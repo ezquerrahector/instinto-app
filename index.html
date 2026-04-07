@@ -154,10 +154,15 @@ nav::-webkit-scrollbar{display:none}
 <div id="inventario" class="section">
   <div class="section-head">
     <span class="section-title">Stock de esencias</span>
-    <div style="display:flex;gap:6px">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
       <select onchange="filterInvLinea(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
         <option value="">Todas las líneas</option>
         <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
+      </select>
+      <select onchange="filterInvStock(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+        <option value="">Todo el inventario</option>
+        <option value="con">Con stock</option>
+        <option value="sin">Sin stock</option>
       </select>
     </div>
   </div>
@@ -419,30 +424,46 @@ function eliminarPed(id){
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────
-let _invLin='', _invTxt='';
+let _invLin='', _invTxt='', _invStock='';
 function filterInvLinea(v){_invLin=v;renderInv();}
 function filterInvTxt(v){_invTxt=v.toLowerCase();renderInv();}
+function filterInvStock(v){_invStock=v;renderInv();}
 function renderInv(){
   const consumo={};
   peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
-  const list=cat.filter(r=>{
+
+  // Calcular stock de cada fragancia primero
+  let list=cat.map(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
+    const usado=(consumo[r.id]||0)*cfg.gesencia;
+    const rest=Math.max(0,ini-usado);
+    return {...r,_rest:rest,_ini:ini,_usado:usado};
+  });
+
+  // Filtrar
+  list=list.filter(r=>{
     const matchLin=!_invLin||r.linea===_invLin;
     const matchTxt=!_invTxt||norm(r.referencia).includes(norm(_invTxt))||norm(r.disenador).includes(norm(_invTxt))||norm(r.id).includes(norm(_invTxt))||norm(r.base).includes(norm(_invTxt));
-    return matchLin&&matchTxt;
+    const matchStock=!_invStock||(_invStock==='con'&&r._rest>0)||(_invStock==='sin'&&r._rest===0);
+    return matchLin&&matchTxt&&matchStock;
   });
+
+  // Ordenar: con stock primero, luego stock bajo, luego sin stock
+  list.sort((a,b)=>{
+    const score=r=>r._rest>=cfg.gesencia?0:r._rest>0?1:2;
+    return score(a)-score(b)||a.referencia.localeCompare(b.referencia);
+  });
+
   document.getElementById('inv-list').innerHTML=list.map(r=>{
-    const ini=parseFloat(r.stockGramos)||0;
-    const elab=consumo[r.id]||0;
-    const usado=elab*cfg.gesencia;
-    const rest=Math.max(0,ini-usado);
+    const ini=r._ini, usado=r._usado, rest=r._rest;
     const pct=ini>0?Math.min(100,Math.round(rest/ini*100)):0;
-    const cls=rest===0?'out':rest<60?'low':'ok';
+    const cls=rest===0?'out':rest<cfg.gesencia?'low':'ok';
     return `<div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
           <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
           <div class="card-sub">${r.disenador} · ${r.id} · ${bLin(r.linea)}</div>
-          <div class="card-sub" style="margin-top:2px">Inicial ${ini}g · Usado ${usado}g · ${elab} perfume${elab!==1?'s':''}</div>
+          <div class="card-sub" style="margin-top:2px">Inicial ${ini}g · Usado ${usado}g · ${Math.round(usado/cfg.gesencia)} perfume${Math.round(usado/cfg.gesencia)!==1?'s':''}</div>
           <div class="inv-bar-wrap"><div class="inv-bar ${cls}" style="width:${pct}%"></div></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
@@ -451,7 +472,7 @@ function renderInv(){
         </div>
       </div>
     </div>`;
-  }).join('')||'<div class="empty">Sin fragancias en esta línea.</div>';
+  }).join('')||'<div class="empty">Sin fragancias con ese filtro.</div>';
 }
 
 // ── CATÁLOGO ──────────────────────────────────────────────────────────────
