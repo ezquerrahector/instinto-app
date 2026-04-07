@@ -536,7 +536,9 @@ function openModal(mode,id=null){
 
   if(mode==='pedido'){
     const p=id?peds.find(x=>x.id===id):null;
-    const catOpts=cat.map(r=>`<option value="${r.id}" data-linea="${r.linea}" data-dis="${r.disenador}" ${(p&&p.codigo===r.id)?'selected':''}>${r.referencia} — ${r.disenador} (${r.id})</option>`).join('');
+    const selFragId = p?p.codigo:'';
+    const selFrag = p?cat.find(x=>x.id===p.codigo):null;
+    const selFragTxt = selFrag?`${selFrag.referencia} — ${selFrag.disenador}`:(p&&!selFrag&&p.fragancia?p.fragancia:'');
     mc.innerHTML=`
       <div class="modal-handle"></div>
       <div class="modal-title">${p?'Editar pedido':'Nuevo pedido'}</div>
@@ -544,11 +546,27 @@ function openModal(mode,id=null){
         <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" value="${p?p.cliente:''}" placeholder="Nombre"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha" value="${p?p.fecha:new Date().toISOString().slice(0,10)}"/></div>
       </div>
-      <div class="form-group"><label>Fragancia</label>
-        <select id="f-frag" onchange="mAutoFill()">${catOpts}<option value="__otra__" ${(p&&!cat.find(x=>x.id===p.codigo))?'selected':''}>— Otra (ingresar manual) —</option></select>
+      <div class="form-group">
+        <label>Fragancia</label>
+        <div style="position:relative">
+          <input type="text" id="f-frag-search" placeholder="Buscar fragancia o diseñador..." value="${selFragTxt}"
+            autocomplete="off" oninput="mFragSearch(this.value)" onfocus="mFragSearch(this.value)"
+            style="width:100%;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text)"/>
+          <input type="hidden" id="f-frag-val" value="${selFragId}"/>
+          <input type="hidden" id="f-frag-linea" value="${selFrag?selFrag.linea:''}"/>
+          <input type="hidden" id="f-frag-dis" value="${selFrag?selFrag.disenador:''}"/>
+          <div id="f-frag-dd" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:220px;overflow-y:auto;z-index:300"></div>
+        </div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('')">Todas</button>
+          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Caballero')">Caballero</button>
+          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Dama')">Dama</button>
+          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Unisex')">Unisex</button>
+          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Nicho')">Nicho</button>
+        </div>
       </div>
-      <div class="form-group" id="f-manual-wrap" style="display:${(p&&!cat.find(x=>x.id===p.codigo))?'block':'none'}">
-        <label>Fragancia manual</label><input type="text" id="f-fragmanual" value="${p?p.fragancia:''}" placeholder="Nombre de la fragancia"/>
+      <div class="form-group" id="f-manual-wrap" style="display:${(p&&!cat.find(x=>x.id===p.codigo)&&p.fragancia)?'block':'none'}">
+        <label>Fragancia manual (no está en catálogo)</label><input type="text" id="f-fragmanual" value="${p&&!selFrag?p.fragancia:''}" placeholder="Nombre de la fragancia"/>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Línea</label>
@@ -625,14 +643,60 @@ function openModal(mode,id=null){
   overlay.classList.add('open');
 }
 
-function mAutoFill(){
-  const sel=document.getElementById('f-frag');
-  const opt=sel.options[sel.selectedIndex];
-  const wrap=document.getElementById('f-manual-wrap');
-  if(sel.value==='__otra__'){wrap.style.display='block';return;}
-  wrap.style.display='none';
-  if(opt&&opt.dataset.linea) document.getElementById('f-linea').value=opt.dataset.linea;
+let _mFragLin='';
+function mFragLinFilter(linea){
+  _mFragLin=linea;
+  const txt=document.getElementById('f-frag-search')?.value||'';
+  mFragSearch(txt);
 }
+function mFragSearch(txt){
+  const dd=document.getElementById('f-frag-dd'); if(!dd)return;
+  const q=txt.toLowerCase().trim();
+  const results=cat.filter(r=>{
+    const matchLin=!_mFragLin||r.linea===_mFragLin;
+    const matchTxt=!q||r.referencia.toLowerCase().includes(q)||r.disenador.toLowerCase().includes(q)||(r.base||'').toLowerCase().includes(q)||r.id.toLowerCase().includes(q);
+    return matchLin&&matchTxt;
+  }).slice(0,30);
+  if(!results.length&&!txt){dd.style.display='none';return;}
+  const LIN_COLOR={'Caballero':'#5B9BD5','Dama':'#E07090','Unisex':'#D4A017','Nicho':'#4CAF7D'};
+  dd.innerHTML=results.map(r=>`
+    <div onclick="mFragSelect('${r.id}','${r.referencia.replace(/'/g,"\\'")} — ${r.disenador.replace(/'/g,"\\'")}','${r.linea}','${r.disenador.replace(/'/g,"\\'")}','${(r.costoEsencia||1.70)}')"
+      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center"
+      onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+      <div>
+        <div style="font-weight:500">${r.referencia}</div>
+        <div style="font-size:11px;color:var(--text2)">${r.disenador} · ${r.id}</div>
+      </div>
+      <span style="font-size:10px;font-weight:600;color:${LIN_COLOR[r.linea]||'var(--text2)'};flex-shrink:0;margin-left:8px">${r.linea[0]}</span>
+    </div>`).join('');
+  if(txt==='__otra__'||(!results.length&&txt)){
+    dd.innerHTML+=`<div onclick="mFragSelectOtra()" style="padding:10px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-style:italic" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">— Ingresar manualmente —</div>`;
+  } else {
+    dd.innerHTML+=`<div onclick="mFragSelectOtra()" style="padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text3);font-style:italic;border-top:1px solid var(--border)" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">No está en catálogo → ingresar manual</div>`;
+  }
+  dd.style.display='block';
+}
+function mFragSelect(id,txt,linea,dis,ce){
+  document.getElementById('f-frag-search').value=txt;
+  document.getElementById('f-frag-val').value=id;
+  document.getElementById('f-frag-linea').value=linea;
+  document.getElementById('f-frag-dis').value=dis;
+  document.getElementById('f-frag-dd').style.display='none';
+  document.getElementById('f-manual-wrap').style.display='none';
+  const lsel=document.getElementById('f-linea'); if(lsel) lsel.value=linea;
+  const ceEl=document.getElementById('f-cesencia'); if(ceEl){ceEl.value=parseFloat(ce)||1.70;mRecalc();}
+}
+function mFragSelectOtra(){
+  document.getElementById('f-frag-val').value='__otra__';
+  document.getElementById('f-frag-dd').style.display='none';
+  document.getElementById('f-manual-wrap').style.display='block';
+  document.getElementById('f-fragmanual')?.focus();
+}
+document.addEventListener('click',e=>{
+  const dd=document.getElementById('f-frag-dd');
+  const inp=document.getElementById('f-frag-search');
+  if(dd&&inp&&!dd.contains(e.target)&&e.target!==inp) dd.style.display='none';
+});
 function mRecalc(){
   const ce=parseFloat(document.getElementById('f-cesencia')?.value)||1.70;
   const el=document.getElementById('f-cprod');
@@ -640,12 +704,12 @@ function mRecalc(){
 }
 
 function savePed(){
-  const sel=document.getElementById('f-frag');
-  const opt=sel.options[sel.selectedIndex];
-  const esOtra=sel.value==='__otra__';
-  const fragNombre=esOtra?(document.getElementById('f-fragmanual')?.value||'Sin nombre'):(opt?opt.textContent.split(' — ')[0]:'');
-  const dis=esOtra?'':(opt?opt.dataset.dis||'':'');
-  const codigo=esOtra?'OTRO':sel.value;
+  const fragVal=document.getElementById('f-frag-val')?.value||'';
+  const esOtra=fragVal==='__otra__'||fragVal==='';
+  const fragTxt=document.getElementById('f-frag-search')?.value||'';
+  const fragNombre=esOtra?(document.getElementById('f-fragmanual')?.value||fragTxt||'Sin nombre'):fragTxt.split(' — ')[0];
+  const dis=esOtra?'':(document.getElementById('f-frag-dis')?.value||'');
+  const codigo=esOtra?'OTRO':fragVal;
 
   if(_modalId){
     const p=peds.find(x=>x.id===_modalId); if(!p)return;
