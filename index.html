@@ -374,7 +374,7 @@ function setFilterEst(v){_fEst=v;renderPedidos();}
 
 function renderPedidos(){
   let list=peds.filter(p=>{
-    const m=!_fTxt||p.cliente.toLowerCase().includes(_fTxt)||p.fragancia.toLowerCase().includes(_fTxt)||(p.disenador||'').toLowerCase().includes(_fTxt);
+    const m=!_fTxt||p.cliente.toLowerCase().includes(_fTxt)||p.fragancia.toLowerCase().includes(_fTxt)||(p.disenador||'').toLowerCase().includes(_fTxt)||(p.codigo||'').toLowerCase().includes(_fTxt);
     return m&&(!_fEst||p.estatus===_fEst);
   }).reverse();
   if(!list.length){document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>';return;}
