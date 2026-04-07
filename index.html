@@ -161,6 +161,9 @@ nav::-webkit-scrollbar{display:none}
       </select>
     </div>
   </div>
+  <div class="search-bar" style="margin-bottom:12px">
+    <input type="search" placeholder="Buscar fragancia, diseñador o código..." oninput="filterInvTxt(this.value)" style="width:100%"/>
+  </div>
   <div id="inv-list"></div>
 </div>
 
@@ -476,12 +479,17 @@ function eliminarPed(id){
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────
-let _invLin='';
+let _invLin='', _invTxt='';
 function filterInvLinea(v){_invLin=v;renderInv();}
+function filterInvTxt(v){_invTxt=v.toLowerCase();renderInv();}
 function renderInv(){
   const consumo={};
   peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
-  const list=cat.filter(r=>!_invLin||r.linea===_invLin);
+  const list=cat.filter(r=>{
+    const matchLin=!_invLin||r.linea===_invLin;
+    const matchTxt=!_invTxt||r.referencia.toLowerCase().includes(_invTxt)||r.disenador.toLowerCase().includes(_invTxt)||r.id.toLowerCase().includes(_invTxt)||(r.base||'').toLowerCase().includes(_invTxt);
+    return matchLin&&matchTxt;
+  });
   document.getElementById('inv-list').innerHTML=list.map(r=>{
     const ini=parseFloat(r.stockGramos)||0;
     const elab=consumo[r.id]||0;
