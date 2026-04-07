@@ -990,14 +990,51 @@ const EJS = {
   publicKey:  '6eSdTAfF6Gi42ORQk'
 };
 
+function setEjsStatus(msg, color){
+  const el = document.getElementById('ejs-status');
+  if(el){ el.textContent = msg; el.style.color = color||'var(--text2)'; }
+}
+
 function loadEmailJS(){
-  return new Promise(resolve => {
+  return new Promise((resolve, reject) => {
     if(window.emailjs){ resolve(); return; }
     const s = document.createElement('script');
     s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
-    s.onload = () => { emailjs.init(EJS.publicKey); resolve(); };
+    s.onload = () => {
+      try{ emailjs.init(EJS.publicKey); resolve(); }
+      catch(e){ reject(e); }
+    };
+    s.onerror = () => reject(new Error('No se pudo cargar EmailJS'));
     document.head.appendChild(s);
   });
+}
+
+async function probarEmailJS(){
+  setEjsStatus('Enviando correo de prueba...', 'var(--amber)');
+  try {
+    await loadEmailJS();
+    const result = await emailjs.send(EJS.serviceId, EJS.templateId, {
+      tipo:      'Correo de prueba',
+      name:      'Instinto Fragancias',
+      cliente:   'Cliente de prueba',
+      fragancia: 'BACCARAT ROUGE',
+      disenador: 'MFK',
+      codigo:    'UP01054',
+      linea:     'Unisex',
+      canal:     'WhatsApp',
+      precio:    '250',
+      fecha:     new Date().toISOString().slice(0,10),
+      notas:     'Correo de prueba de Instinto Fragancias',
+      email:     'hectorezquerra@hotmail.com',
+      message:   'Correo de prueba enviado correctamente'
+    });
+    console.log('EmailJS OK:', result);
+    setEjsStatus('✓ Correo enviado — revisa tu bandeja de entrada', 'var(--green)');
+    toast('Correo de prueba enviado ✓');
+  } catch(e){
+    console.error('EmailJS error:', e);
+    setEjsStatus('✕ Error: ' + (e.text || e.message || JSON.stringify(e)), 'var(--red)');
+  }
 }
 
 async function enviarNotificacion(tipo, p){
@@ -1012,15 +1049,16 @@ async function enviarNotificacion(tipo, p){
       codigo:    p.codigo    || '',
       linea:     p.linea     || '',
       canal:     p.canal     || '',
-      precio:    p.precio    || '',
+      precio:    String(p.precio || ''),
       fecha:     p.fecha     || '',
       notas:     p.notas     || '',
       email:     'hectorezquerra@hotmail.com',
-      message:   `${tipo} registrado en Instinto Fragancias`
+      message:   `${tipo} en Instinto Fragancias`
     });
-    console.log('Notificación enviada ✓');
-  } catch(e){ console.warn('EmailJS error:', e); }
+    console.log('Notificación enviada:', tipo);
+  } catch(e){ console.warn('EmailJS envío falló:', e); }
 }
+
 const FB_CFG = {
   apiKey: "AIzaSyBafY_htzgeMH5_J_h9-VscHHnrHdLX0IY",
   authDomain: "instinto-fragancias.firebaseapp.com",
@@ -1117,6 +1155,16 @@ function addSyncButtons(){
       <button class="btn btn-blue" onclick="fbSave()">↑ Subir a la nube ahora</button>
     </div>`;
   el.prepend(wrap);
+
+  const wrap2 = document.createElement('div');
+  wrap2.className = 'export-area';
+  wrap2.innerHTML = `<h4>Notificaciones por correo (EmailJS)</h4>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Se envía correo a <strong>hectorezquerra@hotmail.com</strong> al registrar o cambiar estatus de un pedido.</p>
+    <div class="btns">
+      <button class="btn btn-blue" onclick="probarEmailJS()">📧 Enviar correo de prueba</button>
+    </div>
+    <div id="ejs-status" style="margin-top:8px;font-size:12px;color:var(--text2)"></div>`;
+  el.prepend(wrap2);
 }
 
 // Al arrancar: carga desde Firebase y activa auto-sync
