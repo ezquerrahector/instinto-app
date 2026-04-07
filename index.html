@@ -4,7 +4,6 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <meta name="theme-color" content="#1A1A1A"/>
-<meta name="description" content="Instinto Fragancias — Sistema de pedidos"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black"/>
 <meta name="apple-mobile-web-app-title" content="Instinto"/>
@@ -18,133 +17,99 @@
   --text:#F0EDE6;--text2:#A09A8E;--text3:#6B6560;
   --gold:#C9A84C;--gold2:#E8C96A;--gold3:#8C6E2A;
   --green:#4CAF7D;--red:#E05555;--blue:#5B9BD5;--amber:#D4A017;
-  --border:#333;--border2:#444;
-  --radius:10px;--radius-sm:6px;
+  --border:#333;--border2:#444;--radius:10px;--radius-sm:6px;
 }
-@media(prefers-color-scheme:light){
-  :root{
-    --bg:#F5F2ED;--bg2:#FFFFFF;--bg3:#EDE9E2;--bg4:#E0DCD4;
-    --text:#1A1A1A;--text2:#5A5550;--text3:#9A9590;
-    --border:#D8D4CC;--border2:#C8C4BC;
-  }
-}
+@media(prefers-color-scheme:light){:root{--bg:#F5F2ED;--bg2:#FFF;--bg3:#EDE9E2;--bg4:#E0DCD4;--text:#1A1A1A;--text2:#5A5550;--text3:#9A9590;--border:#D8D4CC;--border2:#C8C4BC;}}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;padding-bottom:80px}
 
-/* HEADER */
 header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
 .logo{display:flex;align-items:center;gap:10px}
 .logo-icon{width:34px;height:34px;background:#1A1A1A;border:1px solid var(--gold3);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:1px}
-.logo-text{font-size:15px;font-weight:600;color:var(--text)}
+.logo-text{font-size:15px;font-weight:600}
 .logo-sub{font-size:11px;color:var(--text2)}
 .btn-nuevo{background:var(--gold);color:#111;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-nuevo:active{opacity:0.8}
 
-/* TABS */
-nav{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:sticky;top:63px;z-index:49}
+nav{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;position:sticky;top:63px;z-index:49}
 nav::-webkit-scrollbar{display:none}
-.nav-tab{flex:1;min-width:72px;padding:12px 8px;text-align:center;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.15s}
+.nav-tab{flex:1;min-width:68px;padding:12px 6px;text-align:center;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap}
 .nav-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 
-/* SECTIONS */
-.section{display:none;padding:16px}
-.section.active{display:block}
+.section{display:none;padding:14px}.section.active{display:block}
 
-/* KPI GRID */
-.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
 .kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
 .kpi-label{font-size:11px;color:var(--text2);margin-bottom:4px}
-.kpi-val{font-size:24px;font-weight:600}
-.kpi-val.gold{color:var(--gold)}
-.kpi-val.green{color:var(--green)}
-.kpi-val.blue{color:var(--blue)}
-.kpi-val.red{color:var(--red)}
+.kpi-val{font-size:22px;font-weight:600}
+.kv-gold{color:var(--gold)}.kv-green{color:var(--green)}.kv-blue{color:var(--blue)}.kv-red{color:var(--red)}
 
-/* CARDS */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
 .card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+.card-name{font-size:14px;font-weight:600;margin-bottom:2px}
 .card-sub{font-size:12px;color:var(--text2)}
 .card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
 
-/* BADGES */
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
-.b-pedido{background:#3D3300;color:#F0C040}
-.b-comprado{background:#0D2B45;color:#5B9BD5}
-.b-elaborado{background:#2D2000;color:#D4A017}
-.b-entregado{background:#0D2D1A;color:#4CAF7D}
-.b-d{background:#3D0D1F;color:#E07090}
-.b-c{background:#0D1F3D;color:#5B9BD5}
-.b-u{background:#2D2000;color:#D4A017}
-.b-n{background:#0D2D1A;color:#4CAF7D}
+.b-pedido{background:#3D3300;color:#F0C040}.b-comprado{background:#0D2B45;color:#5B9BD5}
+.b-elaborado{background:#2D2000;color:#D4A017}.b-entregado{background:#0D2D1A;color:#4CAF7D}
+.b-d{background:#3D0D1F;color:#E07090}.b-c{background:#0D1F3D;color:#5B9BD5}
+.b-u{background:#2D2000;color:#D4A017}.b-n{background:#0D2D1A;color:#4CAF7D}
 @media(prefers-color-scheme:light){
-  .b-pedido{background:#FFF3CD;color:#856404}
-  .b-comprado{background:#D1ECF1;color:#185FA5}
-  .b-elaborado{background:#FDF3DC;color:#9A6C00}
-  .b-entregado{background:#D4EDDA;color:#28A745}
-  .b-d{background:#FCE4EC;color:#AD1457}
-  .b-c{background:#D1ECF1;color:#185FA5}
-  .b-u{background:#FDF3DC;color:#9A6C00}
-  .b-n{background:#D4EDDA;color:#28A745}
+  .b-pedido{background:#FFF3CD;color:#856404}.b-comprado{background:#D1ECF1;color:#185FA5}
+  .b-elaborado{background:#FDF3DC;color:#9A6C00}.b-entregado{background:#D4EDDA;color:#28A745}
+  .b-d{background:#FCE4EC;color:#AD1457}.b-c{background:#D1ECF1;color:#185FA5}
+  .b-u{background:#FDF3DC;color:#9A6C00}.b-n{background:#D4EDDA;color:#28A745}
 }
 
-/* BUTTONS */
 .btn{padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;cursor:pointer}
 .btn:active{opacity:0.7}
 .btn-gold{background:var(--gold);color:#111;border-color:var(--gold);font-weight:600}
 .btn-danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn-blue{background:transparent;color:var(--blue);border-color:var(--blue)}
 .btn-sm{padding:5px 10px;font-size:11px}
+.btn-icon{padding:5px 8px;font-size:14px;line-height:1}
 
-/* ESTATUS SELECT */
-.est-select{padding:4px 8px;border-radius:4px;border:none;font-size:11px;font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none;background:transparent}
+.search-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap}
+.search-bar input,.search-bar select{font-size:13px;padding:9px 10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+.search-bar input{flex:1;min-width:120px}
 
-/* SEARCH */
-.search-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
-.search-bar input{flex:1;font-size:13px;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text)}
-.search-bar select{font-size:12px;padding:9px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text)}
-
-/* MODAL */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;align-items:flex-end;justify-content:center}
 .modal-overlay.open{display:flex}
-.modal{background:var(--bg2);border-radius:16px 16px 0 0;padding:20px 16px;width:100%;max-width:560px;max-height:92dvh;overflow-y:auto}
+.modal{background:var(--bg2);border-radius:16px 16px 0 0;padding:20px 16px;width:100%;max-width:560px;max-height:94dvh;overflow-y:auto}
 .modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px}
 .form-group{margin-bottom:12px}
 .form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
 .form-group input,.form-group select,.form-group textarea{width:100%;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text)}
 .form-group textarea{resize:vertical;min-height:60px}
+.form-group input[readonly]{background:var(--bg4);color:var(--gold);font-weight:600}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .modal-footer{display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
 .modal-footer .btn{flex:1}
 
-/* INVENTARIO BARS */
 .inv-bar-wrap{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:6px}
-.inv-bar{height:100%;border-radius:3px;transition:width 0.3s}
-.inv-bar.ok{background:var(--green)}
-.inv-bar.low{background:var(--amber)}
-.inv-bar.out{background:var(--red)}
+.inv-bar{height:100%;border-radius:3px}
+.inv-bar.ok{background:var(--green)}.inv-bar.low{background:var(--amber)}.inv-bar.out{background:var(--red)}
 .inv-stock{font-size:20px;font-weight:600}
-.inv-stock.ok{color:var(--green)}
-.inv-stock.low{color:var(--amber)}
-.inv-stock.out{color:var(--red)}
+.inv-stock.ok{color:var(--green)}.inv-stock.low{color:var(--amber)}.inv-stock.out{color:var(--red)}
 
-/* SECTION HEADER */
-.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-.section-title{font-size:14px;font-weight:600;color:var(--text)}
-
-/* EMPTY */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:8px;flex-wrap:wrap}
+.section-title{font-size:14px;font-weight:600}
 .empty{text-align:center;padding:32px 16px;color:var(--text2);font-size:13px}
-
-/* GANANCIA PILL */
 .ganancia-pill{background:rgba(76,175,125,0.15);color:var(--green);padding:3px 9px;border-radius:4px;font-size:12px;font-weight:600}
 
-/* INSTALL BANNER */
-#install-banner{display:none;background:linear-gradient(135deg,#1A1A1A,#2D2200);border:1px solid var(--gold3);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;cursor:pointer}
-#install-banner .ib-title{font-size:13px;font-weight:600;color:var(--gold);margin-bottom:2px}
-#install-banner .ib-sub{font-size:11px;color:var(--text2)}
+/* export/import area */
+.export-area{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:12px}
+.export-area h4{font-size:13px;font-weight:600;margin-bottom:10px;color:var(--text2)}
+.export-area .btns{display:flex;gap:8px;flex-wrap:wrap}
+.file-input-wrap{position:relative;overflow:hidden;display:inline-block}
+.file-input-wrap input[type=file]{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer}
 
-/* TOAST */
 #toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+.tab-settings{display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px;overflow-x:auto}
+.stab{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);white-space:nowrap}
+.stab.active{background:var(--gold);color:#111;border-color:var(--gold)}
 </style>
 </head>
 <body>
@@ -152,12 +117,9 @@ nav::-webkit-scrollbar{display:none}
 <header>
   <div class="logo">
     <div class="logo-icon">IF</div>
-    <div>
-      <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos</div>
-    </div>
+    <div><div class="logo-text">Instinto Fragancias</div><div class="logo-sub">Sistema de pedidos</div></div>
   </div>
-  <button class="btn-nuevo" onclick="openModal()">+ Pedido</button>
+  <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
 </header>
 
 <nav>
@@ -165,14 +127,11 @@ nav::-webkit-scrollbar{display:none}
   <button class="nav-tab" onclick="showTab('pedidos',this)">Pedidos</button>
   <button class="nav-tab" onclick="showTab('inventario',this)">Inventario</button>
   <button class="nav-tab" onclick="showTab('catalogo',this)">Catálogo</button>
+  <button class="nav-tab" onclick="showTab('config',this)">⚙ Config</button>
 </nav>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="section active">
-  <div id="install-banner" onclick="installApp()">
-    <div class="ib-title">📲 Instalar app en tu celular</div>
-    <div class="ib-sub">Toca aquí para agregar Instinto a tu pantalla de inicio</div>
-  </div>
   <div class="kpi-grid" id="kpis"></div>
   <div class="section-head"><span class="section-title">Pedidos recientes</span></div>
   <div id="recent-list"></div>
@@ -182,12 +141,10 @@ nav::-webkit-scrollbar{display:none}
 <div id="pedidos" class="section">
   <div class="search-bar">
     <input type="search" placeholder="Buscar cliente o fragancia..." oninput="filterPedidos(this.value)"/>
-    <select onchange="filterEst(this.value)">
+    <select onchange="setFilterEst(this.value)">
       <option value="">Todos</option>
-      <option>Pedido</option>
-      <option>Comprado proveedor</option>
-      <option>Elaborado</option>
-      <option>Entregado/Cobrado</option>
+      <option>Pedido</option><option>Comprado proveedor</option>
+      <option>Elaborado</option><option>Entregado/Cobrado</option>
     </select>
   </div>
   <div id="pedidos-list"></div>
@@ -197,16 +154,22 @@ nav::-webkit-scrollbar{display:none}
 <div id="inventario" class="section">
   <div class="section-head">
     <span class="section-title">Stock de esencias</span>
-    <select onchange="filterInvLinea(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-      <option value="">Todas las líneas</option>
-      <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
-    </select>
+    <div style="display:flex;gap:6px">
+      <select onchange="filterInvLinea(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+        <option value="">Todas las líneas</option>
+        <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
+      </select>
+    </div>
   </div>
   <div id="inv-list"></div>
 </div>
 
 <!-- CATÁLOGO -->
 <div id="catalogo" class="section">
+  <div class="section-head">
+    <span class="section-title">Catálogo de fragancias</span>
+    <button class="btn btn-gold btn-sm" onclick="openModal('fragancia')">+ Fragancia</button>
+  </div>
   <div class="search-bar">
     <input type="search" placeholder="Buscar fragancia o marca..." oninput="filterCat(this.value)"/>
     <select onchange="filterCatLinea(this.value)">
@@ -217,370 +180,654 @@ nav::-webkit-scrollbar{display:none}
   <div id="cat-list"></div>
 </div>
 
-<!-- MODAL NUEVO PEDIDO -->
-<div class="modal-overlay" id="modal-overlay">
-<div class="modal">
-  <div class="modal-handle"></div>
-  <div class="modal-title">Nuevo pedido</div>
+<!-- CONFIG -->
+<div id="config" class="section">
+  <div class="tab-settings">
+    <button class="stab active" onclick="showStab('s-export',this)">Exportar</button>
+    <button class="stab" onclick="showStab('s-import',this)">Importar</button>
+    <button class="stab" onclick="showStab('s-costos',this)">Costos</button>
+    <button class="stab" onclick="showStab('s-reset',this)">Datos</button>
+  </div>
 
-  <div class="form-row">
-    <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Nombre"/></div>
-    <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha"/></div>
-  </div>
-  <div class="form-group"><label>Fragancia</label>
-    <select id="f-fragancia" onchange="autoFill()"><option value="">Selecciona...</option></select>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>Línea</label>
-      <select id="f-linea"><option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option></select>
-    </div>
-    <div class="form-group"><label>Canal de venta</label>
-      <select id="f-canal"><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Referido</option><option>Directo</option></select>
+  <div id="s-export">
+    <div class="export-area">
+      <h4>Exportar datos</h4>
+      <div class="btns">
+        <button class="btn btn-blue" onclick="exportCSV('pedidos')">📥 Pedidos CSV</button>
+        <button class="btn btn-blue" onclick="exportCSV('catalogo')">📥 Catálogo CSV</button>
+        <button class="btn btn-blue" onclick="exportCSV('inventario')">📥 Inventario CSV</button>
+        <button class="btn btn-gold" onclick="exportJSON()">💾 Backup completo</button>
+      </div>
     </div>
   </div>
-  <div class="form-row">
-    <div class="form-group"><label>Precio venta ($)</label><input type="number" id="f-precio" value="250"/></div>
-    <div class="form-group"><label>Costo esencia/g ($)</label><input type="number" id="f-cesencia" value="1.70" step="0.1" oninput="recalcCosto()"/></div>
-  </div>
-  <div class="form-row">
-    <div class="form-group"><label>Fecha promesa entrega</label><input type="date" id="f-promesa"/></div>
-    <div class="form-group"><label>Costo producción (auto)</label><input type="text" id="f-cprod" readonly style="background:var(--bg4);color:var(--gold);font-weight:600"/></div>
-  </div>
-  <div class="form-group"><label>Notas</label><textarea id="f-notas" placeholder="Instrucciones especiales, color de etiqueta, etc."></textarea></div>
 
-  <div class="modal-footer">
-    <button class="btn" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-gold" onclick="savePedido()">Guardar pedido</button>
+  <div id="s-import" style="display:none">
+    <div class="export-area">
+      <h4>Importar catálogo desde CSV</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">El CSV debe tener columnas: codigo, base, disenador, referencia, linea, costoEsencia, stockGramos</p>
+      <div class="btns">
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv" onchange="importCSV(this,'catalogo')"/></div>
+        <button class="btn" onclick="descargarPlantilla('catalogo')">📋 Plantilla CSV</button>
+      </div>
+    </div>
+    <div class="export-area">
+      <h4>Restaurar backup</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Restaura todos los datos desde un archivo JSON de backup</p>
+      <div class="btns">
+        <div class="file-input-wrap"><button class="btn btn-danger">⚠ Restaurar JSON</button><input type="file" accept=".json" onchange="importJSON(this)"/></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="s-costos" style="display:none">
+    <div class="export-area">
+      <h4>Costos de producción (por perfume 60ml)</h4>
+      <div class="form-group"><label>Gramos de esencia por perfume</label><input type="number" id="cfg-gesencia" value="30" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Gramos de fijador</label><input type="number" id="cfg-gfijador" value="5" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Precio fijador ($/g)</label><input type="number" id="cfg-pfijador" value="1.75" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Gramos de feromonas</label><input type="number" id="cfg-gferomonas" value="3.5" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Precio feromonas ($/g)</label><input type="number" id="cfg-pferomonas" value="6.00" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Gramos de perfumol</label><input type="number" id="cfg-gperfumol" value="21.5" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Precio perfumol ($/g)</label><input type="number" id="cfg-pperfumol" value="1.68" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Costo envase ($)</label><input type="number" id="cfg-envase" value="13.50" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Costo atomizador ($)</label><input type="number" id="cfg-atomizador" value="17.50" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Costo sticker ($)</label><input type="number" id="cfg-sticker" value="4.00" step="0.01" oninput="saveCfg()"/></div>
+      <div class="form-group"><label>Precio venta default ($)</label><input type="number" id="cfg-pventa" value="250" oninput="saveCfg()"/></div>
+      <div style="background:var(--bg4);border-radius:8px;padding:12px;margin-top:8px">
+        <div style="font-size:12px;color:var(--text2)">Costo total sin esencia</div>
+        <div style="font-size:20px;font-weight:600;color:var(--gold)" id="cfg-costo-display">$127.93</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="s-reset" style="display:none">
+    <div class="export-area">
+      <h4>Gestión de datos</h4>
+      <div class="btns" style="flex-direction:column">
+        <button class="btn btn-danger" onclick="resetCatalogo()">🗑 Limpiar catálogo (mantiene pedidos)</button>
+        <button class="btn btn-danger" onclick="resetPedidos()">🗑 Limpiar pedidos (mantiene catálogo)</button>
+        <button class="btn btn-danger" onclick="resetTodo()">⚠ Borrar TODO y empezar de cero</button>
+      </div>
+    </div>
   </div>
 </div>
+
+<!-- MODAL GENÉRICO -->
+<div class="modal-overlay" id="modal-overlay">
+<div class="modal" id="modal-content"></div>
 </div>
 
 <div id="toast"></div>
 
 <script>
-const COSTO_FIJO = 5*1.75 + 3.5*6.00 + 21.5*1.68 + 17.50 + 13.50 + 4.00;
-
-const CAT = [
-  ["CP02499","","ARMAF","ODYSSEY MANDARIN SKY","Caballero"],
-  ["CP02438","BASE NIGHT CLUB ARA","ARMAF","CLUB DE NUIT INTENSE MAN","Caballero"],
-  ["CP00734","BASE CODIGO NEGRO","ARMANI","ARMANI BLACK CODE","Caballero"],
-  ["CP00725","BASE AQUA HOTEL","ARMANI","ACQUA DI GIO","Caballero"],
-  ["CP02453","","BHARARA","KING","Caballero"],
-  ["CP00719","","CHANEL","ALLURE HOMME SPORT","Caballero"],
-  ["CP01059","","CHANEL","BLEU","Caballero"],
-  ["CP02269","BASE AVENTURERO NICHE","CREED","AVENTUS","Caballero"],
-  ["CP02158","BASE SALVAJE","DIOR","SAUVAGE","Caballero"],
-  ["CP02341","","DIOR","SAUVAGE ELIXIR","Caballero"],
-  ["CP00881","","DOLCE & GABBANA","LIGHT BLUE","Caballero"],
-  ["CP02445","","GUCCI","GUILTY ELIXIR POUR HOMME","Caballero"],
-  ["CP02516","","JEAN PAUL GAULTIER","LE MALE ELIXIR ABSOLU","Caballero"],
-  ["CP02358","","JEAN PAUL GAULTIER","SCANDAL","Caballero"],
-  ["CP02498","BASE IMAGINA NICHE","LOUIS VUITTON","IMAGINATION","Caballero"],
-  ["CP01092","","PACO RABANNE","INVICTUS","Caballero"],
-  ["CP01021","","PACO RABANNE","ONE MILLION","Caballero"],
-  ["CP02373","","VERSACE","VERSACE MAN EAU FRAICHE","Caballero"],
-  ["CP01086","","VERSACE","EROS","Caballero"],
-  ["CP02472","BASE SPICY BOMB D.LEATHER FF","VIKTOR & ROLF","SPICEBOMB DARK LEATHER","Caballero"],
-  ["CP02473","","YVES SAINT LAURENT","MYSLF LE PARFUM","Caballero"],
-  ["DP02522","","ARIANA GRANDE","CLOUD","Dama"],
-  ["DP02632","BASE SENSUAL ARIANA","ARIANA GRANDE","SWEET LIKE CANDY","Dama"],
-  ["DP01016","","ARMANI","AQUA DI GIO","Dama"],
-  ["DP02269","","ARMANI","SÍ","Dama"],
-  ["DP01010","","CACHAREL","AMOR AMOR","Dama"],
-  ["DP01119","BASE EUFEMIA","CALVIN KLEIN","EUPHORIA","Dama"],
-  ["DP00987","","CAROLINA HERRERA","212","Dama"],
-  ["DO02404","","CAROLINA HERRERA","GOOD GIRL","Dama"],
-  ["DP02754","","CAROLINA HERRERA","GOOD GIRL BLUSH","Dama"],
-  ["DP02620","","CHANEL","CHANCE EAU FRAICHE","Dama"],
-  ["DP02622","","CHANEL","CHANCE EAU TENDRE","Dama"],
-  ["DP02472","BASE MUJER DE PARIS INTENSA","CHANEL","COCO MADEMOISELLE","Dama"],
-  ["DP01057","","CHANEL","CHANEL 5","Dama"],
-  ["DP01176","","DIOR","J'ADORE","Dama"],
-  ["DP01163","BASE HIPNOSIS","DIOR","HYPNOTIC POISON","Dama"],
-  ["DP02523","BASE LADY 2021","DIOR","MISS DIOR EAU DE PARFUM","Dama"],
-  ["DP02717","","DOLCE & GABBANA","Q BY DOLCE GABBANA","Dama"],
-  ["DP01029","BASE DELICIOSA","DONNA KARAN","BE DELICIOUS","Dama"],
-  ["DP01197","","DOLCE & GABBANA","LIGHT BLUE","Dama"],
-  ["DP02452","","JEAN PAUL GAULTIER","SCANDAL","Dama"],
-  ["DP02853","","LANCOME","LA VIE EST BELLE L'ELIXIR EDP","Dama"],
-  ["DP02544","BASE WONDER CELEBRATION NICHE","LOUIS VUITTON","ATTRAPES REVES","Dama"],
-  ["DP02599","BASE EXPLOSION ESTELAR","MUGLER","ANGEL NOVA","Dama"],
-  ["DP02349","","PACO RABANNE","OLYMPEA","Dama"],
-  ["DP02408","","PARIS HILTON","GOLD RUSH","Dama"],
-  ["DP01277","","RALPH LAUREN","RALPH","Dama"],
-  ["DP02764","","VERSACE","DYLAN PURPLE","Dama"],
-  ["DP02334","","VIKTOR & ROLF","FLOWERBOMB","Dama"],
-  ["DP02324","","YVES SAINT LAURENT","BLACK OPIUM","Dama"],
-  ["DP02515","","YVES SAINT LAURENT","LIBRE","Dama"],
-  ["DP02431","","YVES SAINT LAURENT","MON PARIS","Dama"],
-  ["UP01017","","CALVIN KLEIN","CK BE","Unisex"],
-  ["UP01002","","CALVIN KLEIN","CK ONE","Unisex"],
-  ["BUP0003","BASE TE VERDE MATCHA Y FLOR DE SAKURA","LE LABO","THE MATCHA 26","Unisex"],
-  ["UP01000","","LE LABO","SANTAL 33","Unisex"],
-  ["UP01090","","LOUIS VUITTON","OMBRE NOMADE","Unisex"],
-  ["UP01087","BASE LOVE TOY 2 PEARL","MOSCHINO","TOY 2 PEARL","Unisex"],
-  ["UP01054","","MAISON FRANCIS KURKDJIAN","BACCARAT ROUGE","Unisex"],
-  ["UP01122","","PENHALIGON'S","THE WORLD ACCORDING TO ARTHUR","Unisex"],
-  ["UP01073","BASE CHERRY CIGAR NICHE","TOM FORD","CHERRY SMOKE","Unisex"],
-  ["UP01046","","TOM FORD","OMBRE LEATHER","Unisex"],
-  ["UP01047","","TOM FORD","OUD WOOD","Unisex"],
-  ["UP01028","","TOM FORD","TOBACCO VANILLE","Unisex"],
-  ["UP01129","","XERJOFF","ERBA PURA","Unisex"],
+// ── DEFAULTS ──────────────────────────────────────────────────────────────
+const CFG_DEF = {gesencia:30,gfijador:5,pfijador:1.75,gferomonas:3.5,pferomonas:6.00,gperfumol:21.5,pperfumol:1.68,envase:13.50,atomizador:17.50,sticker:4.00,pventa:250};
+const CAT_SEED = [
+  {id:"CP02499",base:"",disenador:"ARMAF",referencia:"ODYSSEY MANDARIN SKY",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02438",base:"BASE NIGHT CLUB ARA",disenador:"ARMAF",referencia:"CLUB DE NUIT INTENSE MAN",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP00734",base:"BASE CODIGO NEGRO",disenador:"ARMANI",referencia:"ARMANI BLACK CODE",linea:"Caballero",costoEsencia:1.70,stockGramos:180},
+  {id:"CP00725",base:"BASE AQUA HOTEL",disenador:"ARMANI",referencia:"ACQUA DI GIO",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
+  {id:"CP02453",base:"",disenador:"BHARARA",referencia:"KING",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
+  {id:"CP00719",base:"",disenador:"CHANEL",referencia:"ALLURE HOMME SPORT",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP01059",base:"",disenador:"CHANEL",referencia:"BLEU",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02269",base:"BASE AVENTURERO NICHE",disenador:"CREED",referencia:"AVENTUS",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02158",base:"BASE SALVAJE",disenador:"DIOR",referencia:"SAUVAGE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02341",base:"",disenador:"DIOR",referencia:"SAUVAGE ELIXIR",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP00881",base:"",disenador:"DOLCE & GABBANA",referencia:"LIGHT BLUE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02445",base:"",disenador:"GUCCI",referencia:"GUILTY ELIXIR POUR HOMME",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02516",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"LE MALE ELIXIR ABSOLU",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02358",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"SCANDAL",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02498",base:"BASE IMAGINA NICHE",disenador:"LOUIS VUITTON",referencia:"IMAGINATION",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
+  {id:"CP01092",base:"",disenador:"PACO RABANNE",referencia:"INVICTUS",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
+  {id:"CP01021",base:"",disenador:"PACO RABANNE",referencia:"ONE MILLION",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02373",base:"",disenador:"VERSACE",referencia:"VERSACE MAN EAU FRAICHE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP01086",base:"",disenador:"VERSACE",referencia:"EROS",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"CP02472",base:"BASE SPICY BOMB D.LEATHER FF",disenador:"VIKTOR & ROLF",referencia:"SPICEBOMB DARK LEATHER",linea:"Caballero",costoEsencia:1.70,stockGramos:180},
+  {id:"CP02473",base:"",disenador:"YVES SAINT LAURENT",referencia:"MYSLF LE PARFUM",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02522",base:"",disenador:"ARIANA GRANDE",referencia:"CLOUD",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP02632",base:"BASE SENSUAL ARIANA",disenador:"ARIANA GRANDE",referencia:"SWEET LIKE CANDY",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01016",base:"",disenador:"ARMANI",referencia:"AQUA DI GIO",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02269",base:"",disenador:"ARMANI",referencia:"SÍ",linea:"Dama",costoEsencia:1.70,stockGramos:180},
+  {id:"DP01010",base:"",disenador:"CACHAREL",referencia:"AMOR AMOR",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01119",base:"BASE EUFEMIA",disenador:"CALVIN KLEIN",referencia:"EUPHORIA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP00987",base:"",disenador:"CAROLINA HERRERA",referencia:"212",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DO02404",base:"",disenador:"CAROLINA HERRERA",referencia:"GOOD GIRL",linea:"Dama",costoEsencia:1.70,stockGramos:240},
+  {id:"DP02754",base:"",disenador:"CAROLINA HERRERA",referencia:"GOOD GIRL BLUSH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02620",base:"",disenador:"CHANEL",referencia:"CHANCE EAU FRAICHE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02622",base:"",disenador:"CHANEL",referencia:"CHANCE EAU TENDRE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02472",base:"BASE MUJER DE PARIS INTENSA",disenador:"CHANEL",referencia:"COCO MADEMOISELLE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP01057",base:"",disenador:"CHANEL",referencia:"CHANEL 5",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01176",base:"",disenador:"DIOR",referencia:"J'ADORE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP01163",base:"BASE HIPNOSIS",disenador:"DIOR",referencia:"HYPNOTIC POISON",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02523",base:"BASE LADY 2021",disenador:"DIOR",referencia:"MISS DIOR EAU DE PARFUM",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02717",base:"",disenador:"DOLCE & GABBANA",referencia:"Q BY DOLCE GABBANA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01029",base:"BASE DELICIOSA",disenador:"DONNA KARAN",referencia:"BE DELICIOUS",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01197",base:"",disenador:"DOLCE & GABBANA",referencia:"LIGHT BLUE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP02452",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"SCANDAL",linea:"Dama",costoEsencia:1.70,stockGramos:180},
+  {id:"DP02853",base:"",disenador:"LANCOME",referencia:"LA VIE EST BELLE L'ELIXIR EDP",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02544",base:"BASE WONDER CELEBRATION NICHE",disenador:"LOUIS VUITTON",referencia:"ATTRAPES REVES",linea:"Dama",costoEsencia:1.70,stockGramos:180},
+  {id:"DP02599",base:"BASE EXPLOSION ESTELAR",disenador:"MUGLER",referencia:"ANGEL NOVA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02349",base:"",disenador:"PACO RABANNE",referencia:"OLYMPEA",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP02408",base:"",disenador:"PARIS HILTON",referencia:"GOLD RUSH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP01277",base:"",disenador:"RALPH LAUREN",referencia:"RALPH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02764",base:"",disenador:"VERSACE",referencia:"DYLAN PURPLE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02334",base:"",disenador:"VIKTOR & ROLF",referencia:"FLOWERBOMB",linea:"Dama",costoEsencia:1.70,stockGramos:120},
+  {id:"DP02324",base:"",disenador:"YVES SAINT LAURENT",referencia:"BLACK OPIUM",linea:"Dama",costoEsencia:1.70,stockGramos:180},
+  {id:"DP02515",base:"",disenador:"YVES SAINT LAURENT",referencia:"LIBRE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"DP02431",base:"",disenador:"YVES SAINT LAURENT",referencia:"MON PARIS",linea:"Dama",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01017",base:"",disenador:"CALVIN KLEIN",referencia:"CK BE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
+  {id:"UP01002",base:"",disenador:"CALVIN KLEIN",referencia:"CK ONE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
+  {id:"BUP0003",base:"BASE TE VERDE MATCHA Y FLOR DE SAKURA",disenador:"LE LABO",referencia:"THE MATCHA 26",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
+  {id:"UP01000",base:"",disenador:"LE LABO",referencia:"SANTAL 33",linea:"Unisex",costoEsencia:1.70,stockGramos:180},
+  {id:"UP01090",base:"",disenador:"LOUIS VUITTON",referencia:"OMBRE NOMADE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
+  {id:"UP01087",base:"BASE LOVE TOY 2 PEARL",disenador:"MOSCHINO",referencia:"TOY 2 PEARL",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01054",base:"",disenador:"MAISON FRANCIS KURKDJIAN",referencia:"BACCARAT ROUGE",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01122",base:"",disenador:"PENHALIGON'S",referencia:"THE WORLD ACCORDING TO ARTHUR",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01073",base:"BASE CHERRY CIGAR NICHE",disenador:"TOM FORD",referencia:"CHERRY SMOKE",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01046",base:"",disenador:"TOM FORD",referencia:"OMBRE LEATHER",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01047",base:"",disenador:"TOM FORD",referencia:"OUD WOOD",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
+  {id:"UP01028",base:"",disenador:"TOM FORD",referencia:"TOBACCO VANILLE",linea:"Unisex",costoEsencia:1.70,stockGramos:180},
+  {id:"UP01129",base:"",disenador:"XERJOFF",referencia:"ERBA PURA",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
 ];
-
-const EXIST = {"CP02499":1,"CP02438":1,"CP00734":3,"CP00725":2,"CP02453":2,"CP00719":1,"CP01059":1,"CP02269":1,"CP02158":1,"CP02341":1,"CP00881":1,"CP02445":1,"CP02516":1,"CP02358":1,"CP02498":2,"CP01092":2,"CP01021":1,"CP02373":1,"CP01086":1,"CP02472":3,"CP02473":1,"DP02522":2,"DP02632":1,"DP01016":1,"DP02269":3,"DP01010":1,"DP01119":1,"DP00987":1,"DO02404":4,"DP02754":1,"DP02620":1,"DP02622":1,"DP02472":2,"DP01057":1,"DP01176":2,"DP01163":1,"DP02523":1,"DP02717":1,"DP01029":1,"DP01197":2,"DP02452":3,"DP02853":1,"DP02544":3,"DP02599":1,"DP02349":2,"DP02408":1,"DP01277":1,"DP02764":1,"DP02334":2,"DP02324":3,"DP02515":1,"DP02431":1,"UP01017":2,"UP01002":2,"BUP0003":2,"UP01000":3,"UP01090":2,"UP01087":1,"UP01054":1,"UP01122":1,"UP01073":1,"UP01046":1,"UP01047":1,"UP01028":3,"UP01129":2};
-
-const SEED = [
+const PED_SEED = [
   {id:1,fecha:"2026-01-25",cliente:"Ricardo Granados",codigo:"UP01141",fragancia:"BASE VANILLA RUDE NICHE",disenador:"Tom Ford",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
   {id:2,fecha:"2026-01-25",cliente:"Brian Noé",codigo:"CP02158",fragancia:"BASE SALVAJE",disenador:"DIOR",linea:"Caballero",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:3,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01000",fragancia:"BASE SANDALO 33",disenador:"LE LABO",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:4,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01054",fragancia:"BASE ROJO BACCARAT NICHE",disenador:"MFK",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:5,fecha:"2026-01-25",cliente:"Rebeca Núñez",codigo:"DP02620",fragancia:"BASE OPPORTUNITY",disenador:"CHANEL",linea:"Dama",estatus:"Entregado/Cobrado",canal:"Instagram",precio:250,costoEsencia:1.70,notas:""},
-  {id:6,fecha:"2026-02-07",cliente:"Osmara",codigo:"DP00987",fragancia:"BASE URBAN WOMAN",disenador:"CAROLINA HERRERA",linea:"Dama",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:7,fecha:"2026-04-04",cliente:"Omar",codigo:"DP02452",fragancia:"BASE SCANDALOUS GIRL",disenador:"JEAN PAUL GAULTIER",linea:"Dama",estatus:"Pedido",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:8,fecha:"2026-04-06",cliente:"Osmara",codigo:"DP02472",fragancia:"BASE MUJER DE PARIS INTENSA",disenador:"CHANEL",linea:"Dama",estatus:"Comprado proveedor",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:9,fecha:"2026-04-06",cliente:"Karen Jiménez",codigo:"DP02507",fragancia:"BASE MUSK GIRL",disenador:"NARCISO RODRIGUEZ",linea:"Dama",estatus:"Elaborado",canal:"Referido",precio:250,costoEsencia:1.70,notas:""},
+  {id:3,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01000",fragancia:"SANTAL 33",disenador:"LE LABO",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:4,fecha:"2026-02-07",cliente:"Osmara",codigo:"DP00987",fragancia:"212",disenador:"CAROLINA HERRERA",linea:"Dama",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:5,fecha:"2026-04-04",cliente:"Omar",codigo:"DP02452",fragancia:"SCANDAL",disenador:"JEAN PAUL GAULTIER",linea:"Dama",estatus:"Pedido",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:6,fecha:"2026-04-06",cliente:"Osmara",codigo:"DP02472",fragancia:"COCO MADEMOISELLE",disenador:"CHANEL",linea:"Dama",estatus:"Comprado proveedor",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:7,fecha:"2026-04-06",cliente:"Karen Jiménez",codigo:"DP02507",fragancia:"PURE MUSK FOR HER",disenador:"NARCISO RODRIGUEZ",linea:"Dama",estatus:"Elaborado",canal:"Referido",precio:250,costoEsencia:1.70,notas:""},
 ];
 
-let pedidos = JSON.parse(localStorage.getItem('if_pedidos')||'null') || SEED;
-let nextId = Math.max(...pedidos.map(p=>p.id), 0) + 1;
-const save = () => localStorage.setItem('if_pedidos', JSON.stringify(pedidos));
-const fmt = n => '$' + Math.round(n).toLocaleString('es-MX');
-const costoProd = ce => COSTO_FIJO + 30*(parseFloat(ce)||1.70);
-const ganancia = p => (parseFloat(p.precio)||250) - costoProd(p.costoEsencia);
+// ── STATE ─────────────────────────────────────────────────────────────────
+let cfg    = JSON.parse(localStorage.getItem('if_cfg')||'null') || {...CFG_DEF};
+let cat    = JSON.parse(localStorage.getItem('if_cat')||'null') || CAT_SEED.map(x=>({...x}));
+let peds   = JSON.parse(localStorage.getItem('if_peds')||'null') || PED_SEED.map(x=>({...x}));
+let nextId = Math.max(...peds.map(p=>p.id), 0) + 1;
 
-const EST_CLASS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado/Cobrado':'b-entregado'};
-const LIN_CLASS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
+const save = () => {
+  localStorage.setItem('if_cfg',  JSON.stringify(cfg));
+  localStorage.setItem('if_cat',  JSON.stringify(cat));
+  localStorage.setItem('if_peds', JSON.stringify(peds));
+};
 
-function badge(txt, cls){ return `<span class="badge ${cls}">${txt}</span>`; }
-function bEst(e){ return badge(e, EST_CLASS[e]||''); }
-function bLin(l){ return badge(l, LIN_CLASS[l]||''); }
+// ── HELPERS ───────────────────────────────────────────────────────────────
+const fmt  = n => '$' + Math.round(n).toLocaleString('es-MX');
+const costoFijo = () => cfg.gfijador*cfg.pfijador + cfg.gferomonas*cfg.pferomonas + cfg.gperfumol*cfg.pperfumol + cfg.envase + cfg.atomizador + cfg.sticker;
+const costoProd = ce => costoFijo() + cfg.gesencia*(parseFloat(ce)||1.70);
+const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia);
+const EST_CLS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado/Cobrado':'b-entregado'};
+const LIN_CLS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
+const bEst = e => `<span class="badge ${EST_CLS[e]||''}">${e}</span>`;
+const bLin = l => `<span class="badge ${LIN_CLS[l]||''}">${l}</span>`;
 
 function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'), 2200);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
 }
 
-/* ── TABS ── */
-function showTab(id, btn){
+// ── TABS ──────────────────────────────────────────────────────────────────
+function showTab(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
   if(id==='inventario') renderInv();
-  if(id==='catalogo') renderCat();
-  if(id==='pedidos') renderPedidos();
+  if(id==='catalogo')   renderCat();
+  if(id==='pedidos')    renderPedidos();
+  if(id==='config')     loadCfg();
+}
+function showStab(id,btn){
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  ['s-export','s-import','s-costos','s-reset'].forEach(s=>{const el=document.getElementById(s);if(el)el.style.display='none';});
+  btn.classList.add('active');
+  document.getElementById(id).style.display='block';
 }
 
-/* ── DASHBOARD ── */
+// ── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash(){
-  const ent = pedidos.filter(p=>p.estatus==='Entregado/Cobrado');
-  const pend = pedidos.filter(p=>p.estatus==='Pedido').length;
-  const proc = pedidos.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
-  const ventas = ent.reduce((s,p)=>s+(parseFloat(p.precio)||250),0);
-  const gan = ent.reduce((s,p)=>s+ganancia(p),0);
-  const margen = ventas>0?Math.round(gan/ventas*100):0;
-  document.getElementById('kpis').innerHTML = `
-    <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val blue">${pedidos.length}</div></div>
-    <div class="kpi"><div class="kpi-label">Entregados</div><div class="kpi-val green">${ent.length}</div></div>
-    <div class="kpi"><div class="kpi-label">En proceso</div><div class="kpi-val gold">${proc}</div></div>
-    <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val red">${pend}</div></div>
-    <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-val gold" style="font-size:18px">${fmt(ventas)}</div></div>
-    <div class="kpi"><div class="kpi-label">Ganancia total</div><div class="kpi-val green" style="font-size:18px">${fmt(gan)}</div></div>
-    <div class="kpi"><div class="kpi-label">Margen</div><div class="kpi-val blue">${margen}%</div></div>
-    <div class="kpi"><div class="kpi-label">Por entregar</div><div class="kpi-val gold">${proc + pend}</div></div>
+  const ent=peds.filter(p=>p.estatus==='Entregado/Cobrado');
+  const pend=peds.filter(p=>p.estatus==='Pedido').length;
+  const proc=peds.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
+  const ventas=ent.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
+  const gan=ent.reduce((s,p)=>s+ganancia(p),0);
+  const margen=ventas>0?Math.round(gan/ventas*100):0;
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Entregados</div><div class="kpi-val kv-green">${ent.length}</div></div>
+    <div class="kpi"><div class="kpi-label">En proceso</div><div class="kpi-val kv-gold">${proc}</div></div>
+    <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val kv-red">${pend}</div></div>
+    <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-val kv-gold" style="font-size:18px">${fmt(ventas)}</div></div>
+    <div class="kpi"><div class="kpi-label">Ganancia total</div><div class="kpi-val kv-green" style="font-size:18px">${fmt(gan)}</div></div>
+    <div class="kpi"><div class="kpi-label">Margen promedio</div><div class="kpi-val kv-blue">${margen}%</div></div>
+    <div class="kpi"><div class="kpi-label">Fragancias catálogo</div><div class="kpi-val kv-gold">${cat.length}</div></div>
   `;
-  const recent = [...pedidos].reverse().slice(0,6);
-  document.getElementById('recent-list').innerHTML = recent.map(p=>`
+  document.getElementById('recent-list').innerHTML=[...peds].reverse().slice(0,6).map(p=>`
     <div class="card">
       <div class="card-top">
-        <div>
-          <div class="card-name">${p.cliente}</div>
-          <div class="card-sub">${p.fragancia} · ${p.disenador||''}</div>
-        </div>
-        <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
-          ${bEst(p.estatus)}
-          <span class="ganancia-pill">${fmt(ganancia(p))}</span>
-        </div>
+        <div><div class="card-name">${p.cliente}</div><div class="card-sub">${p.fragancia} · ${p.disenador||''}</div><div class="card-sub">${p.fecha}</div></div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${bEst(p.estatus)}<span class="ganancia-pill">${fmt(ganancia(p))}</span></div>
       </div>
     </div>`).join('');
 }
 
-/* ── PEDIDOS ── */
-let _fTxt='', _fEst='', _fLin='';
-function filterPedidos(txt){ _fTxt=txt.toLowerCase(); renderPedidos(); }
-function filterEst(e){ _fEst=e; renderPedidos(); }
-function filterLinPed(l){ _fLin=l; renderPedidos(); }
+// ── PEDIDOS ───────────────────────────────────────────────────────────────
+let _fTxt='',_fEst='';
+function filterPedidos(v){_fTxt=v.toLowerCase();renderPedidos();}
+function setFilterEst(v){_fEst=v;renderPedidos();}
 
 function renderPedidos(){
-  let list = pedidos.filter(p=>{
-    const m = !_fTxt || p.cliente.toLowerCase().includes(_fTxt) || p.fragancia.toLowerCase().includes(_fTxt) || (p.disenador||'').toLowerCase().includes(_fTxt);
-    return m && (!_fEst||p.estatus===_fEst) && (!_fLin||p.linea===_fLin);
+  let list=peds.filter(p=>{
+    const m=!_fTxt||p.cliente.toLowerCase().includes(_fTxt)||p.fragancia.toLowerCase().includes(_fTxt)||(p.disenador||'').toLowerCase().includes(_fTxt);
+    return m&&(!_fEst||p.estatus===_fEst);
   }).reverse();
-  if(!list.length){ document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>'; return; }
-  document.getElementById('pedidos-list').innerHTML = list.map(p=>`
+  if(!list.length){document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>';return;}
+  document.getElementById('pedidos-list').innerHTML=list.map(p=>`
     <div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
           <div class="card-name">${p.cliente}</div>
-          <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia}</div>
-          <div class="card-sub">${p.disenador||''} · ${p.fecha} · ${p.canal||''}</div>
+          <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia} · ${p.disenador||''}</div>
+          <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-          ${bLin(p.linea)}
-          <span class="ganancia-pill">${fmt(ganancia(p))}</span>
+          ${bLin(p.linea)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
         </div>
       </div>
       <div class="card-actions">
         <select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
           ${['Pedido','Comprado proveedor','Elaborado','Entregado/Cobrado'].map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
         </select>
-        <button class="btn btn-sm btn-danger" onclick="eliminar(${p.id})">Eliminar</button>
+        <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
       ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
     </div>`).join('');
 }
 
 function cambiarEst(id,est){
-  const p=pedidos.find(x=>x.id===id);
-  if(!p) return;
+  const p=peds.find(x=>x.id===id); if(!p)return;
   p.estatus=est;
-  if(est==='Elaborado') p.fechaElab=new Date().toISOString().slice(0,10);
-  if(est==='Entregado/Cobrado') p.fechaEntrega=new Date().toISOString().slice(0,10);
-  save(); renderAll(); toast('Estatus actualizado ✓');
+  if(est==='Elaborado')p.fechaElab=new Date().toISOString().slice(0,10);
+  if(est==='Entregado/Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
+  save();renderAll();toast('Estatus actualizado ✓');
 }
-function eliminar(id){
-  if(!confirm('¿Eliminar este pedido?')) return;
-  pedidos=pedidos.filter(x=>x.id!==id);
-  save(); renderAll(); toast('Pedido eliminado');
+function eliminarPed(id){
+  if(!confirm('¿Eliminar este pedido?'))return;
+  peds=peds.filter(x=>x.id!==id);save();renderAll();toast('Pedido eliminado');
 }
 
-/* ── INVENTARIO ── */
+// ── INVENTARIO ────────────────────────────────────────────────────────────
 let _invLin='';
-function filterInvLinea(l){ _invLin=l; renderInv(); }
+function filterInvLinea(v){_invLin=v;renderInv();}
 function renderInv(){
   const consumo={};
-  pedidos.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{ consumo[p.codigo]=(consumo[p.codigo]||0)+1; });
-  const list = CAT.filter(r=>!_invLin||r[4]===_invLin);
-  document.getElementById('inv-list').innerHTML = list.map(r=>{
-    const [cod,,dis,ref,linea]=r;
-    const ini=(EXIST[cod]||0)*60;
-    const elab=consumo[cod]||0;
-    const usado=elab*30;
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
+  const list=cat.filter(r=>!_invLin||r.linea===_invLin);
+  document.getElementById('inv-list').innerHTML=list.map(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
+    const elab=consumo[r.id]||0;
+    const usado=elab*cfg.gesencia;
     const rest=Math.max(0,ini-usado);
     const pct=ini>0?Math.min(100,Math.round(rest/ini*100)):0;
     const cls=rest===0?'out':rest<60?'low':'ok';
     return `<div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
-          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ref}</div>
-          <div class="card-sub">${dis} · ${cod} · ${bLin(linea)}</div>
+          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
+          <div class="card-sub">${r.disenador} · ${r.id} · ${bLin(r.linea)}</div>
           <div class="card-sub" style="margin-top:2px">Inicial ${ini}g · Usado ${usado}g · ${elab} perfume${elab!==1?'s':''}</div>
           <div class="inv-bar-wrap"><div class="inv-bar ${cls}" style="width:${pct}%"></div></div>
         </div>
-        <div class="inv-stock ${cls}" style="margin-left:12px;flex-shrink:0">${rest}g</div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <div class="inv-stock ${cls}" style="margin-left:12px">${rest}g</div>
+          <button class="btn btn-sm btn-blue" onclick="openModal('stock','${r.id}')">✏ Stock</button>
+        </div>
       </div>
     </div>`;
-  }).join('');
+  }).join('')||'<div class="empty">Sin fragancias en esta línea.</div>';
 }
 
-/* ── CATÁLOGO ── */
-let _catTxt='', _catLin='';
-function filterCat(t){ _catTxt=t.toLowerCase(); renderCat(); }
-function filterCatLinea(l){ _catLin=l; renderCat(); }
+// ── CATÁLOGO ──────────────────────────────────────────────────────────────
+let _catTxt='',_catLin='';
+function filterCat(v){_catTxt=v.toLowerCase();renderCat();}
+function filterCatLinea(v){_catLin=v;renderCat();}
 function renderCat(){
-  const cp=costoProd(1.70);
-  const list=CAT.filter(r=>{
-    const m=!_catTxt||r[2].toLowerCase().includes(_catTxt)||r[3].toLowerCase().includes(_catTxt)||r[1].toLowerCase().includes(_catTxt)||r[0].toLowerCase().includes(_catTxt);
-    return m&&(!_catLin||r[4]===_catLin);
+  const list=cat.filter(r=>{
+    const m=!_catTxt||r.referencia.toLowerCase().includes(_catTxt)||r.disenador.toLowerCase().includes(_catTxt)||(r.base||'').toLowerCase().includes(_catTxt)||r.id.toLowerCase().includes(_catTxt);
+    return m&&(!_catLin||r.linea===_catLin);
   });
+  const cp=ce=>costoProd(ce);
   document.getElementById('cat-list').innerHTML=list.map(r=>`
     <div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
-          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r[3]}</div>
-          <div class="card-sub">${r[2]} · ${r[0]}</div>
-          ${r[1]?`<div class="card-sub" style="margin-top:2px;font-style:italic">${r[1]}</div>`:''}
+          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
+          <div class="card-sub">${r.disenador} · ${r.id}</div>
+          ${r.base?`<div class="card-sub" style="font-style:italic;margin-top:2px">${r.base}</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-          ${bLin(r[4])}
-          <span class="ganancia-pill">${fmt(250-cp)}</span>
+          ${bLin(r.linea)}
+          <span class="ganancia-pill">${fmt(cfg.pventa-cp(r.costoEsencia))}</span>
         </div>
       </div>
-    </div>`).join('');
+      <div class="card-actions">
+        <button class="btn btn-sm btn-blue" onclick="openModal('fragancia','${r.id}')">✏ Editar</button>
+        <button class="btn btn-sm btn-danger" onclick="eliminarFrag('${r.id}')">✕ Eliminar</button>
+      </div>
+    </div>`).join('')||'<div class="empty">Sin fragancias.</div>';
+}
+function eliminarFrag(id){
+  if(!confirm('¿Eliminar esta fragancia del catálogo?'))return;
+  cat=cat.filter(x=>x.id!==id);save();renderCat();toast('Fragancia eliminada');
 }
 
-/* ── MODAL ── */
-function openModal(){
-  const sel=document.getElementById('f-fragancia');
-  if(sel.options.length<2){
-    CAT.forEach(r=>{
-      const o=document.createElement('option');
-      o.value=r[0]; o.textContent=`${r[3]} — ${r[2]}`; o.dataset.linea=r[4]; o.dataset.dis=r[2];
-      sel.appendChild(o);
-    });
+// ── MODAL GENÉRICO ────────────────────────────────────────────────────────
+let _modalMode='',_modalId=null;
+const overlay=document.getElementById('modal-overlay');
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+
+function closeModal(){overlay.classList.remove('open');}
+
+function openModal(mode,id=null){
+  _modalMode=mode; _modalId=id;
+  const mc=document.getElementById('modal-content');
+
+  if(mode==='pedido'){
+    const p=id?peds.find(x=>x.id===id):null;
+    const catOpts=cat.map(r=>`<option value="${r.id}" data-linea="${r.linea}" data-dis="${r.disenador}" ${(p&&p.codigo===r.id)?'selected':''}>${r.referencia} — ${r.disenador} (${r.id})</option>`).join('');
+    mc.innerHTML=`
+      <div class="modal-handle"></div>
+      <div class="modal-title">${p?'Editar pedido':'Nuevo pedido'}</div>
+      <div class="form-row">
+        <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" value="${p?p.cliente:''}" placeholder="Nombre"/></div>
+        <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha" value="${p?p.fecha:new Date().toISOString().slice(0,10)}"/></div>
+      </div>
+      <div class="form-group"><label>Fragancia</label>
+        <select id="f-frag" onchange="mAutoFill()">${catOpts}<option value="__otra__" ${(p&&!cat.find(x=>x.id===p.codigo))?'selected':''}>— Otra (ingresar manual) —</option></select>
+      </div>
+      <div class="form-group" id="f-manual-wrap" style="display:${(p&&!cat.find(x=>x.id===p.codigo))?'block':'none'}">
+        <label>Fragancia manual</label><input type="text" id="f-fragmanual" value="${p?p.fragancia:''}" placeholder="Nombre de la fragancia"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Línea</label>
+          <select id="f-linea">
+            ${['Caballero','Dama','Unisex','Nicho'].map(l=>`<option ${(p&&p.linea===l)?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group"><label>Canal</label>
+          <select id="f-canal">
+            ${['WhatsApp','Instagram','Facebook','Referido','Directo'].map(c=>`<option ${(p&&p.canal===c)?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Precio venta ($)</label><input type="number" id="f-precio" value="${p?p.precio:cfg.pventa}"/></div>
+        <div class="form-group"><label>Costo esencia ($/g)</label><input type="number" id="f-cesencia" value="${p?p.costoEsencia:1.70}" step="0.10" oninput="mRecalc()"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Fecha promesa entrega</label><input type="date" id="f-promesa" value="${p&&p.fechaPromesa?p.fechaPromesa:''}"/></div>
+        <div class="form-group"><label>Costo producción (auto)</label><input type="text" id="f-cprod" readonly/></div>
+      </div>
+      ${p?`<div class="form-group"><label>Estatus</label>
+        <select id="f-estatus">
+          ${['Pedido','Comprado proveedor','Elaborado','Entregado/Cobrado'].map(e=>`<option ${p.estatus===e?'selected':''}>${e}</option>`).join('')}
+        </select></div>`:''}
+      <div class="form-group"><label>Notas</label><textarea id="f-notas">${p?p.notas:''}</textarea></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-gold" onclick="savePed()">Guardar</button>
+      </div>`;
+    mRecalc();
   }
-  document.getElementById('f-fecha').value=new Date().toISOString().slice(0,10);
-  recalcCosto();
-  document.getElementById('modal-overlay').classList.add('open');
-}
-function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
-document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
 
-function autoFill(){
-  const sel=document.getElementById('f-fragancia');
+  else if(mode==='fragancia'){
+    const r=id?cat.find(x=>x.id===id):null;
+    mc.innerHTML=`
+      <div class="modal-handle"></div>
+      <div class="modal-title">${r?'Editar fragancia':'Nueva fragancia'}</div>
+      <div class="form-row">
+        <div class="form-group"><label>ID / Código</label><input type="text" id="fc-id" value="${r?r.id:''}" placeholder="CP01234" ${r?'readonly':''}/></div>
+        <div class="form-group"><label>Línea</label>
+          <select id="fc-linea">${['Caballero','Dama','Unisex','Nicho'].map(l=>`<option ${(r&&r.linea===l)?'selected':''}>${l}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="form-group"><label>Nombre referencia (fragancia original)</label><input type="text" id="fc-ref" value="${r?r.referencia:''}" placeholder="BACCARAT ROUGE"/></div>
+      <div class="form-group"><label>Diseñador / Casa</label><input type="text" id="fc-dis" value="${r?r.disenador:''}" placeholder="MAISON FRANCIS KURKDJIAN"/></div>
+      <div class="form-group"><label>Nombre interno / Base (opcional)</label><input type="text" id="fc-base" value="${r?r.base||'':''}" placeholder="BASE ROJO BACCARAT NICHE"/></div>
+      <div class="form-row">
+        <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fc-cesencia" value="${r?r.costoEsencia:1.70}" step="0.10"/></div>
+        <div class="form-group"><label>Stock inicial (gramos)</label><input type="number" id="fc-stock" value="${r?r.stockGramos:60}"/></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-gold" onclick="saveFrag('${id||''}')">Guardar</button>
+      </div>`;
+  }
+
+  else if(mode==='stock'){
+    const r=cat.find(x=>x.id===id);
+    if(!r)return;
+    mc.innerHTML=`
+      <div class="modal-handle"></div>
+      <div class="modal-title">Actualizar stock</div>
+      <div style="margin-bottom:14px"><div class="card-name">${r.referencia}</div><div class="card-sub">${r.disenador} · ${r.id}</div></div>
+      <div class="form-group"><label>Stock actual en gramos</label><input type="number" id="fs-stock" value="${r.stockGramos}"/></div>
+      <div class="form-group"><label>Agregar gramos recibidos del proveedor</label><input type="number" id="fs-agregar" value="0" placeholder="ej. 60 si recibiste un pedido nuevo"/></div>
+      <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fs-cesencia" value="${r.costoEsencia}" step="0.10"/></div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-gold" onclick="saveStock('${id}')">Guardar stock</button>
+      </div>`;
+  }
+
+  overlay.classList.add('open');
+}
+
+function mAutoFill(){
+  const sel=document.getElementById('f-frag');
   const opt=sel.options[sel.selectedIndex];
+  const wrap=document.getElementById('f-manual-wrap');
+  if(sel.value==='__otra__'){wrap.style.display='block';return;}
+  wrap.style.display='none';
   if(opt&&opt.dataset.linea) document.getElementById('f-linea').value=opt.dataset.linea;
-  recalcCosto();
 }
-function recalcCosto(){
-  const ce=parseFloat(document.getElementById('f-cesencia').value)||1.70;
-  document.getElementById('f-cprod').value=fmt(costoProd(ce));
+function mRecalc(){
+  const ce=parseFloat(document.getElementById('f-cesencia')?.value)||1.70;
+  const el=document.getElementById('f-cprod');
+  if(el) el.value=fmt(costoProd(ce));
 }
 
-function savePedido(){
-  const sel=document.getElementById('f-fragancia');
+function savePed(){
+  const sel=document.getElementById('f-frag');
   const opt=sel.options[sel.selectedIndex];
-  const p={
-    id:nextId++,
-    fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
-    cliente:document.getElementById('f-cliente').value.trim()||'Sin nombre',
-    codigo:sel.value,
-    fragancia:opt?opt.textContent.split(' — ')[0]:'',
-    disenador:opt?opt.dataset.dis||'':'',
-    linea:document.getElementById('f-linea').value,
-    estatus:'Pedido',
-    canal:document.getElementById('f-canal').value,
-    fechaPromesa:document.getElementById('f-promesa').value,
-    precio:parseFloat(document.getElementById('f-precio').value)||250,
-    costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||1.70,
-    notas:document.getElementById('f-notas').value,
-  };
-  pedidos.push(p);
-  save(); closeModal(); renderAll(); toast('Pedido guardado ✓');
-  document.getElementById('f-cliente').value='';
-  document.getElementById('f-notas').value='';
-  document.getElementById('f-fragancia').value='';
+  const esOtra=sel.value==='__otra__';
+  const fragNombre=esOtra?(document.getElementById('f-fragmanual')?.value||'Sin nombre'):(opt?opt.textContent.split(' — ')[0]:'');
+  const dis=esOtra?'':(opt?opt.dataset.dis||'':'');
+  const codigo=esOtra?'OTRO':sel.value;
+
+  if(_modalId){
+    const p=peds.find(x=>x.id===_modalId); if(!p)return;
+    p.fecha=document.getElementById('f-fecha').value;
+    p.cliente=document.getElementById('f-cliente').value.trim()||'Sin nombre';
+    p.codigo=codigo; p.fragancia=fragNombre; p.disenador=dis;
+    p.linea=document.getElementById('f-linea').value;
+    p.estatus=document.getElementById('f-estatus')?.value||p.estatus;
+    p.canal=document.getElementById('f-canal').value;
+    p.fechaPromesa=document.getElementById('f-promesa').value;
+    p.precio=parseFloat(document.getElementById('f-precio').value)||cfg.pventa;
+    p.costoEsencia=parseFloat(document.getElementById('f-cesencia').value)||1.70;
+    p.notas=document.getElementById('f-notas').value;
+    toast('Pedido actualizado ✓');
+  } else {
+    peds.push({
+      id:nextId++,
+      fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
+      cliente:document.getElementById('f-cliente').value.trim()||'Sin nombre',
+      codigo,fragancia:fragNombre,disenador:dis,
+      linea:document.getElementById('f-linea').value,
+      estatus:'Pedido',
+      canal:document.getElementById('f-canal').value,
+      fechaPromesa:document.getElementById('f-promesa').value,
+      precio:parseFloat(document.getElementById('f-precio').value)||cfg.pventa,
+      costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||1.70,
+      notas:document.getElementById('f-notas').value,
+    });
+    toast('Pedido guardado ✓');
+  }
+  save(); closeModal(); renderAll();
 }
 
+function saveFrag(existingId){
+  const id=(document.getElementById('fc-id')?.value||'').trim().toUpperCase();
+  if(!id){toast('⚠ El código es requerido');return;}
+  const data={
+    id,base:document.getElementById('fc-base')?.value||'',
+    disenador:(document.getElementById('fc-dis')?.value||'').toUpperCase(),
+    referencia:(document.getElementById('fc-ref')?.value||'').toUpperCase(),
+    linea:document.getElementById('fc-linea')?.value||'Caballero',
+    costoEsencia:parseFloat(document.getElementById('fc-cesencia')?.value)||1.70,
+    stockGramos:parseFloat(document.getElementById('fc-stock')?.value)||60,
+  };
+  if(existingId){
+    const idx=cat.findIndex(x=>x.id===existingId);
+    if(idx>=0) cat[idx]={...cat[idx],...data};
+    toast('Fragancia actualizada ✓');
+  } else {
+    if(cat.find(x=>x.id===id)){toast('⚠ Ese ID ya existe');return;}
+    cat.push(data);
+    toast('Fragancia agregada ✓');
+  }
+  save(); closeModal(); renderCat();
+}
+
+function saveStock(id){
+  const r=cat.find(x=>x.id===id); if(!r)return;
+  const base=parseFloat(document.getElementById('fs-stock')?.value)||0;
+  const agregar=parseFloat(document.getElementById('fs-agregar')?.value)||0;
+  r.stockGramos=base+agregar;
+  r.costoEsencia=parseFloat(document.getElementById('fs-cesencia')?.value)||r.costoEsencia;
+  save(); closeModal(); renderInv(); toast('Stock actualizado ✓');
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────────
+function loadCfg(){
+  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envase','atomizador','sticker','pventa'].forEach(k=>{
+    const el=document.getElementById('cfg-'+k); if(el) el.value=cfg[k];
+  });
+  updateCfgDisplay();
+}
+function saveCfg(){
+  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envase','atomizador','sticker','pventa'].forEach(k=>{
+    const el=document.getElementById('cfg-'+k); if(el) cfg[k]=parseFloat(el.value)||0;
+  });
+  save(); updateCfgDisplay();
+}
+function updateCfgDisplay(){
+  const el=document.getElementById('cfg-costo-display');
+  if(el) el.textContent=fmt(costoFijo());
+}
+
+// ── EXPORT / IMPORT ───────────────────────────────────────────────────────
+function exportCSV(tipo){
+  let csv='',fn='';
+  if(tipo==='pedidos'){
+    fn='instinto_pedidos.csv';
+    csv='id,fecha,cliente,codigo,fragancia,disenador,linea,estatus,canal,precio,costoEsencia,ganancia,notas\n';
+    peds.forEach(p=>{ csv+=`${p.id},"${p.fecha}","${p.cliente}","${p.codigo}","${p.fragancia}","${p.disenador||''}","${p.linea}","${p.estatus}","${p.canal||''}",${p.precio},${p.costoEsencia},${Math.round(ganancia(p))},"${p.notas||''}"\n`; });
+  } else if(tipo==='catalogo'){
+    fn='instinto_catalogo.csv';
+    csv='codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\n';
+    cat.forEach(r=>{ csv+=`"${r.id}","${r.base||''}","${r.disenador}","${r.referencia}","${r.linea}",${r.costoEsencia},${r.stockGramos}\n`; });
+  } else {
+    fn='instinto_inventario.csv';
+    const consumo={};
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
+    csv='codigo,referencia,disenador,linea,stockInicial,usado,restante\n';
+    cat.forEach(r=>{ const ini=r.stockGramos,uso=(consumo[r.id]||0)*cfg.gesencia,rest=Math.max(0,ini-uso); csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${ini},${uso},${rest}\n`; });
+  }
+  dlBlob(csv,'text/csv',fn);
+}
+
+function exportJSON(){
+  dlBlob(JSON.stringify({cfg,cat,peds},null,2),'application/json','instinto_backup_'+new Date().toISOString().slice(0,10)+'.json');
+}
+
+function dlBlob(content,type,filename){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=filename; a.click();
+  toast('Descargando '+filename+' ✓');
+}
+
+function descargarPlantilla(tipo){
+  if(tipo==='catalogo'){
+    dlBlob('codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\nCP99999,BASE EJEMPLO,DIOR,SAUVAGE,Caballero,1.70,60\n','text/csv','plantilla_catalogo.csv');
+  }
+}
+
+function importCSV(input,tipo){
+  const file=input.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').filter(l=>l.trim());
+    const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
+    const rows=lines.slice(1).map(l=>{
+      const vals=l.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+      const obj={};
+      headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+      return obj;
+    });
+    if(tipo==='catalogo'){
+      let added=0,updated=0;
+      rows.forEach(r=>{
+        if(!r.codigo)return;
+        const existing=cat.find(x=>x.id===r.codigo.toUpperCase());
+        const data={id:r.codigo.toUpperCase(),base:r.base||'',disenador:(r.disenador||'').toUpperCase(),referencia:(r.referencia||'').toUpperCase(),linea:r.linea||'Caballero',costoEsencia:parseFloat(r.costoEsencia)||1.70,stockGramos:parseFloat(r.stockGramos)||60};
+        if(existing){Object.assign(existing,data);updated++;}
+        else{cat.push(data);added++;}
+      });
+      save(); renderCat();
+      toast(`Importado: ${added} nuevas, ${updated} actualizadas ✓`);
+    }
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+function importJSON(input){
+  const file=input.files[0]; if(!file)return;
+  if(!confirm('¿Restaurar backup? Esto reemplazará todos los datos actuales.'))return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(data.cfg)cfg=data.cfg;
+      if(data.cat)cat=data.cat;
+      if(data.peds)peds=data.peds;
+      nextId=Math.max(...peds.map(p=>p.id),0)+1;
+      save(); renderAll(); loadCfg();
+      toast('Backup restaurado ✓');
+    }catch(err){toast('⚠ Error al leer el archivo JSON');}
+    input.value='';
+  };
+  reader.readAsText(file);
+}
+
+// ── RESET ─────────────────────────────────────────────────────────────────
+function resetCatalogo(){ if(!confirm('¿Limpiar catálogo? Los pedidos se conservan.'))return; cat=[]; save(); renderCat(); toast('Catálogo limpiado'); }
+function resetPedidos(){ if(!confirm('¿Eliminar todos los pedidos?'))return; peds=[]; nextId=1; save(); renderAll(); toast('Pedidos eliminados'); }
+function resetTodo(){ if(!confirm('¿BORRAR TODO? Esta acción no se puede deshacer.'))return; localStorage.clear(); location.reload(); }
+
+// ── RENDER ALL ────────────────────────────────────────────────────────────
 function renderAll(){ renderDash(); renderPedidos(); }
 
-/* ── PWA INSTALL ── */
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault(); deferredPrompt=e;
-  document.getElementById('install-banner').style.display='block';
-});
-function installApp(){
-  if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ document.getElementById('install-banner').style.display='none'; deferredPrompt=null; }); }
-}
-window.addEventListener('appinstalled',()=>{ document.getElementById('install-banner').style.display='none'; toast('¡App instalada! ✓'); });
-
-/* ── SERVICE WORKER ── */
+// ── SERVICE WORKER ────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
 renderAll();
+loadCfg();
 </script>
 </body>
 </html>
