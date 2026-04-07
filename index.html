@@ -50,12 +50,12 @@ nav::-webkit-scrollbar{display:none}
 
 .badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
 .b-pedido{background:#3D3300;color:#F0C040}.b-comprado{background:#0D2B45;color:#5B9BD5}
-.b-elaborado{background:#2D2000;color:#D4A017}.b-entregado{background:#0D2D1A;color:#4CAF7D}
+.b-elaborado{background:#2D2000;color:#D4A017}.b-entregado{background:#0D2D1A;color:#4CAF7D}.b-cobrado{background:#1A2D0D;color:#8BC34A}
 .b-d{background:#3D0D1F;color:#E07090}.b-c{background:#0D1F3D;color:#5B9BD5}
 .b-u{background:#2D2000;color:#D4A017}.b-n{background:#0D2D1A;color:#4CAF7D}
 @media(prefers-color-scheme:light){
   .b-pedido{background:#FFF3CD;color:#856404}.b-comprado{background:#D1ECF1;color:#185FA5}
-  .b-elaborado{background:#FDF3DC;color:#9A6C00}.b-entregado{background:#D4EDDA;color:#28A745}
+  .b-elaborado{background:#FDF3DC;color:#9A6C00}.b-entregado{background:#D4EDDA;color:#28A745}.b-cobrado{background:#C8E6C9;color:#1B5E20}
   .b-d{background:#FCE4EC;color:#AD1457}.b-c{background:#D1ECF1;color:#185FA5}
   .b-u{background:#FDF3DC;color:#9A6C00}.b-n{background:#D4EDDA;color:#28A745}
 }
@@ -144,7 +144,7 @@ nav::-webkit-scrollbar{display:none}
     <select onchange="setFilterEst(this.value)">
       <option value="">Todos</option>
       <option>Pedido</option><option>Comprado proveedor</option>
-      <option>Elaborado</option><option>Entregado/Cobrado</option>
+      <option>Elaborado</option><option>Entregado</option><option>Cobrado</option>
     </select>
   </div>
   <div id="pedidos-list"></div>
@@ -204,14 +204,30 @@ nav::-webkit-scrollbar{display:none}
   <div id="s-import" style="display:none">
     <div class="export-area">
       <h4>Importar catálogo desde CSV</h4>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">El CSV debe tener columnas: codigo, base, disenador, referencia, linea, costoEsencia, stockGramos</p>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, base, disenador, referencia, linea, costoEsencia, stockGramos</p>
       <div class="btns">
         <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv" onchange="importCSV(this,'catalogo')"/></div>
-        <button class="btn" onclick="descargarPlantilla('catalogo')">📋 Plantilla CSV</button>
+        <button class="btn" onclick="descargarPlantilla('catalogo')">📋 Plantilla</button>
       </div>
     </div>
     <div class="export-area">
-      <h4>Restaurar backup</h4>
+      <h4>Importar pedidos desde CSV</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: fecha, cliente, codigo, fragancia, disenador, linea, estatus, canal, precio, costoEsencia, notas — Los pedidos nuevos se agregan sin borrar los existentes.</p>
+      <div class="btns">
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV pedidos</button><input type="file" accept=".csv" onchange="importCSV(this,'pedidos')"/></div>
+        <button class="btn" onclick="descargarPlantilla('pedidos')">📋 Plantilla</button>
+      </div>
+    </div>
+    <div class="export-area">
+      <h4>Actualizar inventario desde CSV</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, stockGramos, costoEsencia — Actualiza el stock de las fragancias que ya existen en el catálogo.</p>
+      <div class="btns">
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv" onchange="importCSV(this,'inventario')"/></div>
+        <button class="btn" onclick="descargarPlantilla('inventario')">📋 Plantilla</button>
+      </div>
+    </div>
+    <div class="export-area">
+      <h4>Restaurar backup completo</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Restaura todos los datos desde un archivo JSON de backup</p>
       <div class="btns">
         <div class="file-input-wrap"><button class="btn btn-danger">⚠ Restaurar JSON</button><input type="file" accept=".json" onchange="importJSON(this)"/></div>
@@ -356,7 +372,8 @@ const fmt  = n => '$' + Math.round(n).toLocaleString('es-MX');
 const costoFijo = () => cfg.gfijador*cfg.pfijador + cfg.gferomonas*cfg.pferomonas + cfg.gperfumol*cfg.pperfumol + cfg.envase + cfg.atomizador + cfg.sticker;
 const costoProd = ce => costoFijo() + cfg.gesencia*(parseFloat(ce)||1.70);
 const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia);
-const EST_CLS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado/Cobrado':'b-entregado'};
+const EST_CLS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado':'b-entregado','Cobrado':'b-cobrado'};
+const TODOS_EST = ['Pedido','Comprado proveedor','Elaborado','Entregado','Cobrado'];
 const LIN_CLS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
 const bEst = e => `<span class="badge ${EST_CLS[e]||''}">${e}</span>`;
 const bLin = l => `<span class="badge ${LIN_CLS[l]||''}">${l}</span>`;
@@ -387,7 +404,7 @@ function showStab(id,btn){
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash(){
-  const ent=peds.filter(p=>p.estatus==='Entregado/Cobrado');
+  const ent=peds.filter(p=>p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado');
   const pend=peds.filter(p=>p.estatus==='Pedido').length;
   const proc=peds.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
   const ventas=ent.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
@@ -395,7 +412,7 @@ function renderDash(){
   const margen=ventas>0?Math.round(gan/ventas*100):0;
   document.getElementById('kpis').innerHTML=`
     <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
-    <div class="kpi"><div class="kpi-label">Entregados</div><div class="kpi-val kv-green">${ent.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
     <div class="kpi"><div class="kpi-label">En proceso</div><div class="kpi-val kv-gold">${proc}</div></div>
     <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val kv-red">${pend}</div></div>
     <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-val kv-gold" style="font-size:18px">${fmt(ventas)}</div></div>
@@ -437,7 +454,7 @@ function renderPedidos(){
       </div>
       <div class="card-actions">
         <select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
-          ${['Pedido','Comprado proveedor','Elaborado','Entregado/Cobrado'].map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
+          ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
         </select>
         <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
@@ -450,7 +467,7 @@ function cambiarEst(id,est){
   const p=peds.find(x=>x.id===id); if(!p)return;
   p.estatus=est;
   if(est==='Elaborado')p.fechaElab=new Date().toISOString().slice(0,10);
-  if(est==='Entregado/Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
+  if(est==='Entregado'||est==='Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
   save();renderAll();toast('Estatus actualizado ✓');
 }
 function eliminarPed(id){
@@ -463,7 +480,7 @@ let _invLin='';
 function filterInvLinea(v){_invLin=v;renderInv();}
 function renderInv(){
   const consumo={};
-  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
   const list=cat.filter(r=>!_invLin||r.linea===_invLin);
   document.getElementById('inv-list').innerHTML=list.map(r=>{
     const ini=parseFloat(r.stockGramos)||0;
@@ -590,7 +607,7 @@ function openModal(mode,id=null){
       </div>
       ${p?`<div class="form-group"><label>Estatus</label>
         <select id="f-estatus">
-          ${['Pedido','Comprado proveedor','Elaborado','Entregado/Cobrado'].map(e=>`<option ${p.estatus===e?'selected':''}>${e}</option>`).join('')}
+          ${TODOS_EST.map(e=>`<option ${p.estatus===e?'selected':''}>${e}</option>`).join('')}
         </select></div>`:''}
       <div class="form-group"><label>Notas</label><textarea id="f-notas">${p?p.notas:''}</textarea></div>
       <div class="modal-footer">
@@ -807,7 +824,7 @@ function exportCSV(tipo){
   } else {
     fn='instinto_inventario.csv';
     const consumo={};
-    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
     csv='codigo,referencia,disenador,linea,stockInicial,usado,restante\n';
     cat.forEach(r=>{ const ini=r.stockGramos,uso=(consumo[r.id]||0)*cfg.gesencia,rest=Math.max(0,ini-uso); csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${ini},${uso},${rest}\n`; });
   }
@@ -828,6 +845,10 @@ function dlBlob(content,type,filename){
 function descargarPlantilla(tipo){
   if(tipo==='catalogo'){
     dlBlob('codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\nCP99999,BASE EJEMPLO,DIOR,SAUVAGE,Caballero,1.70,60\n','text/csv','plantilla_catalogo.csv');
+  } else if(tipo==='pedidos'){
+    dlBlob('fecha,cliente,codigo,fragancia,disenador,linea,estatus,canal,precio,costoEsencia,notas\n2026-04-07,Nombre Cliente,CP02158,SAUVAGE,DIOR,Caballero,Pedido,WhatsApp,250,1.70,\n','text/csv','plantilla_pedidos.csv');
+  } else if(tipo==='inventario'){
+    dlBlob('codigo,stockGramos,costoEsencia\nCP02158,60,1.70\nUP01054,120,1.70\n','text/csv','plantilla_inventario.csv');
   }
 }
 
@@ -838,11 +859,13 @@ function importCSV(input,tipo){
     const lines=e.target.result.split('\n').filter(l=>l.trim());
     const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
     const rows=lines.slice(1).map(l=>{
-      const vals=l.match(/(".*?"|[^,]+)(?=,|$)/g)||[];
+      const vals=[]; let cur='',inQ=false;
+      for(const ch of l+','){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){vals.push(cur.trim());cur='';}else{cur+=ch;}}
       const obj={};
       headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
       return obj;
-    });
+    }).filter(r=>Object.values(r).some(v=>v));
+
     if(tipo==='catalogo'){
       let added=0,updated=0;
       rows.forEach(r=>{
@@ -853,7 +876,49 @@ function importCSV(input,tipo){
         else{cat.push(data);added++;}
       });
       save(); renderCat();
-      toast(`Importado: ${added} nuevas, ${updated} actualizadas ✓`);
+      toast(`Catálogo: ${added} nuevas, ${updated} actualizadas ✓`);
+
+    } else if(tipo==='pedidos'){
+      let added=0;
+      const maxId=Math.max(...peds.map(p=>p.id),nextId-1);
+      let newId=maxId+1;
+      rows.forEach(r=>{
+        if(!r.cliente&&!r.fragancia)return;
+        const estNorm={'entregado/cobrado':'Entregado','cobrado':'Cobrado','entregado':'Entregado','elaborado':'Elaborado','comprado proveedor':'Comprado proveedor','pedido':'Pedido'};
+        const estatus=estNorm[(r.estatus||'pedido').toLowerCase()]||'Pedido';
+        peds.push({
+          id:newId++,
+          fecha:r.fecha||new Date().toISOString().slice(0,10),
+          cliente:r.cliente||'Sin nombre',
+          codigo:(r.codigo||'').toUpperCase(),
+          fragancia:(r.fragancia||'').toUpperCase(),
+          disenador:(r.disenador||'').toUpperCase(),
+          linea:r.linea||'Caballero',
+          estatus,
+          canal:r.canal||'WhatsApp',
+          precio:parseFloat(r.precio)||cfg.pventa,
+          costoEsencia:parseFloat(r.costoEsencia)||1.70,
+          notas:r.notas||'',
+        });
+        added++;
+      });
+      nextId=Math.max(...peds.map(p=>p.id),0)+1;
+      save(); renderAll();
+      toast(`Pedidos: ${added} importados ✓`);
+
+    } else if(tipo==='inventario'){
+      let updated=0;
+      rows.forEach(r=>{
+        if(!r.codigo)return;
+        const frag=cat.find(x=>x.id===r.codigo.toUpperCase());
+        if(frag){
+          if(r.stockGramos) frag.stockGramos=parseFloat(r.stockGramos);
+          if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
+          updated++;
+        }
+      });
+      save(); renderInv();
+      toast(`Inventario: ${updated} fragancias actualizadas ✓`);
     }
     input.value='';
   };
