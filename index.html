@@ -722,7 +722,7 @@ function saveFrag(existingId){
     referencia:(document.getElementById('fc-ref')?.value||'').toUpperCase(),
     linea:document.getElementById('fc-linea')?.value||'Caballero',
     costoEsencia:parseFloat(document.getElementById('fc-cesencia')?.value)||1.70,
-    stockGramos:parseFloat(document.getElementById('fc-stock')?.value)||60,
+    stockGramos:parseFloat(document.getElementById('fc-stock')?.value??60),
   };
   if(existingId){
     const idx=cat.findIndex(x=>x.id===existingId);
