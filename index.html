@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#1A1A1A"/>
+<meta name="description" content="Instinto Fragancias — Sistema de pedidos"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black"/>
+<meta name="apple-mobile-web-app-title" content="Instinto"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<title>Instinto Fragancias</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#111;--bg2:#1C1C1C;--bg3:#252525;--bg4:#2E2E2E;
+  --text:#F0EDE6;--text2:#A09A8E;--text3:#6B6560;
+  --gold:#C9A84C;--gold2:#E8C96A;--gold3:#8C6E2A;
+  --green:#4CAF7D;--red:#E05555;--blue:#5B9BD5;--amber:#D4A017;
+  --border:#333;--border2:#444;
+  --radius:10px;--radius-sm:6px;
+}
+@media(prefers-color-scheme:light){
+  :root{
+    --bg:#F5F2ED;--bg2:#FFFFFF;--bg3:#EDE9E2;--bg4:#E0DCD4;
+    --text:#1A1A1A;--text2:#5A5550;--text3:#9A9590;
+    --border:#D8D4CC;--border2:#C8C4BC;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100dvh;padding-bottom:80px}
+
+/* HEADER */
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:#1A1A1A;border:1px solid var(--gold3);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--gold);letter-spacing:1px}
+.logo-text{font-size:15px;font-weight:600;color:var(--text)}
+.logo-sub{font-size:11px;color:var(--text2)}
+.btn-nuevo{background:var(--gold);color:#111;border:none;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-nuevo:active{opacity:0.8}
+
+/* TABS */
+nav{background:var(--bg2);border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;position:sticky;top:63px;z-index:49}
+nav::-webkit-scrollbar{display:none}
+.nav-tab{flex:1;min-width:72px;padding:12px 8px;text-align:center;font-size:12px;font-weight:500;color:var(--text2);border:none;background:none;cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:color 0.15s}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* SECTIONS */
+.section{display:none;padding:16px}
+.section.active{display:block}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px}
+.kpi{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px}
+.kpi-label{font-size:11px;color:var(--text2);margin-bottom:4px}
+.kpi-val{font-size:24px;font-weight:600}
+.kpi-val.gold{color:var(--gold)}
+.kpi-val.green{color:var(--green)}
+.kpi-val.blue{color:var(--blue)}
+.kpi-val.red{color:var(--red)}
+
+/* CARDS */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin-bottom:10px}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.card-name{font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px}
+.card-sub{font-size:12px;color:var(--text2)}
+.card-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;white-space:nowrap}
+.b-pedido{background:#3D3300;color:#F0C040}
+.b-comprado{background:#0D2B45;color:#5B9BD5}
+.b-elaborado{background:#2D2000;color:#D4A017}
+.b-entregado{background:#0D2D1A;color:#4CAF7D}
+.b-d{background:#3D0D1F;color:#E07090}
+.b-c{background:#0D1F3D;color:#5B9BD5}
+.b-u{background:#2D2000;color:#D4A017}
+.b-n{background:#0D2D1A;color:#4CAF7D}
+@media(prefers-color-scheme:light){
+  .b-pedido{background:#FFF3CD;color:#856404}
+  .b-comprado{background:#D1ECF1;color:#185FA5}
+  .b-elaborado{background:#FDF3DC;color:#9A6C00}
+  .b-entregado{background:#D4EDDA;color:#28A745}
+  .b-d{background:#FCE4EC;color:#AD1457}
+  .b-c{background:#D1ECF1;color:#185FA5}
+  .b-u{background:#FDF3DC;color:#9A6C00}
+  .b-n{background:#D4EDDA;color:#28A745}
+}
+
+/* BUTTONS */
+.btn{padding:7px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-size:12px;cursor:pointer}
+.btn:active{opacity:0.7}
+.btn-gold{background:var(--gold);color:#111;border-color:var(--gold);font-weight:600}
+.btn-danger{background:transparent;color:var(--red);border-color:var(--red)}
+.btn-sm{padding:5px 10px;font-size:11px}
+
+/* ESTATUS SELECT */
+.est-select{padding:4px 8px;border-radius:4px;border:none;font-size:11px;font-weight:600;cursor:pointer;-webkit-appearance:none;appearance:none;background:transparent}
+
+/* SEARCH */
+.search-bar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.search-bar input{flex:1;font-size:13px;padding:9px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+.search-bar select{font-size:12px;padding:9px 8px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border-radius:16px 16px 0 0;padding:20px 16px;width:100%;max-width:560px;max-height:92dvh;overflow-y:auto}
+.modal-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.form-group{margin-bottom:12px}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;font-weight:500}
+.form-group input,.form-group select,.form-group textarea{width:100%;font-size:14px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text)}
+.form-group textarea{resize:vertical;min-height:60px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-footer{display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border)}
+.modal-footer .btn{flex:1}
+
+/* INVENTARIO BARS */
+.inv-bar-wrap{height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:6px}
+.inv-bar{height:100%;border-radius:3px;transition:width 0.3s}
+.inv-bar.ok{background:var(--green)}
+.inv-bar.low{background:var(--amber)}
+.inv-bar.out{background:var(--red)}
+.inv-stock{font-size:20px;font-weight:600}
+.inv-stock.ok{color:var(--green)}
+.inv-stock.low{color:var(--amber)}
+.inv-stock.out{color:var(--red)}
+
+/* SECTION HEADER */
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-title{font-size:14px;font-weight:600;color:var(--text)}
+
+/* EMPTY */
+.empty{text-align:center;padding:32px 16px;color:var(--text2);font-size:13px}
+
+/* GANANCIA PILL */
+.ganancia-pill{background:rgba(76,175,125,0.15);color:var(--green);padding:3px 9px;border-radius:4px;font-size:12px;font-weight:600}
+
+/* INSTALL BANNER */
+#install-banner{display:none;background:linear-gradient(135deg,#1A1A1A,#2D2200);border:1px solid var(--gold3);border-radius:var(--radius);padding:12px 14px;margin-bottom:14px;cursor:pointer}
+#install-banner .ib-title{font-size:13px;font-weight:600;color:var(--gold);margin-bottom:2px}
+#install-banner .ib-sub{font-size:11px;color:var(--text2)}
+
+/* TOAST */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">IF</div>
+    <div>
+      <div class="logo-text">Instinto Fragancias</div>
+      <div class="logo-sub">Sistema de pedidos</div>
+    </div>
+  </div>
+  <button class="btn-nuevo" onclick="openModal()">+ Pedido</button>
+</header>
+
+<nav>
+  <button class="nav-tab active" onclick="showTab('dashboard',this)">Dashboard</button>
+  <button class="nav-tab" onclick="showTab('pedidos',this)">Pedidos</button>
+  <button class="nav-tab" onclick="showTab('inventario',this)">Inventario</button>
+  <button class="nav-tab" onclick="showTab('catalogo',this)">Catálogo</button>
+</nav>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+  <div id="install-banner" onclick="installApp()">
+    <div class="ib-title">📲 Instalar app en tu celular</div>
+    <div class="ib-sub">Toca aquí para agregar Instinto a tu pantalla de inicio</div>
+  </div>
+  <div class="kpi-grid" id="kpis"></div>
+  <div class="section-head"><span class="section-title">Pedidos recientes</span></div>
+  <div id="recent-list"></div>
+</div>
+
+<!-- PEDIDOS -->
+<div id="pedidos" class="section">
+  <div class="search-bar">
+    <input type="search" placeholder="Buscar cliente o fragancia..." oninput="filterPedidos(this.value)"/>
+    <select onchange="filterEst(this.value)">
+      <option value="">Todos</option>
+      <option>Pedido</option>
+      <option>Comprado proveedor</option>
+      <option>Elaborado</option>
+      <option>Entregado/Cobrado</option>
+    </select>
+  </div>
+  <div id="pedidos-list"></div>
+</div>
+
+<!-- INVENTARIO -->
+<div id="inventario" class="section">
+  <div class="section-head">
+    <span class="section-title">Stock de esencias</span>
+    <select onchange="filterInvLinea(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
+      <option value="">Todas las líneas</option>
+      <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
+    </select>
+  </div>
+  <div id="inv-list"></div>
+</div>
+
+<!-- CATÁLOGO -->
+<div id="catalogo" class="section">
+  <div class="search-bar">
+    <input type="search" placeholder="Buscar fragancia o marca..." oninput="filterCat(this.value)"/>
+    <select onchange="filterCatLinea(this.value)">
+      <option value="">Todas</option>
+      <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
+    </select>
+  </div>
+  <div id="cat-list"></div>
+</div>
+
+<!-- MODAL NUEVO PEDIDO -->
+<div class="modal-overlay" id="modal-overlay">
+<div class="modal">
+  <div class="modal-handle"></div>
+  <div class="modal-title">Nuevo pedido</div>
+
+  <div class="form-row">
+    <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" placeholder="Nombre"/></div>
+    <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha"/></div>
+  </div>
+  <div class="form-group"><label>Fragancia</label>
+    <select id="f-fragancia" onchange="autoFill()"><option value="">Selecciona...</option></select>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Línea</label>
+      <select id="f-linea"><option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option></select>
+    </div>
+    <div class="form-group"><label>Canal de venta</label>
+      <select id="f-canal"><option>WhatsApp</option><option>Instagram</option><option>Facebook</option><option>Referido</option><option>Directo</option></select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Precio venta ($)</label><input type="number" id="f-precio" value="250"/></div>
+    <div class="form-group"><label>Costo esencia/g ($)</label><input type="number" id="f-cesencia" value="1.70" step="0.1" oninput="recalcCosto()"/></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Fecha promesa entrega</label><input type="date" id="f-promesa"/></div>
+    <div class="form-group"><label>Costo producción (auto)</label><input type="text" id="f-cprod" readonly style="background:var(--bg4);color:var(--gold);font-weight:600"/></div>
+  </div>
+  <div class="form-group"><label>Notas</label><textarea id="f-notas" placeholder="Instrucciones especiales, color de etiqueta, etc."></textarea></div>
+
+  <div class="modal-footer">
+    <button class="btn" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-gold" onclick="savePedido()">Guardar pedido</button>
+  </div>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const COSTO_FIJO = 5*1.75 + 3.5*6.00 + 21.5*1.68 + 17.50 + 13.50 + 4.00;
+
+const CAT = [
+  ["CP02499","","ARMAF","ODYSSEY MANDARIN SKY","Caballero"],
+  ["CP02438","BASE NIGHT CLUB ARA","ARMAF","CLUB DE NUIT INTENSE MAN","Caballero"],
+  ["CP00734","BASE CODIGO NEGRO","ARMANI","ARMANI BLACK CODE","Caballero"],
+  ["CP00725","BASE AQUA HOTEL","ARMANI","ACQUA DI GIO","Caballero"],
+  ["CP02453","","BHARARA","KING","Caballero"],
+  ["CP00719","","CHANEL","ALLURE HOMME SPORT","Caballero"],
+  ["CP01059","","CHANEL","BLEU","Caballero"],
+  ["CP02269","BASE AVENTURERO NICHE","CREED","AVENTUS","Caballero"],
+  ["CP02158","BASE SALVAJE","DIOR","SAUVAGE","Caballero"],
+  ["CP02341","","DIOR","SAUVAGE ELIXIR","Caballero"],
+  ["CP00881","","DOLCE & GABBANA","LIGHT BLUE","Caballero"],
+  ["CP02445","","GUCCI","GUILTY ELIXIR POUR HOMME","Caballero"],
+  ["CP02516","","JEAN PAUL GAULTIER","LE MALE ELIXIR ABSOLU","Caballero"],
+  ["CP02358","","JEAN PAUL GAULTIER","SCANDAL","Caballero"],
+  ["CP02498","BASE IMAGINA NICHE","LOUIS VUITTON","IMAGINATION","Caballero"],
+  ["CP01092","","PACO RABANNE","INVICTUS","Caballero"],
+  ["CP01021","","PACO RABANNE","ONE MILLION","Caballero"],
+  ["CP02373","","VERSACE","VERSACE MAN EAU FRAICHE","Caballero"],
+  ["CP01086","","VERSACE","EROS","Caballero"],
+  ["CP02472","BASE SPICY BOMB D.LEATHER FF","VIKTOR & ROLF","SPICEBOMB DARK LEATHER","Caballero"],
+  ["CP02473","","YVES SAINT LAURENT","MYSLF LE PARFUM","Caballero"],
+  ["DP02522","","ARIANA GRANDE","CLOUD","Dama"],
+  ["DP02632","BASE SENSUAL ARIANA","ARIANA GRANDE","SWEET LIKE CANDY","Dama"],
+  ["DP01016","","ARMANI","AQUA DI GIO","Dama"],
+  ["DP02269","","ARMANI","SÍ","Dama"],
+  ["DP01010","","CACHAREL","AMOR AMOR","Dama"],
+  ["DP01119","BASE EUFEMIA","CALVIN KLEIN","EUPHORIA","Dama"],
+  ["DP00987","","CAROLINA HERRERA","212","Dama"],
+  ["DO02404","","CAROLINA HERRERA","GOOD GIRL","Dama"],
+  ["DP02754","","CAROLINA HERRERA","GOOD GIRL BLUSH","Dama"],
+  ["DP02620","","CHANEL","CHANCE EAU FRAICHE","Dama"],
+  ["DP02622","","CHANEL","CHANCE EAU TENDRE","Dama"],
+  ["DP02472","BASE MUJER DE PARIS INTENSA","CHANEL","COCO MADEMOISELLE","Dama"],
+  ["DP01057","","CHANEL","CHANEL 5","Dama"],
+  ["DP01176","","DIOR","J'ADORE","Dama"],
+  ["DP01163","BASE HIPNOSIS","DIOR","HYPNOTIC POISON","Dama"],
+  ["DP02523","BASE LADY 2021","DIOR","MISS DIOR EAU DE PARFUM","Dama"],
+  ["DP02717","","DOLCE & GABBANA","Q BY DOLCE GABBANA","Dama"],
+  ["DP01029","BASE DELICIOSA","DONNA KARAN","BE DELICIOUS","Dama"],
+  ["DP01197","","DOLCE & GABBANA","LIGHT BLUE","Dama"],
+  ["DP02452","","JEAN PAUL GAULTIER","SCANDAL","Dama"],
+  ["DP02853","","LANCOME","LA VIE EST BELLE L'ELIXIR EDP","Dama"],
+  ["DP02544","BASE WONDER CELEBRATION NICHE","LOUIS VUITTON","ATTRAPES REVES","Dama"],
+  ["DP02599","BASE EXPLOSION ESTELAR","MUGLER","ANGEL NOVA","Dama"],
+  ["DP02349","","PACO RABANNE","OLYMPEA","Dama"],
+  ["DP02408","","PARIS HILTON","GOLD RUSH","Dama"],
+  ["DP01277","","RALPH LAUREN","RALPH","Dama"],
+  ["DP02764","","VERSACE","DYLAN PURPLE","Dama"],
+  ["DP02334","","VIKTOR & ROLF","FLOWERBOMB","Dama"],
+  ["DP02324","","YVES SAINT LAURENT","BLACK OPIUM","Dama"],
+  ["DP02515","","YVES SAINT LAURENT","LIBRE","Dama"],
+  ["DP02431","","YVES SAINT LAURENT","MON PARIS","Dama"],
+  ["UP01017","","CALVIN KLEIN","CK BE","Unisex"],
+  ["UP01002","","CALVIN KLEIN","CK ONE","Unisex"],
+  ["BUP0003","BASE TE VERDE MATCHA Y FLOR DE SAKURA","LE LABO","THE MATCHA 26","Unisex"],
+  ["UP01000","","LE LABO","SANTAL 33","Unisex"],
+  ["UP01090","","LOUIS VUITTON","OMBRE NOMADE","Unisex"],
+  ["UP01087","BASE LOVE TOY 2 PEARL","MOSCHINO","TOY 2 PEARL","Unisex"],
+  ["UP01054","","MAISON FRANCIS KURKDJIAN","BACCARAT ROUGE","Unisex"],
+  ["UP01122","","PENHALIGON'S","THE WORLD ACCORDING TO ARTHUR","Unisex"],
+  ["UP01073","BASE CHERRY CIGAR NICHE","TOM FORD","CHERRY SMOKE","Unisex"],
+  ["UP01046","","TOM FORD","OMBRE LEATHER","Unisex"],
+  ["UP01047","","TOM FORD","OUD WOOD","Unisex"],
+  ["UP01028","","TOM FORD","TOBACCO VANILLE","Unisex"],
+  ["UP01129","","XERJOFF","ERBA PURA","Unisex"],
+];
+
+const EXIST = {"CP02499":1,"CP02438":1,"CP00734":3,"CP00725":2,"CP02453":2,"CP00719":1,"CP01059":1,"CP02269":1,"CP02158":1,"CP02341":1,"CP00881":1,"CP02445":1,"CP02516":1,"CP02358":1,"CP02498":2,"CP01092":2,"CP01021":1,"CP02373":1,"CP01086":1,"CP02472":3,"CP02473":1,"DP02522":2,"DP02632":1,"DP01016":1,"DP02269":3,"DP01010":1,"DP01119":1,"DP00987":1,"DO02404":4,"DP02754":1,"DP02620":1,"DP02622":1,"DP02472":2,"DP01057":1,"DP01176":2,"DP01163":1,"DP02523":1,"DP02717":1,"DP01029":1,"DP01197":2,"DP02452":3,"DP02853":1,"DP02544":3,"DP02599":1,"DP02349":2,"DP02408":1,"DP01277":1,"DP02764":1,"DP02334":2,"DP02324":3,"DP02515":1,"DP02431":1,"UP01017":2,"UP01002":2,"BUP0003":2,"UP01000":3,"UP01090":2,"UP01087":1,"UP01054":1,"UP01122":1,"UP01073":1,"UP01046":1,"UP01047":1,"UP01028":3,"UP01129":2};
+
+const SEED = [
+  {id:1,fecha:"2026-01-25",cliente:"Ricardo Granados",codigo:"UP01141",fragancia:"BASE VANILLA RUDE NICHE",disenador:"Tom Ford",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:2,fecha:"2026-01-25",cliente:"Brian Noé",codigo:"CP02158",fragancia:"BASE SALVAJE",disenador:"DIOR",linea:"Caballero",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:3,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01000",fragancia:"BASE SANDALO 33",disenador:"LE LABO",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:4,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01054",fragancia:"BASE ROJO BACCARAT NICHE",disenador:"MFK",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:5,fecha:"2026-01-25",cliente:"Rebeca Núñez",codigo:"DP02620",fragancia:"BASE OPPORTUNITY",disenador:"CHANEL",linea:"Dama",estatus:"Entregado/Cobrado",canal:"Instagram",precio:250,costoEsencia:1.70,notas:""},
+  {id:6,fecha:"2026-02-07",cliente:"Osmara",codigo:"DP00987",fragancia:"BASE URBAN WOMAN",disenador:"CAROLINA HERRERA",linea:"Dama",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:7,fecha:"2026-04-04",cliente:"Omar",codigo:"DP02452",fragancia:"BASE SCANDALOUS GIRL",disenador:"JEAN PAUL GAULTIER",linea:"Dama",estatus:"Pedido",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:8,fecha:"2026-04-06",cliente:"Osmara",codigo:"DP02472",fragancia:"BASE MUJER DE PARIS INTENSA",disenador:"CHANEL",linea:"Dama",estatus:"Comprado proveedor",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
+  {id:9,fecha:"2026-04-06",cliente:"Karen Jiménez",codigo:"DP02507",fragancia:"BASE MUSK GIRL",disenador:"NARCISO RODRIGUEZ",linea:"Dama",estatus:"Elaborado",canal:"Referido",precio:250,costoEsencia:1.70,notas:""},
+];
+
+let pedidos = JSON.parse(localStorage.getItem('if_pedidos')||'null') || SEED;
+let nextId = Math.max(...pedidos.map(p=>p.id), 0) + 1;
+const save = () => localStorage.setItem('if_pedidos', JSON.stringify(pedidos));
+const fmt = n => '$' + Math.round(n).toLocaleString('es-MX');
+const costoProd = ce => COSTO_FIJO + 30*(parseFloat(ce)||1.70);
+const ganancia = p => (parseFloat(p.precio)||250) - costoProd(p.costoEsencia);
+
+const EST_CLASS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado/Cobrado':'b-entregado'};
+const LIN_CLASS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
+
+function badge(txt, cls){ return `<span class="badge ${cls}">${txt}</span>`; }
+function bEst(e){ return badge(e, EST_CLASS[e]||''); }
+function bLin(l){ return badge(l, LIN_CLASS[l]||''); }
+
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ── TABS ── */
+function showTab(id, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  if(id==='inventario') renderInv();
+  if(id==='catalogo') renderCat();
+  if(id==='pedidos') renderPedidos();
+}
+
+/* ── DASHBOARD ── */
+function renderDash(){
+  const ent = pedidos.filter(p=>p.estatus==='Entregado/Cobrado');
+  const pend = pedidos.filter(p=>p.estatus==='Pedido').length;
+  const proc = pedidos.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
+  const ventas = ent.reduce((s,p)=>s+(parseFloat(p.precio)||250),0);
+  const gan = ent.reduce((s,p)=>s+ganancia(p),0);
+  const margen = ventas>0?Math.round(gan/ventas*100):0;
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val blue">${pedidos.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Entregados</div><div class="kpi-val green">${ent.length}</div></div>
+    <div class="kpi"><div class="kpi-label">En proceso</div><div class="kpi-val gold">${proc}</div></div>
+    <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val red">${pend}</div></div>
+    <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-val gold" style="font-size:18px">${fmt(ventas)}</div></div>
+    <div class="kpi"><div class="kpi-label">Ganancia total</div><div class="kpi-val green" style="font-size:18px">${fmt(gan)}</div></div>
+    <div class="kpi"><div class="kpi-label">Margen</div><div class="kpi-val blue">${margen}%</div></div>
+    <div class="kpi"><div class="kpi-label">Por entregar</div><div class="kpi-val gold">${proc + pend}</div></div>
+  `;
+  const recent = [...pedidos].reverse().slice(0,6);
+  document.getElementById('recent-list').innerHTML = recent.map(p=>`
+    <div class="card">
+      <div class="card-top">
+        <div>
+          <div class="card-name">${p.cliente}</div>
+          <div class="card-sub">${p.fragancia} · ${p.disenador||''}</div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;gap:4px;align-items:flex-end">
+          ${bEst(p.estatus)}
+          <span class="ganancia-pill">${fmt(ganancia(p))}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── PEDIDOS ── */
+let _fTxt='', _fEst='', _fLin='';
+function filterPedidos(txt){ _fTxt=txt.toLowerCase(); renderPedidos(); }
+function filterEst(e){ _fEst=e; renderPedidos(); }
+function filterLinPed(l){ _fLin=l; renderPedidos(); }
+
+function renderPedidos(){
+  let list = pedidos.filter(p=>{
+    const m = !_fTxt || p.cliente.toLowerCase().includes(_fTxt) || p.fragancia.toLowerCase().includes(_fTxt) || (p.disenador||'').toLowerCase().includes(_fTxt);
+    return m && (!_fEst||p.estatus===_fEst) && (!_fLin||p.linea===_fLin);
+  }).reverse();
+  if(!list.length){ document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>'; return; }
+  document.getElementById('pedidos-list').innerHTML = list.map(p=>`
+    <div class="card">
+      <div class="card-top">
+        <div style="flex:1;min-width:0">
+          <div class="card-name">${p.cliente}</div>
+          <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia}</div>
+          <div class="card-sub">${p.disenador||''} · ${p.fecha} · ${p.canal||''}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+          ${bLin(p.linea)}
+          <span class="ganancia-pill">${fmt(ganancia(p))}</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
+          ${['Pedido','Comprado proveedor','Elaborado','Entregado/Cobrado'].map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
+        </select>
+        <button class="btn btn-sm btn-danger" onclick="eliminar(${p.id})">Eliminar</button>
+      </div>
+      ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
+    </div>`).join('');
+}
+
+function cambiarEst(id,est){
+  const p=pedidos.find(x=>x.id===id);
+  if(!p) return;
+  p.estatus=est;
+  if(est==='Elaborado') p.fechaElab=new Date().toISOString().slice(0,10);
+  if(est==='Entregado/Cobrado') p.fechaEntrega=new Date().toISOString().slice(0,10);
+  save(); renderAll(); toast('Estatus actualizado ✓');
+}
+function eliminar(id){
+  if(!confirm('¿Eliminar este pedido?')) return;
+  pedidos=pedidos.filter(x=>x.id!==id);
+  save(); renderAll(); toast('Pedido eliminado');
+}
+
+/* ── INVENTARIO ── */
+let _invLin='';
+function filterInvLinea(l){ _invLin=l; renderInv(); }
+function renderInv(){
+  const consumo={};
+  pedidos.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado/Cobrado').forEach(p=>{ consumo[p.codigo]=(consumo[p.codigo]||0)+1; });
+  const list = CAT.filter(r=>!_invLin||r[4]===_invLin);
+  document.getElementById('inv-list').innerHTML = list.map(r=>{
+    const [cod,,dis,ref,linea]=r;
+    const ini=(EXIST[cod]||0)*60;
+    const elab=consumo[cod]||0;
+    const usado=elab*30;
+    const rest=Math.max(0,ini-usado);
+    const pct=ini>0?Math.min(100,Math.round(rest/ini*100)):0;
+    const cls=rest===0?'out':rest<60?'low':'ok';
+    return `<div class="card">
+      <div class="card-top">
+        <div style="flex:1;min-width:0">
+          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ref}</div>
+          <div class="card-sub">${dis} · ${cod} · ${bLin(linea)}</div>
+          <div class="card-sub" style="margin-top:2px">Inicial ${ini}g · Usado ${usado}g · ${elab} perfume${elab!==1?'s':''}</div>
+          <div class="inv-bar-wrap"><div class="inv-bar ${cls}" style="width:${pct}%"></div></div>
+        </div>
+        <div class="inv-stock ${cls}" style="margin-left:12px;flex-shrink:0">${rest}g</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ── CATÁLOGO ── */
+let _catTxt='', _catLin='';
+function filterCat(t){ _catTxt=t.toLowerCase(); renderCat(); }
+function filterCatLinea(l){ _catLin=l; renderCat(); }
+function renderCat(){
+  const cp=costoProd(1.70);
+  const list=CAT.filter(r=>{
+    const m=!_catTxt||r[2].toLowerCase().includes(_catTxt)||r[3].toLowerCase().includes(_catTxt)||r[1].toLowerCase().includes(_catTxt)||r[0].toLowerCase().includes(_catTxt);
+    return m&&(!_catLin||r[4]===_catLin);
+  });
+  document.getElementById('cat-list').innerHTML=list.map(r=>`
+    <div class="card">
+      <div class="card-top">
+        <div style="flex:1;min-width:0">
+          <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r[3]}</div>
+          <div class="card-sub">${r[2]} · ${r[0]}</div>
+          ${r[1]?`<div class="card-sub" style="margin-top:2px;font-style:italic">${r[1]}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+          ${bLin(r[4])}
+          <span class="ganancia-pill">${fmt(250-cp)}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+/* ── MODAL ── */
+function openModal(){
+  const sel=document.getElementById('f-fragancia');
+  if(sel.options.length<2){
+    CAT.forEach(r=>{
+      const o=document.createElement('option');
+      o.value=r[0]; o.textContent=`${r[3]} — ${r[2]}`; o.dataset.linea=r[4]; o.dataset.dis=r[2];
+      sel.appendChild(o);
+    });
+  }
+  document.getElementById('f-fecha').value=new Date().toISOString().slice(0,10);
+  recalcCosto();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); }
+document.getElementById('modal-overlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeModal(); });
+
+function autoFill(){
+  const sel=document.getElementById('f-fragancia');
+  const opt=sel.options[sel.selectedIndex];
+  if(opt&&opt.dataset.linea) document.getElementById('f-linea').value=opt.dataset.linea;
+  recalcCosto();
+}
+function recalcCosto(){
+  const ce=parseFloat(document.getElementById('f-cesencia').value)||1.70;
+  document.getElementById('f-cprod').value=fmt(costoProd(ce));
+}
+
+function savePedido(){
+  const sel=document.getElementById('f-fragancia');
+  const opt=sel.options[sel.selectedIndex];
+  const p={
+    id:nextId++,
+    fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
+    cliente:document.getElementById('f-cliente').value.trim()||'Sin nombre',
+    codigo:sel.value,
+    fragancia:opt?opt.textContent.split(' — ')[0]:'',
+    disenador:opt?opt.dataset.dis||'':'',
+    linea:document.getElementById('f-linea').value,
+    estatus:'Pedido',
+    canal:document.getElementById('f-canal').value,
+    fechaPromesa:document.getElementById('f-promesa').value,
+    precio:parseFloat(document.getElementById('f-precio').value)||250,
+    costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||1.70,
+    notas:document.getElementById('f-notas').value,
+  };
+  pedidos.push(p);
+  save(); closeModal(); renderAll(); toast('Pedido guardado ✓');
+  document.getElementById('f-cliente').value='';
+  document.getElementById('f-notas').value='';
+  document.getElementById('f-fragancia').value='';
+}
+
+function renderAll(){ renderDash(); renderPedidos(); }
+
+/* ── PWA INSTALL ── */
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('install-banner').style.display='block';
+});
+function installApp(){
+  if(deferredPrompt){ deferredPrompt.prompt(); deferredPrompt.userChoice.then(()=>{ document.getElementById('install-banner').style.display='none'; deferredPrompt=null; }); }
+}
+window.addEventListener('appinstalled',()=>{ document.getElementById('install-banner').style.display='none'; toast('¡App instalada! ✓'); });
+
+/* ── SERVICE WORKER ── */
+if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+renderAll();
+</script>
+</body>
+</html>
