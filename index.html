@@ -309,6 +309,7 @@ const costoFijo = () => cfg.gfijador*cfg.pfijador + cfg.gferomonas*cfg.pferomona
 const costoProd = ce => costoFijo() + cfg.gesencia*(parseFloat(ce)||1.70);
 const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia);
 const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function lineaDesdeId(id){
   const p=id.toUpperCase();
   if(p.startsWith('CP')||p.startsWith('C'))return 'Caballero';
   if(p.startsWith('DP')||p.startsWith('DO')||p.startsWith('D'))return 'Dama';
