@@ -360,8 +360,8 @@ const PED_SEED = [
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let cfg    = JSON.parse(localStorage.getItem('if_cfg')||'null') || {...CFG_DEF};
-let cat    = JSON.parse(localStorage.getItem('if_cat')||'null') || CAT_SEED.map(x=>({...x}));
-let peds   = JSON.parse(localStorage.getItem('if_peds')||'null') || PED_SEED.map(x=>({...x}));
+let cat    = localStorage.getItem('if_cat')  !== null ? JSON.parse(localStorage.getItem('if_cat'))  : CAT_SEED.map(x=>({...x}));
+let peds   = localStorage.getItem('if_peds') !== null ? JSON.parse(localStorage.getItem('if_peds')) : PED_SEED.map(x=>({...x}));
 let nextId = Math.max(...peds.map(p=>p.id), 0) + 1;
 
 const save = () => {
@@ -953,9 +953,21 @@ function importJSON(input){
 }
 
 // ── RESET ─────────────────────────────────────────────────────────────────
-function resetCatalogo(){ if(!confirm('¿Limpiar catálogo? Los pedidos se conservan.'))return; cat=[]; save(); renderCat(); toast('Catálogo limpiado'); }
-function resetPedidos(){ if(!confirm('¿Eliminar todos los pedidos?'))return; peds=[]; nextId=1; save(); renderAll(); toast('Pedidos eliminados'); }
-function resetTodo(){ if(!confirm('¿BORRAR TODO? Esta acción no se puede deshacer.'))return; localStorage.clear(); location.reload(); }
+function resetTodo(){
+  if(!confirm('¿BORRAR TODO? Esta acción no se puede deshacer.'))return;
+  if(!confirm('Segunda confirmación: ¿Estás seguro? Se eliminarán todos los pedidos, catálogo e inventario.'))return;
+  ['if_cfg','if_cat','if_peds'].forEach(k=>localStorage.removeItem(k));
+  toast('Datos eliminados, recargando...');
+  setTimeout(()=>location.reload(),800);
+}
+function resetCatalogo(){
+  if(!confirm('¿Limpiar catálogo? Los pedidos se conservan.'))return;
+  cat=[]; save(); renderCat(); toast('Catálogo limpiado');
+}
+function resetPedidos(){
+  if(!confirm('¿Eliminar todos los pedidos?'))return;
+  peds=[]; nextId=1; save(); renderAll(); toast('Pedidos eliminados');
+}
 
 // ── RENDER ALL ────────────────────────────────────────────────────────────
 function renderAll(){ renderDash(); renderPedidos(); }
