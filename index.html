@@ -414,10 +414,12 @@ function renderPedidos(){
 
 function cambiarEst(id,est){
   const p=peds.find(x=>x.id===id); if(!p)return;
+  const estAnterior=p.estatus;
   p.estatus=est;
   if(est==='Elaborado')p.fechaElab=new Date().toISOString().slice(0,10);
   if(est==='Entregado'||est==='Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
-  save();fbSave();renderAll();toast("Estatus actualizado ✓");
+  save();fbSave();renderAll();toast('Estatus actualizado ✓');
+  if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
 }
 function eliminarPed(id){
   if(!confirm('¿Eliminar este pedido?'))return;
@@ -764,6 +766,7 @@ function savePed(){
       notas:document.getElementById('f-notas').value,
     });
     toast('Pedido guardado ✓');
+    enviarNotificacion('🆕 Nuevo pedido', peds[peds.length-1]);
   }
   save();fbSave(); closeModal(); renderAll();
 }
@@ -980,7 +983,44 @@ function renderAll(){ renderDash(); renderPedidos(); }
 // ── SERVICE WORKER ────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
-// ── FIREBASE SYNC ─────────────────────────────────────────────────────────
+// ── EMAILJS NOTIFICACIONES ────────────────────────────────────────────────
+const EJS = {
+  serviceId:  'instinto_gmail',
+  templateId: 'jyklyrm',
+  publicKey:  '6eSdTAfF6Gi42ORQk'
+};
+
+function loadEmailJS(){
+  return new Promise(resolve => {
+    if(window.emailjs){ resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js';
+    s.onload = () => { emailjs.init(EJS.publicKey); resolve(); };
+    document.head.appendChild(s);
+  });
+}
+
+async function enviarNotificacion(tipo, p){
+  try {
+    await loadEmailJS();
+    await emailjs.send(EJS.serviceId, EJS.templateId, {
+      tipo,
+      name:      'Instinto Fragancias',
+      cliente:   p.cliente   || '',
+      fragancia: p.fragancia || '',
+      disenador: p.disenador || '',
+      codigo:    p.codigo    || '',
+      linea:     p.linea     || '',
+      canal:     p.canal     || '',
+      precio:    p.precio    || '',
+      fecha:     p.fecha     || '',
+      notas:     p.notas     || '',
+      email:     'hectorezquerra@hotmail.com',
+      message:   `${tipo} registrado en Instinto Fragancias`
+    });
+    console.log('Notificación enviada ✓');
+  } catch(e){ console.warn('EmailJS error:', e); }
+}
 const FB_CFG = {
   apiKey: "AIzaSyBafY_htzgeMH5_J_h9-VscHHnrHdLX0IY",
   authDomain: "instinto-fragancias.firebaseapp.com",
