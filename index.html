@@ -417,11 +417,11 @@ function cambiarEst(id,est){
   p.estatus=est;
   if(est==='Elaborado')p.fechaElab=new Date().toISOString().slice(0,10);
   if(est==='Entregado'||est==='Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
-  save();renderAll();toast('Estatus actualizado ✓');
+  save();fbSave();renderAll();toast("Estatus actualizado ✓");
 }
 function eliminarPed(id){
   if(!confirm('¿Eliminar este pedido?'))return;
-  peds=peds.filter(x=>x.id!==id);save();renderAll();toast('Pedido eliminado');
+  peds=peds.filter(x=>x.id!==id);save();fbSave();renderAll();toast('Pedido eliminado');
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────
@@ -507,7 +507,7 @@ function renderCat(){
 }
 function eliminarFrag(id){
   if(!confirm('¿Eliminar esta fragancia del catálogo?'))return;
-  cat=cat.filter(x=>x.id!==id);save();renderCat();toast('Fragancia eliminada');
+  cat=cat.filter(x=>x.id!==id);save();fbSave();renderCat();toast('Fragancia eliminada');
 }
 
 // ── MODAL GENÉRICO ────────────────────────────────────────────────────────
@@ -765,7 +765,7 @@ function savePed(){
     });
     toast('Pedido guardado ✓');
   }
-  save(); closeModal(); renderAll();
+  save();fbSave(); closeModal(); renderAll();
 }
 
 function saveFrag(existingId){
@@ -788,7 +788,7 @@ function saveFrag(existingId){
     cat.push(data);
     toast('Fragancia agregada ✓');
   }
-  save(); closeModal(); renderCat();
+  save();fbSave(); closeModal(); renderCat();
 }
 
 function saveStock(id){
@@ -797,7 +797,7 @@ function saveStock(id){
   const agregar=parseFloat(document.getElementById('fs-agregar')?.value)||0;
   r.stockGramos=base+agregar;
   r.costoEsencia=parseFloat(document.getElementById('fs-cesencia')?.value)||r.costoEsencia;
-  save(); closeModal(); renderInv(); toast('Stock actualizado ✓');
+  save();fbSave(); closeModal(); renderInv(); toast('Stock actualizado ✓');
 }
 
 // ── CONFIG ────────────────────────────────────────────────────────────────
@@ -883,7 +883,7 @@ function importCSV(input,tipo){
         if(existing){Object.assign(existing,data);updated++;}
         else{cat.push(data);added++;}
       });
-      save(); renderCat();
+      save();fbSave(); renderCat();
       toast(`Catálogo: ${added} nuevas, ${updated} actualizadas ✓`);
 
     } else if(tipo==='pedidos'){
@@ -911,7 +911,7 @@ function importCSV(input,tipo){
         added++;
       });
       nextId=Math.max(...peds.map(p=>p.id),0)+1;
-      save(); renderAll();
+      save();fbSave(); renderAll();
       toast(`Pedidos: ${added} importados ✓`);
 
     } else if(tipo==='inventario'){
@@ -925,7 +925,7 @@ function importCSV(input,tipo){
           updated++;
         }
       });
-      save(); renderInv();
+      save();fbSave(); renderInv();
       toast(`Inventario: ${updated} fragancias actualizadas ✓`);
     }
     input.value='';
@@ -944,7 +944,7 @@ function importJSON(input){
       if(data.cat)cat=data.cat;
       if(data.peds)peds=data.peds;
       nextId=Math.max(...peds.map(p=>p.id),0)+1;
-      save(); renderAll(); loadCfg();
+      save();fbSave(); renderAll(); loadCfg();
       toast('Backup restaurado ✓');
     }catch(err){toast('⚠ Error al leer el archivo JSON');}
     input.value='';
@@ -963,15 +963,15 @@ function resetTodo(){
 function resetInventario(){
   if(!confirm('¿Resetear el stock de todas las fragancias a 0?'))return;
   cat.forEach(r=>r.stockGramos=0);
-  save(); renderInv(); toast('Inventario reseteado a 0');
+  save();fbSave(); renderInv(); toast('Inventario reseteado a 0');
 }
 function resetCatalogo(){
   if(!confirm('¿Limpiar catálogo? Los pedidos se conservan.'))return;
-  cat=[]; save(); renderCat(); toast('Catálogo limpiado');
+  cat=[]; save();fbSave(); renderCat(); toast('Catálogo limpiado');
 }
 function resetPedidos(){
   if(!confirm('¿Eliminar todos los pedidos?'))return;
-  peds=[]; nextId=1; save(); renderAll(); toast('Pedidos eliminados');
+  peds=[]; nextId=1; save();fbSave(); renderAll(); toast('Pedidos eliminados');
 }
 
 // ── RENDER ALL ────────────────────────────────────────────────────────────
@@ -979,6 +979,111 @@ function renderAll(){ renderDash(); renderPedidos(); }
 
 // ── SERVICE WORKER ────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+
+// ── FIREBASE SYNC ─────────────────────────────────────────────────────────
+const FB_CFG = {
+  apiKey: "AIzaSyBafY_htzgeMH5_J_h9-VscHHnrHdLX0IY",
+  authDomain: "instinto-fragancias.firebaseapp.com",
+  projectId: "instinto-fragancias",
+  storageBucket: "instinto-fragancias.firebasestorage.app",
+  messagingSenderId: "972424984397",
+  appId: "1:972424984397:web:5910eef68d595de71ee904"
+};
+
+let db = null;
+let _fbLoaded = false;
+
+function loadFirebase(){
+  return new Promise(resolve => {
+    if(_fbLoaded){ resolve(); return; }
+    const s1 = document.createElement('script');
+    s1.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
+    s1.onload = () => {
+      const s2 = document.createElement('script');
+      s2.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
+      s2.onload = () => {
+        firebase.initializeApp(FB_CFG);
+        db = firebase.firestore();
+        _fbLoaded = true;
+        resolve();
+      };
+      document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+  });
+}
+
+// Indicador de sync en el header
+function setSyncStatus(status){
+  let el = document.getElementById('sync-status');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'sync-status';
+    el.style.cssText = 'font-size:11px;padding:3px 8px;border-radius:4px;font-weight:500;margin-left:8px;transition:all 0.3s';
+    document.querySelector('.logo').appendChild(el);
+  }
+  if(status==='syncing'){ el.textContent='↑ Sincronizando...'; el.style.color='var(--amber)'; }
+  else if(status==='ok'){  el.textContent='✓ Sincronizado';     el.style.color='var(--green)'; setTimeout(()=>{ if(el)el.textContent=''; },3000); }
+  else if(status==='err'){ el.textContent='✕ Sin conexión';     el.style.color='var(--red)'; }
+}
+
+async function fbSave(){
+  try {
+    setSyncStatus('syncing');
+    await loadFirebase();
+    const ref = db.collection('instinto').doc('datos');
+    await ref.set({ cfg, cat, peds, updatedAt: new Date().toISOString() });
+    setSyncStatus('ok');
+  } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e); }
+}
+
+async function fbLoad(){
+  try {
+    setSyncStatus('syncing');
+    await loadFirebase();
+    const ref = db.collection('instinto').doc('datos');
+    const snap = await ref.get();
+    if(snap.exists){
+      const data = snap.data();
+      if(data.cfg) cfg = data.cfg;
+      if(data.cat) cat = data.cat;
+      if(data.peds){ peds = data.peds; nextId = Math.max(...peds.map(p=>p.id),0)+1; }
+      save(); // guarda en localStorage también
+      renderAll(); loadCfg();
+      setSyncStatus('ok');
+      toast('Datos sincronizados desde la nube ✓');
+    } else {
+      setSyncStatus('ok');
+      // Primera vez — sube los datos locales a Firebase
+      await fbSave();
+    }
+  } catch(e){ setSyncStatus('err'); console.warn('Firebase load error:', e); }
+}
+
+// Sobreescribir save para que también suba a Firebase
+const _localSave = save;
+const saveAndSync = () => { _localSave(); fbSave(); };
+
+// Botón de sync manual en Config
+function addSyncButtons(){
+  const el = document.getElementById('s-export');
+  if(!el || document.getElementById('sync-btn')) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'export-area';
+  wrap.innerHTML = `<h4>Sincronización en la nube (Firebase)</h4>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Los datos se sincronizan automáticamente. Usa estos botones si cambias de dispositivo.</p>
+    <div class="btns">
+      <button id="sync-btn" class="btn btn-gold" onclick="fbLoad()">☁ Descargar desde la nube</button>
+      <button class="btn btn-blue" onclick="fbSave()">↑ Subir a la nube ahora</button>
+    </div>`;
+  el.prepend(wrap);
+}
+
+// Al arrancar: carga desde Firebase y activa auto-sync
+window.addEventListener('load', async () => {
+  await fbLoad();
+  addSyncButtons();
+});
 
 renderAll();
 loadCfg();
