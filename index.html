@@ -281,93 +281,20 @@ nav::-webkit-scrollbar{display:none}
 <script>
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
 const CFG_DEF = {gesencia:30,gfijador:5,pfijador:1.75,gferomonas:3.5,pferomonas:6.00,gperfumol:21.5,pperfumol:1.68,envase:13.50,atomizador:17.50,sticker:4.00,pventa:250};
-const CAT_SEED = [
-  {id:"CP02499",base:"",disenador:"ARMAF",referencia:"ODYSSEY MANDARIN SKY",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02438",base:"BASE NIGHT CLUB ARA",disenador:"ARMAF",referencia:"CLUB DE NUIT INTENSE MAN",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP00734",base:"BASE CODIGO NEGRO",disenador:"ARMANI",referencia:"ARMANI BLACK CODE",linea:"Caballero",costoEsencia:1.70,stockGramos:180},
-  {id:"CP00725",base:"BASE AQUA HOTEL",disenador:"ARMANI",referencia:"ACQUA DI GIO",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
-  {id:"CP02453",base:"",disenador:"BHARARA",referencia:"KING",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
-  {id:"CP00719",base:"",disenador:"CHANEL",referencia:"ALLURE HOMME SPORT",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP01059",base:"",disenador:"CHANEL",referencia:"BLEU",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02269",base:"BASE AVENTURERO NICHE",disenador:"CREED",referencia:"AVENTUS",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02158",base:"BASE SALVAJE",disenador:"DIOR",referencia:"SAUVAGE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02341",base:"",disenador:"DIOR",referencia:"SAUVAGE ELIXIR",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP00881",base:"",disenador:"DOLCE & GABBANA",referencia:"LIGHT BLUE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02445",base:"",disenador:"GUCCI",referencia:"GUILTY ELIXIR POUR HOMME",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02516",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"LE MALE ELIXIR ABSOLU",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02358",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"SCANDAL",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02498",base:"BASE IMAGINA NICHE",disenador:"LOUIS VUITTON",referencia:"IMAGINATION",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
-  {id:"CP01092",base:"",disenador:"PACO RABANNE",referencia:"INVICTUS",linea:"Caballero",costoEsencia:1.70,stockGramos:120},
-  {id:"CP01021",base:"",disenador:"PACO RABANNE",referencia:"ONE MILLION",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02373",base:"",disenador:"VERSACE",referencia:"VERSACE MAN EAU FRAICHE",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP01086",base:"",disenador:"VERSACE",referencia:"EROS",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"CP02472",base:"BASE SPICY BOMB D.LEATHER FF",disenador:"VIKTOR & ROLF",referencia:"SPICEBOMB DARK LEATHER",linea:"Caballero",costoEsencia:1.70,stockGramos:180},
-  {id:"CP02473",base:"",disenador:"YVES SAINT LAURENT",referencia:"MYSLF LE PARFUM",linea:"Caballero",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02522",base:"",disenador:"ARIANA GRANDE",referencia:"CLOUD",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP02632",base:"BASE SENSUAL ARIANA",disenador:"ARIANA GRANDE",referencia:"SWEET LIKE CANDY",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01016",base:"",disenador:"ARMANI",referencia:"AQUA DI GIO",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02269",base:"",disenador:"ARMANI",referencia:"SÍ",linea:"Dama",costoEsencia:1.70,stockGramos:180},
-  {id:"DP01010",base:"",disenador:"CACHAREL",referencia:"AMOR AMOR",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01119",base:"BASE EUFEMIA",disenador:"CALVIN KLEIN",referencia:"EUPHORIA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP00987",base:"",disenador:"CAROLINA HERRERA",referencia:"212",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DO02404",base:"",disenador:"CAROLINA HERRERA",referencia:"GOOD GIRL",linea:"Dama",costoEsencia:1.70,stockGramos:240},
-  {id:"DP02754",base:"",disenador:"CAROLINA HERRERA",referencia:"GOOD GIRL BLUSH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02620",base:"",disenador:"CHANEL",referencia:"CHANCE EAU FRAICHE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02622",base:"",disenador:"CHANEL",referencia:"CHANCE EAU TENDRE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02472",base:"BASE MUJER DE PARIS INTENSA",disenador:"CHANEL",referencia:"COCO MADEMOISELLE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP01057",base:"",disenador:"CHANEL",referencia:"CHANEL 5",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01176",base:"",disenador:"DIOR",referencia:"J'ADORE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP01163",base:"BASE HIPNOSIS",disenador:"DIOR",referencia:"HYPNOTIC POISON",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02523",base:"BASE LADY 2021",disenador:"DIOR",referencia:"MISS DIOR EAU DE PARFUM",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02717",base:"",disenador:"DOLCE & GABBANA",referencia:"Q BY DOLCE GABBANA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01029",base:"BASE DELICIOSA",disenador:"DONNA KARAN",referencia:"BE DELICIOUS",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01197",base:"",disenador:"DOLCE & GABBANA",referencia:"LIGHT BLUE",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP02452",base:"",disenador:"JEAN PAUL GAULTIER",referencia:"SCANDAL",linea:"Dama",costoEsencia:1.70,stockGramos:180},
-  {id:"DP02853",base:"",disenador:"LANCOME",referencia:"LA VIE EST BELLE L'ELIXIR EDP",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02544",base:"BASE WONDER CELEBRATION NICHE",disenador:"LOUIS VUITTON",referencia:"ATTRAPES REVES",linea:"Dama",costoEsencia:1.70,stockGramos:180},
-  {id:"DP02599",base:"BASE EXPLOSION ESTELAR",disenador:"MUGLER",referencia:"ANGEL NOVA",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02349",base:"",disenador:"PACO RABANNE",referencia:"OLYMPEA",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP02408",base:"",disenador:"PARIS HILTON",referencia:"GOLD RUSH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP01277",base:"",disenador:"RALPH LAUREN",referencia:"RALPH",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02764",base:"",disenador:"VERSACE",referencia:"DYLAN PURPLE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02334",base:"",disenador:"VIKTOR & ROLF",referencia:"FLOWERBOMB",linea:"Dama",costoEsencia:1.70,stockGramos:120},
-  {id:"DP02324",base:"",disenador:"YVES SAINT LAURENT",referencia:"BLACK OPIUM",linea:"Dama",costoEsencia:1.70,stockGramos:180},
-  {id:"DP02515",base:"",disenador:"YVES SAINT LAURENT",referencia:"LIBRE",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"DP02431",base:"",disenador:"YVES SAINT LAURENT",referencia:"MON PARIS",linea:"Dama",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01017",base:"",disenador:"CALVIN KLEIN",referencia:"CK BE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
-  {id:"UP01002",base:"",disenador:"CALVIN KLEIN",referencia:"CK ONE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
-  {id:"BUP0003",base:"BASE TE VERDE MATCHA Y FLOR DE SAKURA",disenador:"LE LABO",referencia:"THE MATCHA 26",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
-  {id:"UP01000",base:"",disenador:"LE LABO",referencia:"SANTAL 33",linea:"Unisex",costoEsencia:1.70,stockGramos:180},
-  {id:"UP01090",base:"",disenador:"LOUIS VUITTON",referencia:"OMBRE NOMADE",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
-  {id:"UP01087",base:"BASE LOVE TOY 2 PEARL",disenador:"MOSCHINO",referencia:"TOY 2 PEARL",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01054",base:"",disenador:"MAISON FRANCIS KURKDJIAN",referencia:"BACCARAT ROUGE",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01122",base:"",disenador:"PENHALIGON'S",referencia:"THE WORLD ACCORDING TO ARTHUR",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01073",base:"BASE CHERRY CIGAR NICHE",disenador:"TOM FORD",referencia:"CHERRY SMOKE",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01046",base:"",disenador:"TOM FORD",referencia:"OMBRE LEATHER",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01047",base:"",disenador:"TOM FORD",referencia:"OUD WOOD",linea:"Unisex",costoEsencia:1.70,stockGramos:60},
-  {id:"UP01028",base:"",disenador:"TOM FORD",referencia:"TOBACCO VANILLE",linea:"Unisex",costoEsencia:1.70,stockGramos:180},
-  {id:"UP01129",base:"",disenador:"XERJOFF",referencia:"ERBA PURA",linea:"Unisex",costoEsencia:1.70,stockGramos:120},
-];
-const PED_SEED = [
-  {id:1,fecha:"2026-01-25",cliente:"Ricardo Granados",codigo:"UP01141",fragancia:"BASE VANILLA RUDE NICHE",disenador:"Tom Ford",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:2,fecha:"2026-01-25",cliente:"Brian Noé",codigo:"CP02158",fragancia:"BASE SALVAJE",disenador:"DIOR",linea:"Caballero",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:3,fecha:"2026-01-25",cliente:"Omar Durán",codigo:"UP01000",fragancia:"SANTAL 33",disenador:"LE LABO",linea:"Unisex",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:4,fecha:"2026-02-07",cliente:"Osmara",codigo:"DP00987",fragancia:"212",disenador:"CAROLINA HERRERA",linea:"Dama",estatus:"Entregado/Cobrado",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:5,fecha:"2026-04-04",cliente:"Omar",codigo:"DP02452",fragancia:"SCANDAL",disenador:"JEAN PAUL GAULTIER",linea:"Dama",estatus:"Pedido",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:6,fecha:"2026-04-06",cliente:"Osmara",codigo:"DP02472",fragancia:"COCO MADEMOISELLE",disenador:"CHANEL",linea:"Dama",estatus:"Comprado proveedor",canal:"WhatsApp",precio:250,costoEsencia:1.70,notas:""},
-  {id:7,fecha:"2026-04-06",cliente:"Karen Jiménez",codigo:"DP02507",fragancia:"PURE MUSK FOR HER",disenador:"NARCISO RODRIGUEZ",linea:"Dama",estatus:"Elaborado",canal:"Referido",precio:250,costoEsencia:1.70,notas:""},
-];
+const CAT_SEED = [];
+const PED_SEED = [];
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let cfg    = JSON.parse(localStorage.getItem('if_cfg')||'null') || {...CFG_DEF};
-let cat    = localStorage.getItem('if_cat')  !== null ? JSON.parse(localStorage.getItem('if_cat'))  : CAT_SEED.map(x=>({...x}));
-let peds   = localStorage.getItem('if_peds') !== null ? JSON.parse(localStorage.getItem('if_peds')) : PED_SEED.map(x=>({...x}));
+let cat    = JSON.parse(localStorage.getItem('if_cat')  || '[]');
+let peds   = JSON.parse(localStorage.getItem('if_peds') || '[]');
 let nextId = Math.max(...peds.map(p=>p.id), 0) + 1;
 
 const save = () => {
   localStorage.setItem('if_cfg',  JSON.stringify(cfg));
   localStorage.setItem('if_cat',  JSON.stringify(cat));
   localStorage.setItem('if_peds', JSON.stringify(peds));
+
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
