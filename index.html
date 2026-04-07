@@ -302,6 +302,14 @@ const fmt  = n => '$' + Math.round(n).toLocaleString('es-MX');
 const costoFijo = () => cfg.gfijador*cfg.pfijador + cfg.gferomonas*cfg.pferomonas + cfg.gperfumol*cfg.pperfumol + cfg.envase + cfg.atomizador + cfg.sticker;
 const costoProd = ce => costoFijo() + cfg.gesencia*(parseFloat(ce)||1.70);
 const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia);
+function lineaDesdeId(id){
+  const p=id.toUpperCase();
+  if(p.startsWith('CP')||p.startsWith('C'))return 'Caballero';
+  if(p.startsWith('DP')||p.startsWith('DO')||p.startsWith('D'))return 'Dama';
+  if(p.startsWith('UP')||p.startsWith('BUP')||p.startsWith('U'))return 'Unisex';
+  if(p.startsWith('N'))return 'Nicho';
+  return '';
+}
 const EST_CLS = {'Pedido':'b-pedido','Comprado proveedor':'b-comprado','Elaborado':'b-elaborado','Entregado':'b-entregado','Cobrado':'b-cobrado'};
 const TODOS_EST = ['Pedido','Comprado proveedor','Elaborado','Entregado','Cobrado'];
 const LIN_CLS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
@@ -370,16 +378,19 @@ function renderPedidos(){
     return m&&(!_fEst||p.estatus===_fEst);
   }).reverse();
   if(!list.length){document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>';return;}
-  document.getElementById('pedidos-list').innerHTML=list.map(p=>`
+  document.getElementById('pedidos-list').innerHTML=list.map(p=>{
+    const linAuto=lineaDesdeId(p.codigo||'');
+    const linMostrar=linAuto||p.linea||'';
+    return `
     <div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
           <div class="card-name">${p.cliente}</div>
           <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia} · ${p.disenador||''}</div>
-          <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}</div>
+          <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}${p.codigo?' · <span style="font-family:monospace;color:var(--gold)">' + p.codigo + '</span>':''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-          ${bLin(p.linea)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
+          ${bLin(linMostrar)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
         </div>
       </div>
       <div class="card-actions">
@@ -390,7 +401,8 @@ function renderPedidos(){
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
       ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function cambiarEst(id,est){
@@ -509,6 +521,7 @@ function openModal(mode,id=null){
           <input type="hidden" id="f-frag-dis" value="${selFrag?selFrag.disenador:''}"/>
           <div id="f-frag-dd" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:220px;overflow-y:auto;z-index:300"></div>
         </div>
+        ${selFragId?`<div style="margin-top:5px;font-size:11px;color:var(--gold);font-family:monospace">${selFragId} · ${bLin(lineaDesdeId(selFragId)||selFrag?.linea||'')}</div>`:'<div id="f-frag-info" style="margin-top:5px;font-size:11px;color:var(--gold);font-family:monospace;min-height:16px"></div>'}
         <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
           <button type="button" class="btn btn-sm" onclick="mFragLinFilter('')">Todas</button>
           <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Caballero')">Caballero</button>
@@ -635,7 +648,11 @@ function mFragSelect(id,txt,linea,dis,ce){
   document.getElementById('f-frag-dis').value=dis;
   document.getElementById('f-frag-dd').style.display='none';
   document.getElementById('f-manual-wrap').style.display='none';
-  const lsel=document.getElementById('f-linea'); if(lsel) lsel.value=linea;
+  const lsel=document.getElementById('f-linea');
+  const linAuto=lineaDesdeId(id)||linea;
+  if(lsel) lsel.value=linAuto;
+  const info=document.getElementById('f-frag-info');
+  if(info) info.innerHTML=`${id} · ${bLin(linAuto)}`;
   const ceEl=document.getElementById('f-cesencia'); if(ceEl){ceEl.value=parseFloat(ce)||1.70;mRecalc();}
 }
 function mFragSelectOtra(){
