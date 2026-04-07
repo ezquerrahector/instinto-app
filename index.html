@@ -624,17 +624,32 @@ function mFragSearch(txt){
     return matchLin&&matchTxt;
   }).slice(0,30);
   if(!results.length&&!txt){dd.style.display='none';return;}
+  const consumoAct={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoAct[p.codigo]=(consumoAct[p.codigo]||0)+1;});
   const LIN_COLOR={'Caballero':'#5B9BD5','Dama':'#E07090','Unisex':'#D4A017','Nicho':'#4CAF7D'};
-  dd.innerHTML=results.map(r=>`
+  dd.innerHTML=results.map(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
+    const usado=(consumoAct[r.id]||0)*cfg.gesencia;
+    const rest=Math.max(0,ini-usado);
+    const stockInd=rest>=cfg.gesencia
+      ?`<span style="font-size:10px;color:var(--green);flex-shrink:0">✓ ${rest}g</span>`
+      :rest>0
+      ?`<span style="font-size:10px;color:var(--amber);flex-shrink:0">⚠ ${rest}g</span>`
+      :`<span style="font-size:10px;color:var(--red);flex-shrink:0">✕ Sin stock</span>`;
+    return `
     <div onclick="mFragSelect('${r.id}','${r.referencia.replace(/'/g,"\\'")} — ${r.disenador.replace(/'/g,"\\'")}','${r.linea}','${r.disenador.replace(/'/g,"\\'")}','${(r.costoEsencia||1.70)}')"
-      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center"
+      style="padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;display:flex;justify-content:space-between;align-items:center;gap:8px"
       onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-      <div>
-        <div style="font-weight:500">${r.referencia}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
         <div style="font-size:11px;color:var(--text2)">${r.disenador} · ${r.id}</div>
       </div>
-      <span style="font-size:10px;font-weight:600;color:${LIN_COLOR[r.linea]||'var(--text2)'};flex-shrink:0;margin-left:8px">${r.linea[0]}</span>
-    </div>`).join('');
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
+        <span style="font-size:10px;font-weight:600;color:${LIN_COLOR[r.linea]||'var(--text2)'}">${r.linea[0]}</span>
+        ${stockInd}
+      </div>
+    </div>`;
+  }).join('');
   if(txt==='__otra__'||(!results.length&&txt)){
     dd.innerHTML+=`<div onclick="mFragSelectOtra()" style="padding:10px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-style:italic" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">— Ingresar manualmente —</div>`;
   } else {
@@ -653,7 +668,25 @@ function mFragSelect(id,txt,linea,dis,ce){
   const linAuto=lineaDesdeId(id)||linea;
   if(lsel) lsel.value=linAuto;
   const info=document.getElementById('f-frag-info');
-  if(info) info.innerHTML=`${id} · ${bLin(linAuto)}`;
+  if(info){
+    const fragCat=cat.find(x=>x.id===id);
+    const consumo={};
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
+    let stockHtml='';
+    if(fragCat){
+      const ini=parseFloat(fragCat.stockGramos)||0;
+      const usado=(consumo[id]||0)*cfg.gesencia;
+      const rest=Math.max(0,ini-usado);
+      if(rest>=cfg.gesencia){
+        stockHtml=`<span style="background:rgba(76,175,125,0.15);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">✓ En stock (${rest}g)</span>`;
+      } else if(rest>0){
+        stockHtml=`<span style="background:rgba(212,160,23,0.15);color:var(--amber);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">⚠ Stock bajo (${rest}g)</span>`;
+      } else {
+        stockHtml=`<span style="background:rgba(224,85,85,0.15);color:var(--red);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">✕ Sin stock</span>`;
+      }
+    }
+    info.innerHTML=`<span style="font-family:monospace;color:var(--gold)">${id}</span> · ${bLin(linAuto)} ${stockHtml}`;
+  }
   const ceEl=document.getElementById('f-cesencia'); if(ceEl){ceEl.value=parseFloat(ce)||1.70;mRecalc();}
 }
 function mFragSelectOtra(){
