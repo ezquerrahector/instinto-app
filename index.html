@@ -265,6 +265,7 @@ nav::-webkit-scrollbar{display:none}
       <div class="btns" style="flex-direction:column">
         <button class="btn btn-danger" onclick="resetCatalogo()">🗑 Limpiar catálogo (mantiene pedidos)</button>
         <button class="btn btn-danger" onclick="resetPedidos()">🗑 Limpiar pedidos (mantiene catálogo)</button>
+        <button class="btn btn-danger" onclick="resetInventario()">🗑 Limpiar inventario (resetea stock a 0)</button>
         <button class="btn btn-danger" onclick="resetTodo()">⚠ Borrar TODO y empezar de cero</button>
       </div>
     </div>
@@ -903,6 +904,11 @@ function resetTodo(){
   ['if_cfg','if_cat','if_peds'].forEach(k=>localStorage.removeItem(k));
   toast('Datos eliminados, recargando...');
   setTimeout(()=>location.reload(),800);
+}
+function resetInventario(){
+  if(!confirm('¿Resetear el stock de todas las fragancias a 0?'))return;
+  cat.forEach(r=>r.stockGramos=0);
+  save(); renderInv(); toast('Inventario reseteado a 0');
 }
 function resetCatalogo(){
   if(!confirm('¿Limpiar catálogo? Los pedidos se conservan.'))return;
