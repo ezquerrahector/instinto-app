@@ -925,7 +925,7 @@ function exportCSV(tipo){
     fn='instinto_inventario.csv';
     const consumoInv={};
     peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoInv[p.codigo]=(consumoInv[p.codigo]||0)+1;});
-    csv='codigo,referencia,disenador,linea,stockInicial,usado,restante,costoEsencia\n';
+    csv='codigo,referencia,disenador,linea,stockGramos,usado,restante,costoEsencia\n';
     cat.forEach(r=>{
       const ini=parseFloat(r.stockGramos)||0;
       const uso=(consumoInv[r.id]||0)*cfg.gesencia;
@@ -1018,7 +1018,11 @@ function importCSV(input,tipo){
         if(!r.codigo)return;
         const frag=cat.find(x=>x.id===r.codigo.toUpperCase());
         if(frag){
-          if(r.stockGramos) frag.stockGramos=parseFloat(r.stockGramos);
+          // Acepta tanto 'stockGramos' (plantilla) como 'restante' (exportado)
+          const nuevoStock = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
+                           : r.restante!==undefined    ? parseFloat(r.restante)
+                           : null;
+          if(nuevoStock!==null && !isNaN(nuevoStock)) frag.stockGramos=nuevoStock;
           if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
           updated++;
         }
