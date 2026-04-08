@@ -721,8 +721,8 @@ function openModal(mode,id=null){
         <div class="form-group"><label>Stock inicial (gramos)</label><input type="number" id="fc-stock" value="${r?r.stockGramos:60}"/></div>
       </div>
       <div class="modal-footer">
-        <button class="btn" onclick="closeModal()">Cancelar</button>
-        <button class="btn btn-gold" onclick="saveFrag('${id||''}')">Guardar</button>
+        <button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-gold" type="button" onclick="saveFrag(${r?`'${id}'`:'null'})">Guardar</button>
       </div>`;
   }
 
@@ -897,22 +897,24 @@ function savePed(){
 }
 
 function saveFrag(existingId){
+  existingId = existingId==='null'||existingId===''||existingId===null?null:existingId;
   const id=(document.getElementById('fc-id')?.value||'').trim().toUpperCase();
   if(!id){toast('⚠ El código es requerido');return;}
   const data={
-    id,base:document.getElementById('fc-base')?.value||'',
+    id,
+    base:document.getElementById('fc-base')?.value||'',
     disenador:(document.getElementById('fc-dis')?.value||'').toUpperCase(),
     referencia:(document.getElementById('fc-ref')?.value||'').toUpperCase(),
     linea:document.getElementById('fc-linea')?.value||'Caballero',
     costoEsencia:parseFloat(document.getElementById('fc-cesencia')?.value)||1.70,
-    stockGramos:parseFloat(document.getElementById('fc-stock')?.value??60),
+    stockGramos:parseFloat(document.getElementById('fc-stock')?.value??0)||0,
   };
   if(existingId){
     const idx=cat.findIndex(x=>x.id===existingId);
     if(idx>=0) cat[idx]={...cat[idx],...data};
     toast('Fragancia actualizada ✓');
   } else {
-    if(cat.find(x=>x.id===id)){toast('⚠ Ese ID ya existe');return;}
+    if(cat.find(x=>x.id===id)){toast('⚠ Ese ID ya existe en el catálogo');return;}
     cat.push(data);
     toast('Fragancia agregada ✓');
   }
