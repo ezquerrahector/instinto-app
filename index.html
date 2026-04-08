@@ -850,8 +850,9 @@ function exportJSON(){
 }
 
 function dlBlob(content,type,filename){
+  const bom = type.includes('csv') ? '\uFEFF' : '';
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.href=URL.createObjectURL(new Blob([bom+content],{type:type+';charset=utf-8'}));
   a.download=filename; a.click();
   toast('Descargando '+filename+' ✓');
 }
