@@ -829,8 +829,8 @@ function exportCSV(tipo){
   let csv='',fn='';
   if(tipo==='pedidos'){
     fn='instinto_pedidos.csv';
-    csv='id,fecha,cliente,codigo,fragancia,disenador,linea,estatus,canal,precio,costoEsencia,ganancia,notas\n';
-    peds.forEach(p=>{ csv+=`${p.id},"${p.fecha}","${p.cliente}","${p.codigo}","${p.fragancia}","${p.disenador||''}","${p.linea}","${p.estatus}","${p.canal||''}",${p.precio},${p.costoEsencia},${Math.round(ganancia(p))},"${p.notas||''}"\n`; });
+    csv='#,id,fecha,cliente,codigo,fragancia,disenador,linea,estatus,canal,precio,costoEsencia,ganancia,notas\n';
+    peds.forEach((p,i)=>{ csv+=`${i+1},${p.id},"${p.fecha}","${p.cliente}","${p.codigo}","${p.fragancia}","${p.disenador||''}","${p.linea}","${p.estatus}","${p.canal||''}",${p.precio},${p.costoEsencia},${Math.round(ganancia(p))},"${p.notas||''}"\n`; });
   } else if(tipo==='catalogo'){
     fn='instinto_catalogo.csv';
     csv='codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\n';
