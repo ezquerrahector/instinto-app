@@ -242,6 +242,13 @@ nav::-webkit-scrollbar{display:none}
         <button class="btn btn-gold" onclick="exportJSON()">💾 Backup completo</button>
       </div>
     </div>
+    <div class="export-area">
+      <h4>Reporte de existencia para vendedores</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Genera una imagen/tabla lista para compartir por WhatsApp con las fragancias disponibles ahora.</p>
+      <div class="btns">
+        <button class="btn btn-gold" onclick="generarReporteExistencia()">📋 Ver reporte de existencia</button>
+      </div>
+    </div>
   </div>
 
   <div id="s-import" style="display:none">
@@ -315,6 +322,21 @@ nav::-webkit-scrollbar{display:none}
 <!-- MODAL GENÉRICO -->
 <div class="modal-overlay" id="modal-overlay">
 <div class="modal" id="modal-content"></div>
+</div>
+
+<!-- MODAL REPORTE EXISTENCIA -->
+<div class="modal-overlay" id="reporte-overlay">
+<div class="modal" style="max-width:620px;border-radius:16px 16px 0 0">
+  <div class="modal-handle"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="modal-title" style="margin:0">Existencia inmediata</div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-sm btn-blue" onclick="copiarReporte()">📋 Copiar</button>
+      <button class="btn btn-sm" onclick="document.getElementById('reporte-overlay').classList.remove('open')">✕</button>
+    </div>
+  </div>
+  <div id="reporte-contenido"></div>
+</div>
 </div>
 
 <div id="toast"></div>
@@ -1195,6 +1217,87 @@ function abrirWhatsApp(){
   const txt=encodeURIComponent(document.getElementById('prov-msg').value);
   window.open(`https://wa.me/?text=${txt}`,'_blank');
 }
+
+// ── REPORTE EXISTENCIA ────────────────────────────────────────────────────
+function generarReporteExistencia(){
+  const consumido={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
+    .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
+
+  const conStock=cat.filter(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
+    const rest=Math.max(0,ini-(consumido[r.id]||0)*cfg.gesencia);
+    return rest>=cfg.gesencia;
+  }).sort((a,b)=>{
+    const ord={'Caballero':0,'Dama':1,'Unisex':2,'Nicho':3};
+    return (ord[a.linea]??4)-(ord[b.linea]??4)||a.referencia.localeCompare(b.referencia);
+  });
+
+  const COLOR={'Caballero':'#D1ECF1','Dama':'#FCE4EC','Unisex':'#FDF3DC','Nicho':'#D4EDDA'};
+  const COLOR_TXT={'Caballero':'#185FA5','Dama':'#AD1457','Unisex':'#9A6C00','Nicho':'#28A745'};
+
+  let html=`<div style="overflow-x:auto">
+  <table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead>
+      <tr style="background:#1A1A1A">
+        <th style="padding:8px 10px;text-align:left;color:#C9A84C;font-weight:600;border:1px solid #333">Casa</th>
+        <th style="padding:8px 10px;text-align:left;color:#C9A84C;font-weight:600;border:1px solid #333">Fragancia</th>
+        <th style="padding:8px 10px;text-align:left;color:#C9A84C;font-weight:600;border:1px solid #333">Dirigido a</th>
+      </tr>
+    </thead><tbody>`;
+
+  conStock.forEach((r,i)=>{
+    const bg=i%2===0?'#fff':COLOR[r.linea]||'#f9f9f9';
+    const linBg=COLOR[r.linea]||'#eee';
+    const linTxt=COLOR_TXT[r.linea]||'#333';
+    html+=`<tr>
+      <td style="padding:7px 10px;border:1px solid #ddd;background:${bg};color:#222">${r.disenador}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;background:${bg};color:#222;font-weight:500">${r.referencia}</td>
+      <td style="padding:7px 10px;border:1px solid #ddd;background:${linBg}"><span style="color:${linTxt};font-weight:600;font-size:11px">${r.linea}</span></td>
+    </tr>`;
+  });
+
+  html+=`</tbody></table></div>
+  <div style="margin-top:10px;font-size:11px;color:var(--text2);text-align:center">
+    ${conStock.length} fragancias disponibles · Instinto Fragancias · ${new Date().toLocaleDateString('es-MX')}
+  </div>`;
+
+  document.getElementById('reporte-contenido').innerHTML=html;
+  document.getElementById('reporte-overlay').classList.add('open');
+}
+
+function copiarReporte(){
+  const consumido={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
+    .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
+
+  const conStock=cat.filter(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
+    const rest=Math.max(0,ini-(consumido[r.id]||0)*cfg.gesencia);
+    return rest>=cfg.gesencia;
+  }).sort((a,b)=>{
+    const ord={'Caballero':0,'Dama':1,'Unisex':2,'Nicho':3};
+    return (ord[a.linea]??4)-(ord[b.linea]??4)||a.referencia.localeCompare(b.referencia);
+  });
+
+  const lineas={'Caballero':[],'Dama':[],'Unisex':[],'Nicho':[]};
+  conStock.forEach(r=>{if(lineas[r.linea]) lineas[r.linea].push(`${r.disenador} — ${r.referencia}`);});
+
+  let txt=`🌟 *INSTINTO FRAGANCIAS*\n📦 Existencia inmediata · ${new Date().toLocaleDateString('es-MX')}\n\n`;
+  if(lineas.Caballero.length) txt+=`👔 *CABALLERO*\n${lineas.Caballero.map(x=>`• ${x}`).join('\n')}\n\n`;
+  if(lineas.Dama.length)      txt+=`💄 *DAMA*\n${lineas.Dama.map(x=>`• ${x}`).join('\n')}\n\n`;
+  if(lineas.Unisex.length)    txt+=`✨ *UNISEX*\n${lineas.Unisex.map(x=>`• ${x}`).join('\n')}\n\n`;
+  if(lineas.Nicho.length)     txt+=`🌸 *NICHO*\n${lineas.Nicho.map(x=>`• ${x}`).join('\n')}\n\n`;
+  txt+=`_No todo se ve, otras cosas se sienten_ 🖤`;
+
+  navigator.clipboard.writeText(txt).then(()=>toast('Copiado para WhatsApp ✓')).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=txt; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast('Copiado para WhatsApp ✓');
+  });
+}
+
 const EJS = {
   serviceId:  'instinto_gmail',
   templateId: 'template_sjjxq5c',
