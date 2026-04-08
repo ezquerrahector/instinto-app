@@ -263,7 +263,7 @@ nav::-webkit-scrollbar{display:none}
     </div>
     <div class="export-area">
       <h4>Actualizar inventario desde CSV</h4>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, stockGramos, costoEsencia — Actualiza el stock de las fragancias que ya existen en el catálogo.</p>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, stockGramos (gramos disponibles <strong>ahora</strong>), costoEsencia — El sistema ajusta automáticamente el histórico de consumo.</p>
       <div class="btns">
         <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv" onchange="importCSV(this,'inventario')"/></div>
         <button class="btn" onclick="descargarPlantilla('inventario')">📋 Plantilla</button>
@@ -1035,11 +1035,15 @@ function importCSV(input,tipo){
         if(!r.codigo)return;
         const frag=cat.find(x=>x.id===r.codigo.toUpperCase());
         if(frag){
-          // Acepta tanto 'stockGramos' (plantilla) como 'restante' (exportado)
-          const nuevoStock = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
+          // El CSV tiene gramos disponibles AHORA — recalcular stockGramos interno
+          const disponible = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
                            : r.restante!==undefined    ? parseFloat(r.restante)
                            : null;
-          if(nuevoStock!==null && !isNaN(nuevoStock)) frag.stockGramos=nuevoStock;
+          if(disponible!==null && !isNaN(disponible)){
+            // Sumar lo ya consumido para obtener el stockGramos interno correcto
+            const consumido=peds.filter(p=>p.codigo===frag.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+            frag.stockGramos = disponible + consumido*cfg.gesencia;
+          }
           if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
           updated++;
         }
