@@ -146,7 +146,14 @@ nav::-webkit-scrollbar{display:none}
       <option>Pedido</option><option>Comprado proveedor</option>
       <option>Elaborado</option><option>Entregado</option><option>Cobrado</option>
     </select>
+    <select onchange="setOrden(this.value)">
+      <option value="fecha">Más reciente</option>
+      <option value="nombre">Nombre A-Z</option>
+      <option value="numero">Núm. pedido</option>
+      <option value="fragancia">Fragancia A-Z</option>
+    </select>
   </div>
+  <div id="pedidos-count" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
   <div id="pedidos-list"></div>
 </div>
 
@@ -375,32 +382,82 @@ function renderDash(){
 }
 
 // ── PEDIDOS ───────────────────────────────────────────────────────────────
-let _fTxt='',_fEst='';
+let _fTxt='',_fEst='',_fOrden='fecha';
 function filterPedidos(v){_fTxt=v.toLowerCase();renderPedidos();}
 function setFilterEst(v){_fEst=v;renderPedidos();}
+function setOrden(v){_fOrden=v;renderPedidos();}
 
 function renderPedidos(){
   let list=peds.filter(p=>{
     const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt));
     return m&&(!_fEst||p.estatus===_fEst);
-  }).reverse();
+  });
+
+  // Ordenar
+  if(_fOrden==='nombre') list=[...list].sort((a,b)=>a.cliente.localeCompare(b.cliente));
+  else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>a.fragancia.localeCompare(b.fragancia));
+  else if(_fOrden==='numero') list=[...list].sort((a,b)=>b.id-a.id);
+  else list=[...list].reverse(); // fecha: más reciente primero
+
+  // Contador
+  const countEl=document.getElementById('pedidos-count');
+  if(countEl) countEl.textContent=list.length===0?'Sin resultados':`${list.length} pedido${list.length!==1?'s':''}${_fTxt||_fEst?' encontrados':''}`;
+
   if(!list.length){document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>';return;}
+
+  // Calcular stock disponible por fragancia considerando el orden de los pedidos
+  // Solo pedidos activos (no entregados/cobrados) consumen stock pendiente
+  const stockDisp={};
+  cat.forEach(r=>{
+    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+    stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-consumido*cfg.gesencia);
+  });
+
+  // Para pedidos activos en la lista filtrada, asignar stock en orden
+  const stockUsadoPorPedido={};
+  const stockTemporal={...stockDisp};
+  // Procesar todos los pedidos activos en orden cronológico para asignar stock justo
+  const pedidosActivos=[...peds]
+    .filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
+    .sort((a,b)=>a.id-b.id);
+  pedidosActivos.forEach(p=>{
+    if(stockTemporal[p.codigo]===undefined) return;
+    if(stockTemporal[p.codigo]>=cfg.gesencia){
+      stockUsadoPorPedido[p.id]='ok';
+      stockTemporal[p.codigo]-=cfg.gesencia;
+    } else {
+      stockUsadoPorPedido[p.id]='sin';
+    }
+  });
+
   document.getElementById('pedidos-list').innerHTML=list.map(p=>{
-    const linAuto=lineaDesdeId(p.codigo||'');
-    const linMostrar=linAuto||p.linea||'';
+    const linAuto=lineaDesdeId(p.codigo||'')||p.linea||'';
+    // Indicador de stock solo para pedidos activos
+    let stockBadge='';
+    if(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'){
+      const fragCat=cat.find(x=>x.id===p.codigo);
+      if(!fragCat){
+        stockBadge=`<span style="font-size:11px;background:rgba(160,154,142,0.15);color:var(--text2);padding:2px 7px;border-radius:4px">— Sin catálogo</span>`;
+      } else if(stockUsadoPorPedido[p.id]==='ok'){
+        stockBadge=`<span style="font-size:11px;background:rgba(76,175,125,0.15);color:var(--green);padding:2px 7px;border-radius:4px;font-weight:600">✓ Stock OK</span>`;
+      } else {
+        stockBadge=`<span style="font-size:11px;background:rgba(224,85,85,0.15);color:var(--red);padding:2px 7px;border-radius:4px;font-weight:600">✕ Sin stock</span>`;
+      }
+    }
     return `
     <div class="card">
       <div class="card-top">
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">
             <span style="font-size:11px;font-weight:600;background:var(--bg4);color:var(--text2);padding:2px 7px;border-radius:4px;flex-shrink:0">#${p.id}</span>
             <div class="card-name">${p.cliente}</div>
+            ${stockBadge}
           </div>
           <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia} · ${p.disenador||''}</div>
           <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}${p.codigo?' · <span style="font-family:monospace;color:var(--gold)">' + p.codigo + '</span>':''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-          ${bLin(linMostrar)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
+          ${bLin(linAuto)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
         </div>
       </div>
       <div class="card-actions">
