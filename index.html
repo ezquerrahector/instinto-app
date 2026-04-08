@@ -923,10 +923,15 @@ function exportCSV(tipo){
     cat.forEach(r=>{ csv+=`"${r.id}","${r.base||''}","${r.disenador}","${r.referencia}","${r.linea}",${r.costoEsencia},${r.stockGramos}\n`; });
   } else {
     fn='instinto_inventario.csv';
-    const consumo={};
-    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumo[p.codigo]=(consumo[p.codigo]||0)+1;});
-    csv='codigo,referencia,disenador,linea,stockInicial,usado,restante\n';
-    cat.forEach(r=>{ const ini=r.stockGramos,uso=(consumo[r.id]||0)*cfg.gesencia,rest=Math.max(0,ini-uso); csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${ini},${uso},${rest}\n`; });
+    const consumoInv={};
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoInv[p.codigo]=(consumoInv[p.codigo]||0)+1;});
+    csv='codigo,referencia,disenador,linea,stockInicial,usado,restante,costoEsencia\n';
+    cat.forEach(r=>{
+      const ini=parseFloat(r.stockGramos)||0;
+      const uso=(consumoInv[r.id]||0)*cfg.gesencia;
+      const rest=Math.max(0,ini-uso);
+      if(rest>0) csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${ini},${uso},${rest},${r.costoEsencia}\n`;
+    });
   }
   dlBlob(csv,'text/csv',fn);
 }
