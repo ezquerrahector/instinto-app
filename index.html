@@ -1044,6 +1044,19 @@ async function probarEmailJS(){
 async function enviarNotificacion(tipo, p){
   try {
     await loadEmailJS();
+    // Calcular stock disponible
+    const fragCat = cat.find(x=>x.id===p.codigo);
+    let stockInfo = 'No registrado en catálogo';
+    if(fragCat){
+      const consumo = {};
+      peds.filter(x=>x.estatus==='Elaborado'||x.estatus==='Entregado'||x.estatus==='Cobrado'||x.estatus==='Entregado/Cobrado').forEach(x=>{consumo[x.codigo]=(consumo[x.codigo]||0)+1;});
+      const ini = parseFloat(fragCat.stockGramos)||0;
+      const usado = (consumo[p.codigo]||0)*cfg.gesencia;
+      const rest = Math.max(0, ini-usado);
+      if(rest >= cfg.gesencia) stockInfo = `✅ Hay stock disponible (${rest}g)`;
+      else if(rest > 0) stockInfo = `⚠️ Stock bajo (${rest}g — menos de 1 perfume)`;
+      else stockInfo = `❌ Sin stock (0g)`;
+    }
     await emailjs.send(EJS.serviceId, EJS.templateId, {
       tipo,
       name:      'Instinto Fragancias',
@@ -1055,9 +1068,9 @@ async function enviarNotificacion(tipo, p){
       canal:     p.canal     || '',
       precio:    String(p.precio || ''),
       fecha:     p.fecha     || '',
-      notas:     p.notas     || '',
+      notas:     (p.notas || '') + '\nStock: ' + stockInfo,
       email:     'hectorezquerra@hotmail.com',
-      message:   `${tipo} en Instinto Fragancias`
+      message:   `${tipo} en Instinto Fragancias\nStock: ${stockInfo}`
     });
     console.log('Notificación enviada:', tipo);
   } catch(e){ console.warn('EmailJS envío falló:', e); }
