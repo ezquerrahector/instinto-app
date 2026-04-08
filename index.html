@@ -446,46 +446,41 @@ function renderPedidos(){
     return m&&(!_fEst||p.estatus===_fEst);
   });
 
+  // Calcular stock ANTES de ordenar (para poder ordenar por stock)
+  const stockDisp={};
+  cat.forEach(r=>{
+    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+    stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-consumido*cfg.gesencia);
+  });
+  const stockUsadoPorPedido={};
+  const stockTemporal={...stockDisp};
+  [...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
+    .sort((a,b)=>a.id-b.id)
+    .forEach(p=>{
+      if(stockTemporal[p.codigo]===undefined) return;
+      if(stockTemporal[p.codigo]>=cfg.gesencia){
+        stockUsadoPorPedido[p.id]='ok';
+        stockTemporal[p.codigo]-=cfg.gesencia;
+      } else {
+        stockUsadoPorPedido[p.id]='sin';
+      }
+    });
+
   // Ordenar
   if(_fOrden==='nombre') list=[...list].sort((a,b)=>a.cliente.localeCompare(b.cliente));
   else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>a.fragancia.localeCompare(b.fragancia));
   else if(_fOrden==='numero') list=[...list].sort((a,b)=>b.id-a.id);
   else if(_fOrden==='stock') list=[...list].sort((a,b)=>{
-    const sc=p=>stockUsadoPorPedido[p.id]==='ok'?0:1;
+    const sc=p=>stockUsadoPorPedido[p.id]==='ok'?0:stockUsadoPorPedido[p.id]==='sin'?1:2;
     return sc(a)-sc(b);
   });
-  else list=[...list].reverse(); // fecha: más reciente primero
+  else list=[...list].reverse();
 
   // Contador
   const countEl=document.getElementById('pedidos-count');
   if(countEl) countEl.textContent=list.length===0?'Sin resultados':`${list.length} pedido${list.length!==1?'s':''}${_fTxt||_fEst?' encontrados':''}`;
 
   if(!list.length){document.getElementById('pedidos-list').innerHTML='<div class="empty">Sin pedidos con ese filtro.</div>';return;}
-
-  // Calcular stock disponible por fragancia considerando el orden de los pedidos
-  // Solo pedidos activos (no entregados/cobrados) consumen stock pendiente
-  const stockDisp={};
-  cat.forEach(r=>{
-    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
-    stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-consumido*cfg.gesencia);
-  });
-
-  // Para pedidos activos en la lista filtrada, asignar stock en orden
-  const stockUsadoPorPedido={};
-  const stockTemporal={...stockDisp};
-  // Procesar todos los pedidos activos en orden cronológico para asignar stock justo
-  const pedidosActivos=[...peds]
-    .filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
-    .sort((a,b)=>a.id-b.id);
-  pedidosActivos.forEach(p=>{
-    if(stockTemporal[p.codigo]===undefined) return;
-    if(stockTemporal[p.codigo]>=cfg.gesencia){
-      stockUsadoPorPedido[p.id]='ok';
-      stockTemporal[p.codigo]-=cfg.gesencia;
-    } else {
-      stockUsadoPorPedido[p.id]='sin';
-    }
-  });
 
   document.getElementById('pedidos-list').innerHTML=list.map(p=>{
     const linAuto=lineaDesdeId(p.codigo||'')||p.linea||'';
