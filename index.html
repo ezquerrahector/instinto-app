@@ -104,7 +104,13 @@ nav::-webkit-scrollbar{display:none}
 .file-input-wrap{position:relative;overflow:hidden;display:inline-block}
 .file-input-wrap input[type=file]{position:absolute;left:0;top:0;opacity:0;width:100%;height:100%;cursor:pointer}
 
-#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap}
+.prov-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:4px}
+.prov-table th{background:var(--bg4);padding:8px 10px;text-align:left;font-weight:600;color:var(--text2);border:1px solid var(--border)}
+.prov-table td{padding:7px 10px;border:1px solid var(--border);color:var(--text);vertical-align:middle}
+.prov-table tr:nth-child(even) td{background:var(--bg3)}
+.prov-table .cod{font-family:monospace;color:var(--gold);font-weight:600}
+.prov-alert{background:rgba(224,85,85,0.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;font-size:13px;color:var(--red)}
+.prov-ok{background:rgba(76,175,125,0.1);border:1px solid var(--green);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--green)};bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .tab-settings{display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px;overflow-x:auto}
@@ -127,6 +133,7 @@ nav::-webkit-scrollbar{display:none}
   <button class="nav-tab" onclick="showTab('pedidos',this)">Pedidos</button>
   <button class="nav-tab" onclick="showTab('inventario',this)">Inventario</button>
   <button class="nav-tab" onclick="showTab('catalogo',this)">Catálogo</button>
+  <button class="nav-tab" onclick="showTab('proveedor',this)">🛒 Proveedor</button>
   <button class="nav-tab" onclick="showTab('config',this)">⚙ Config</button>
 </nav>
 
@@ -177,6 +184,27 @@ nav::-webkit-scrollbar{display:none}
     <input type="search" placeholder="Buscar fragancia, diseñador o código..." oninput="filterInvTxt(this.value)" style="width:100%"/>
   </div>
   <div id="inv-list"></div>
+</div>
+
+<!-- PROVEEDOR -->
+<div id="proveedor" class="section">
+  <div class="section-head">
+    <span class="section-title">Pedido al proveedor</span>
+    <button class="btn btn-sm" onclick="renderProveedor()">↺ Actualizar</button>
+  </div>
+  <div id="prov-resumen" style="margin-bottom:12px"></div>
+  <div id="prov-tabla" style="margin-bottom:12px"></div>
+  <div id="prov-acciones" style="display:none">
+    <div class="export-area">
+      <h4>Mensaje para WhatsApp</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Copia este mensaje y pégalo en WhatsApp a tu proveedor:</p>
+      <textarea id="prov-msg" readonly style="width:100%;font-size:12px;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);min-height:140px;resize:vertical"></textarea>
+      <div class="btns" style="margin-top:10px">
+        <button class="btn btn-gold" onclick="copiarMsgProveedor()">📋 Copiar mensaje</button>
+        <button class="btn btn-blue" onclick="abrirWhatsApp()">💬 Abrir WhatsApp</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- CATÁLOGO -->
@@ -346,6 +374,7 @@ function showTab(id,btn){
   if(id==='catalogo')   renderCat();
   if(id==='pedidos')    renderPedidos();
   if(id==='config')     loadCfg();
+  if(id==='proveedor')  renderProveedor();
 }
 function showStab(id,btn){
   document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
@@ -1044,7 +1073,98 @@ function renderAll(){ renderDash(); renderPedidos(); }
 // ── SERVICE WORKER ────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
-// ── EMAILJS NOTIFICACIONES ────────────────────────────────────────────────
+// ── PROVEEDOR ─────────────────────────────────────────────────────────────
+function renderProveedor(){
+  // 1. Calcular stock consumido por pedidos elaborados/entregados
+  const consumido={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
+    .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
+
+  // 2. Stock disponible por fragancia
+  const stockDisp={};
+  cat.forEach(r=>{
+    stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);
+  });
+
+  // 3. Pedidos activos que necesitan esencia — asignar stock en orden
+  const pedActivos=[...peds]
+    .filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
+    .sort((a,b)=>a.id-b.id);
+
+  const stockTemp={...stockDisp};
+  const necesitan=[];
+
+  pedActivos.forEach(p=>{
+    const fragCat=cat.find(x=>x.id===p.codigo);
+    if(!fragCat) return; // sin catálogo, ignorar
+    if(stockTemp[p.codigo]>=cfg.gesencia){
+      stockTemp[p.codigo]-=cfg.gesencia; // alcanza, descontar
+    } else {
+      necesitan.push({p, fragCat}); // no alcanza → pedir al proveedor
+    }
+  });
+
+  const resEl=document.getElementById('prov-resumen');
+  const tablaEl=document.getElementById('prov-tabla');
+  const accionesEl=document.getElementById('prov-acciones');
+
+  if(!necesitan.length){
+    resEl.innerHTML=`<div class="prov-ok">✓ Tienes stock suficiente para todos los pedidos activos. No necesitas pedir nada al proveedor por ahora.</div>`;
+    tablaEl.innerHTML='';
+    accionesEl.style.display='none';
+    return;
+  }
+
+  resEl.innerHTML=`<div class="prov-alert">⚠ Necesitas pedir <strong>${necesitan.length} esencia${necesitan.length!==1?'s':''}</strong> al proveedor para cubrir todos los pedidos activos.</div>`;
+
+  // Agrupar por fragancia para saber gramos totales a pedir
+  const agrupado={};
+  necesitan.forEach(({p,fragCat})=>{
+    const id=p.codigo;
+    if(!agrupado[id]) agrupado[id]={fragCat, pedidos:[], gramos:0};
+    agrupado[id].pedidos.push(p);
+    agrupado[id].gramos+=cfg.gesencia; // 30g por pedido
+  });
+
+  // Tabla estilo proveedor
+  let html=`<div class="table-wrap"><table class="prov-table">
+    <thead><tr><th>Código</th><th>Base (nombre interno)</th><th>Casa / Diseñador</th><th>Fragancia referencia</th><th>Gramos</th><th>Pedidos</th></tr></thead><tbody>`;
+
+  const lineas=[];
+  Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
+    const clientes=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
+    html+=`<tr>
+      <td class="cod">${fragCat.id}</td>
+      <td>${fragCat.base||'—'}</td>
+      <td>${fragCat.disenador}</td>
+      <td>${fragCat.referencia}</td>
+      <td style="font-weight:600;color:var(--gold)">${gramos}g</td>
+      <td style="font-size:11px;color:var(--text2)">${clientes}</td>
+    </tr>`;
+    lineas.push(`${fragCat.id} | ${fragCat.base||fragCat.referencia} | ${fragCat.disenador} | ${fragCat.referencia} | ${gramos}g`);
+  });
+  html+=`</tbody></table></div>`;
+  tablaEl.innerHTML=html;
+
+  // Mensaje WhatsApp
+  const hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  const msg=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
+  document.getElementById('prov-msg').value=msg;
+  accionesEl.style.display='block';
+}
+
+function copiarMsgProveedor(){
+  const txt=document.getElementById('prov-msg').value;
+  navigator.clipboard.writeText(txt).then(()=>toast('Mensaje copiado ✓')).catch(()=>{
+    const ta=document.getElementById('prov-msg');
+    ta.select(); document.execCommand('copy'); toast('Mensaje copiado ✓');
+  });
+}
+
+function abrirWhatsApp(){
+  const txt=encodeURIComponent(document.getElementById('prov-msg').value);
+  window.open(`https://wa.me/?text=${txt}`,'_blank');
+}
 const EJS = {
   serviceId:  'instinto_gmail',
   templateId: 'template_sjjxq5c',
