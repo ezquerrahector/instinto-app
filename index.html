@@ -706,12 +706,25 @@ function openModal(mode,id=null){
   else if(mode==='stock'){
     const r=cat.find(x=>x.id===id);
     if(!r)return;
+    // Calcular stock real disponible
+    const consumido=peds.filter(p=>p.codigo===id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+    const usado=consumido*cfg.gesencia;
+    const disponible=Math.max(0,(parseFloat(r.stockGramos)||0)-usado);
     mc.innerHTML=`
       <div class="modal-handle"></div>
       <div class="modal-title">Actualizar stock</div>
       <div style="margin-bottom:14px"><div class="card-name">${r.referencia}</div><div class="card-sub">${r.disenador} · ${r.id}</div></div>
-      <div class="form-group"><label>Stock actual en gramos</label><input type="number" id="fs-stock" value="${r.stockGramos}"/></div>
-      <div class="form-group"><label>Agregar gramos recibidos del proveedor</label><input type="number" id="fs-agregar" value="0" placeholder="ej. 60 si recibiste un pedido nuevo"/></div>
+      <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:12px;font-size:12px;color:var(--text2)">
+        Stock calculado actual: <strong style="color:var(--gold)">${disponible}g</strong> · Usado en pedidos: ${usado}g
+      </div>
+      <div class="form-group">
+        <label>¿Cuántos gramos tienes disponibles ahora?</label>
+        <input type="number" id="fs-disponible" value="${disponible}" placeholder="ej. 30"/>
+      </div>
+      <div class="form-group">
+        <label>Agregar gramos recibidos del proveedor</label>
+        <input type="number" id="fs-agregar" value="0" placeholder="ej. 60 si recibiste un pedido nuevo"/>
+      </div>
       <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fs-cesencia" value="${r.costoEsencia}" step="0.10"/></div>
       <div class="modal-footer">
         <button class="btn" onclick="closeModal()">Cancelar</button>
@@ -885,9 +898,13 @@ function saveFrag(existingId){
 
 function saveStock(id){
   const r=cat.find(x=>x.id===id); if(!r)return;
-  const base=parseFloat(document.getElementById('fs-stock')?.value)||0;
+  const disponible=parseFloat(document.getElementById('fs-disponible')?.value)||0;
   const agregar=parseFloat(document.getElementById('fs-agregar')?.value)||0;
-  r.stockGramos=base+agregar;
+  // El nuevo stock disponible real es lo que tiene + lo que llega
+  const nuevoDisponible=disponible+agregar;
+  // Recalcular stockGramos interno: disponible + lo ya consumido
+  const consumido=peds.filter(p=>p.codigo===id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+  r.stockGramos=nuevoDisponible + consumido*cfg.gesencia;
   r.costoEsencia=parseFloat(document.getElementById('fs-cesencia')?.value)||r.costoEsencia;
   save();fbSave(); closeModal(); renderInv(); toast('Stock actualizado ✓');
 }
