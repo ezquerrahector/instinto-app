@@ -155,6 +155,7 @@ nav::-webkit-scrollbar{display:none}
     </select>
     <select onchange="setOrden(this.value)">
       <option value="fecha">Más reciente</option>
+      <option value="stock">Con stock primero</option>
       <option value="nombre">Nombre A-Z</option>
       <option value="numero">Núm. pedido</option>
       <option value="fragancia">Fragancia A-Z</option>
@@ -448,6 +449,10 @@ function renderPedidos(){
   if(_fOrden==='nombre') list=[...list].sort((a,b)=>a.cliente.localeCompare(b.cliente));
   else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>a.fragancia.localeCompare(b.fragancia));
   else if(_fOrden==='numero') list=[...list].sort((a,b)=>b.id-a.id);
+  else if(_fOrden==='stock') list=[...list].sort((a,b)=>{
+    const sc=p=>stockUsadoPorPedido[p.id]==='ok'?0:1;
+    return sc(a)-sc(b);
+  });
   else list=[...list].reverse(); // fecha: más reciente primero
 
   // Contador
