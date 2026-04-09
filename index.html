@@ -298,22 +298,33 @@ nav::-webkit-scrollbar{display:none}
 
   <div id="s-costos" style="display:none">
     <div class="export-area">
-      <h4>Costos de producción (por perfume 60ml)</h4>
-      <div class="form-group"><label>Gramos de esencia por perfume</label><input type="number" id="cfg-gesencia" value="30" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Gramos de fijador</label><input type="number" id="cfg-gfijador" value="5" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Precio fijador ($/g)</label><input type="number" id="cfg-pfijador" value="1.75" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Gramos de feromonas</label><input type="number" id="cfg-gferomonas" value="3.5" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Precio feromonas ($/g)</label><input type="number" id="cfg-pferomonas" value="6.00" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Gramos de perfumol</label><input type="number" id="cfg-gperfumol" value="21.5" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Precio perfumol ($/g)</label><input type="number" id="cfg-pperfumol" value="1.68" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Costo envase ($)</label><input type="number" id="cfg-envase" value="13.50" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Costo atomizador ($)</label><input type="number" id="cfg-atomizador" value="17.50" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Costo sticker ($)</label><input type="number" id="cfg-sticker" value="4.00" step="0.01" oninput="saveCfg()"/></div>
-      <div class="form-group"><label>Precio venta default ($)</label><input type="number" id="cfg-pventa" value="250" oninput="saveCfg()"/></div>
-      <div style="background:var(--bg4);border-radius:8px;padding:12px;margin-top:8px">
-        <div style="font-size:12px;color:var(--text2)">Costo total sin esencia</div>
-        <div style="font-size:20px;font-weight:600;color:var(--gold)" id="cfg-costo-display">$127.93</div>
+      <h4>Ingredientes por perfume (60ml)</h4>
+      <div class="form-row">
+        <div class="form-group"><label>Gramos de esencia</label><input type="number" id="cfg-gesencia" value="30" oninput="saveCfg()"/></div>
+        <div class="form-group"><label>Envase proveedor ($) <span style="font-size:10px;color:var(--text2)">cobro por servir</span></label><input type="number" id="cfg-envprov" value="5" step="0.01" oninput="saveCfg()"/></div>
       </div>
+      <div class="form-row">
+        <div class="form-group"><label>Gramos fijador</label><input type="number" id="cfg-gfijador" value="5" oninput="saveCfg()"/></div>
+        <div class="form-group"><label>Precio fijador ($/g)</label><input type="number" id="cfg-pfijador" value="0.35" step="0.01" oninput="saveCfg()"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Gramos feromonas</label><input type="number" id="cfg-gferomonas" value="3.5" oninput="saveCfg()"/></div>
+        <div class="form-group"><label>Precio feromonas ($/g)</label><input type="number" id="cfg-pferomonas" value="2.00" step="0.01" oninput="saveCfg()"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Gramos perfumol</label><input type="number" id="cfg-gperfumol" value="21.5" oninput="saveCfg()"/></div>
+        <div class="form-group"><label>Precio perfumol ($/g)</label><input type="number" id="cfg-pperfumol" value="0.06" step="0.01" oninput="saveCfg()"/></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Costo atomizador ($)</label><input type="number" id="cfg-atomizador" value="17.50" step="0.01" oninput="saveCfg()"/></div>
+        <div class="form-group"><label>Costo sticker ($)</label><input type="number" id="cfg-sticker" value="4.00" step="0.01" oninput="saveCfg()"/></div>
+      </div>
+      <div class="form-group"><label>Precio venta default ($)</label><input type="number" id="cfg-pventa" value="250" oninput="saveCfg()"/></div>
+    </div>
+    <div class="export-area">
+      <h4>Desglose de costos por perfume</h4>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">El costo de esencia varía por fragancia — aquí se muestra con el promedio $1.70/g. El envase depende de la línea.</p>
+      <div id="cfg-desglose"></div>
     </div>
   </div>
 
@@ -355,7 +366,7 @@ nav::-webkit-scrollbar{display:none}
 
 <script>
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
-const CFG_DEF = {gesencia:30,gfijador:5,pfijador:1.75,gferomonas:3.5,pferomonas:6.00,gperfumol:21.5,pperfumol:1.68,envase:13.50,atomizador:17.50,sticker:4.00,pventa:250};
+const CFG_DEF = {gesencia:30,gfijador:5,pfijador:0.35,gferomonas:3.5,pferomonas:2.00,gperfumol:21.5,pperfumol:0.06,envprov:5,atomizador:17.50,sticker:4.00,pventa:250};
 const CAT_SEED = [];
 const PED_SEED = [];
 
@@ -374,9 +385,19 @@ const save = () => {
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
 const fmt  = n => '$' + Math.round(n).toLocaleString('es-MX');
-const costoFijo = () => cfg.gfijador*cfg.pfijador + cfg.gferomonas*cfg.pferomonas + cfg.gperfumol*cfg.pperfumol + cfg.envase + cfg.atomizador + cfg.sticker;
-const costoProd = ce => costoFijo() + cfg.gesencia*(parseFloat(ce)||1.70);
-const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia);
+const costoFijo = (linea='Caballero') => {
+  const matEnvase = materiales ? (linea==='Dama'
+    ? (materiales.find(m=>m.id==='env_cristal')?.costo||8.50)
+    : (materiales.find(m=>m.id==='env_mate')?.costo||13.50)) : 13.50;
+  const matAtomizador = materiales?.find(m=>m.id==='atomizador')?.costo||cfg.atomizador||17.50;
+  const matFijador = materiales?.find(m=>m.id==='fijador')?.costo||cfg.pfijador||0.35;
+  const matFeromonas = materiales?.find(m=>m.id==='feromonas')?.costo||cfg.pferomonas||2.00;
+  const matPerfumol = materiales?.find(m=>m.id==='perfumol')?.costo||cfg.pperfumol||0.06;
+  return cfg.gfijador*matFijador + cfg.gferomonas*matFeromonas + cfg.gperfumol*matPerfumol
+    + matEnvase + matAtomizador + (cfg.sticker||4) + (cfg.envprov||5);
+};
+const costoProd = (ce, linea='Caballero') => costoFijo(linea) + cfg.gesencia*(parseFloat(ce)||1.70);
+const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia, p.linea||lineaDesdeId(p.codigo||''));
 const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 function lineaDesdeId(id){
   const p=id.toUpperCase();
@@ -629,7 +650,10 @@ function renderPedidos(){
           <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}${p.codigo?' · <span style="font-family:monospace;color:var(--gold)">' + p.codigo + '</span>':''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
-          ${bLin(linAuto)}<span class="ganancia-pill">${fmt(ganancia(p))}</span>
+          ${bLin(linAuto)}
+          ${p.cliente==='Para stock'
+            ? `<span style="background:rgba(91,155,213,0.15);color:var(--blue);padding:3px 9px;border-radius:4px;font-size:11px;font-weight:600">Para stock</span>`
+            : `<span class="ganancia-pill">${fmt(ganancia(p))}</span>`}
         </div>
       </div>
       <div class="card-actions">
@@ -1092,20 +1116,77 @@ function saveStock(id){
 
 // ── CONFIG ────────────────────────────────────────────────────────────────
 function loadCfg(){
-  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envase','atomizador','sticker','pventa'].forEach(k=>{
-    const el=document.getElementById('cfg-'+k); if(el) el.value=cfg[k];
+  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envprov','atomizador','sticker','pventa'].forEach(k=>{
+    const el=document.getElementById('cfg-'+k); if(el) el.value=cfg[k]??CFG_DEF[k];
   });
   updateCfgDisplay();
 }
 function saveCfg(){
-  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envase','atomizador','sticker','pventa'].forEach(k=>{
+  ['gesencia','gfijador','pfijador','gferomonas','pferomonas','gperfumol','pperfumol','envprov','atomizador','sticker','pventa'].forEach(k=>{
     const el=document.getElementById('cfg-'+k); if(el) cfg[k]=parseFloat(el.value)||0;
   });
   save(); updateCfgDisplay();
 }
 function updateCfgDisplay(){
-  const el=document.getElementById('cfg-costo-display');
-  if(el) el.textContent=fmt(costoFijo());
+  const el=document.getElementById('cfg-desglose'); if(!el)return;
+  const esencia=1.70; // promedio
+  const lineas=[
+    {nombre:'Caballero/Unisex/Nicho',linea:'Caballero'},
+    {nombre:'Dama',linea:'Dama'}
+  ];
+  const matFijador=materiales?.find(m=>m.id==='fijador')?.costo||cfg.pfijador||0.35;
+  const matFeromonas=materiales?.find(m=>m.id==='feromonas')?.costo||cfg.pferomonas||2.00;
+  const matPerfumol=materiales?.find(m=>m.id==='perfumol')?.costo||cfg.pperfumol||0.06;
+  const matAtomizador=materiales?.find(m=>m.id==='atomizador')?.costo||cfg.atomizador||17.50;
+  const matMate=materiales?.find(m=>m.id==='env_mate')?.costo||13.50;
+  const matCristal=materiales?.find(m=>m.id==='env_cristal')?.costo||8.50;
+
+  const rows=[
+    {concepto:'Esencia (promedio)',detalle:`${cfg.gesencia}g × $${esencia}/g`,monto:cfg.gesencia*esencia},
+    {concepto:'Fijador',detalle:`${cfg.gfijador}g × $${matFijador}/g`,monto:cfg.gfijador*matFijador},
+    {concepto:'Feromonas',detalle:`${cfg.gferomonas}g × $${matFeromonas}/g`,monto:cfg.gferomonas*matFeromonas},
+    {concepto:'Perfumol',detalle:`${cfg.gperfumol}g × $${matPerfumol}/g`,monto:cfg.gperfumol*matPerfumol},
+    {concepto:'Envase proveedor',detalle:'Costo por servir la esencia',monto:cfg.envprov||5},
+    {concepto:'Atomizador',detalle:'1 pza',monto:matAtomizador},
+    {concepto:'Sticker',detalle:'1 pza',monto:cfg.sticker||4},
+  ];
+
+  let html='';
+  lineas.forEach(({nombre,linea})=>{
+    const envase=linea==='Dama'?matCristal:matMate;
+    const envNombre=linea==='Dama'?'Envase cristal':'Envase mate';
+    const total=rows.reduce((s,r)=>s+r.monto,0)+envase;
+    const ganancia_=(cfg.pventa||250)-total;
+    const margen=((ganancia_/(cfg.pventa||250))*100).toFixed(1);
+    html+=`<div style="background:var(--bg3);border-radius:var(--radius);padding:12px;margin-bottom:12px">
+      <div style="font-weight:600;font-size:13px;margin-bottom:10px;color:var(--text)">${nombre}</div>
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        ${rows.map(r=>`<tr>
+          <td style="padding:4px 0;color:var(--text2)">${r.concepto}</td>
+          <td style="padding:4px 0;color:var(--text3);font-size:11px">${r.detalle}</td>
+          <td style="padding:4px 0;text-align:right;color:var(--text)">${fmt(r.monto)}</td>
+        </tr>`).join('')}
+        <tr>
+          <td style="padding:4px 0;color:var(--text2)">${envNombre}</td>
+          <td style="padding:4px 0;color:var(--text3);font-size:11px">1 pza</td>
+          <td style="padding:4px 0;text-align:right;color:var(--text)">${fmt(envase)}</td>
+        </tr>
+        <tr style="border-top:1px solid var(--border)">
+          <td style="padding:6px 0;font-weight:700;color:var(--text)" colspan="2">Costo total</td>
+          <td style="padding:6px 0;text-align:right;font-weight:700;color:var(--red)">${fmt(total)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;color:var(--text2)" colspan="2">Precio venta</td>
+          <td style="padding:4px 0;text-align:right;color:var(--text)">${fmt(cfg.pventa||250)}</td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;font-weight:700;color:var(--green)" colspan="2">Ganancia estimada</td>
+          <td style="padding:4px 0;text-align:right;font-weight:700;color:var(--green)">${fmt(ganancia_)} (${margen}%)</td>
+        </tr>
+      </table>
+    </div>`;
+  });
+  el.innerHTML=html;
 }
 
 // ── EXPORT / IMPORT ───────────────────────────────────────────────────────
