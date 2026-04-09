@@ -1582,7 +1582,7 @@ const MAT_DEF = [
 
 let materiales = JSON.parse(localStorage.getItem('if_mat')||'null') || MAT_DEF.map(x=>({...x}));
 
-function saveMat(){ localStorage.setItem('if_mat',JSON.stringify(materiales)); }
+function saveMat(){ localStorage.setItem('if_mat',JSON.stringify(materiales)); fbSave(); }
 
 function descontarMateriales(pedido){
   const linea = pedido.linea || lineaDesdeId(pedido.codigo||'') || 'Caballero';
@@ -1746,7 +1746,7 @@ async function fbSave(){
     setSyncStatus('syncing');
     await loadFirebase();
     const ref = db.collection('instinto').doc('datos');
-    await ref.set({ cfg, cat, peds, updatedAt: new Date().toISOString() });
+    await ref.set({ cfg, cat, peds, materiales, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
   } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e); }
 }
@@ -1762,13 +1762,14 @@ async function fbLoad(){
       if(data.cfg) cfg = data.cfg;
       if(data.cat) cat = data.cat;
       if(data.peds){ peds = data.peds; nextId = Math.max(...peds.map(p=>p.id),0)+1; }
-      save(); // guarda en localStorage también
-      renderAll(); loadCfg();
+      if(data.materiales) materiales = data.materiales;
+      save();
+      localStorage.setItem('if_mat', JSON.stringify(materiales));
+      renderAll(); loadCfg(); renderMateriales();
       setSyncStatus('ok');
       toast('Datos sincronizados desde la nube ✓');
     } else {
       setSyncStatus('ok');
-      // Primera vez — sube los datos locales a Firebase
       await fbSave();
     }
   } catch(e){ setSyncStatus('err'); console.warn('Firebase load error:', e); }
