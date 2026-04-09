@@ -658,9 +658,13 @@ function renderPedidos(){
         </div>
       </div>
       <div class="card-actions">
-        <select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
-          ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
-        </select>
+        ${(p.estatus==='Pedido'||p.estatus==='Comprado proveedor') && stockUsadoPorPedido[p.id]==='sin'
+          ? `<div style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--text2)">
+              <span style="color:var(--red)">🔒</span> Sin stock — registra esencia en Inventario para cambiar estatus
+            </div>`
+          : `<select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
+              ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
+            </select>`}
         <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
