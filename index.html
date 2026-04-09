@@ -826,12 +826,11 @@ function openModal(mode,id=null){
       <div class="modal-title">${p?`Editar pedido #${p.id}`:'Nuevo pedido'}</div>
       ${!p?`<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--text2)">El número de pedido se asignará automáticamente al guardar (#${nextId})</div>`:''}
       <div class="form-row">
-        <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" value="${p?p.cliente:''}" placeholder="Nombre"/></div>
+        <div class="form-group"><label>Cliente <span style="color:var(--red)">*</span></label><input type="text" id="f-cliente" value="${p?p.cliente:''}" placeholder="Nombre del cliente"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha" value="${p?p.fecha:new Date().toISOString().slice(0,10)}"/></div>
       </div>
-      ${!p?`<div class="form-group"><label>Registrado por</label><input type="text" id="f-registrador" placeholder="Tu nombre (quien captura el pedido)" value="${localStorage.getItem('if_registrador')||''}"/></div>`:''}
       <div class="form-group">
-        <label>Fragancia</label>
+        <label>Fragancia <span style="color:var(--red)">*</span></label>
         <div style="position:relative">
           <input type="text" id="f-frag-search" placeholder="Buscar fragancia o diseñador..." value="${selFragTxt}"
             autocomplete="off" oninput="mFragSearch(this.value)" onfocus="mFragSearch(this.value)"
@@ -842,21 +841,15 @@ function openModal(mode,id=null){
           <div id="f-frag-dd" style="display:none;position:absolute;left:0;right:0;top:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:0 0 var(--radius-sm) var(--radius-sm);max-height:220px;overflow-y:auto;z-index:300"></div>
         </div>
         ${selFragId?`<div style="margin-top:5px;font-size:11px;color:var(--gold);font-family:monospace">${selFragId} · ${bLin(lineaDesdeId(selFragId)||selFrag?.linea||'')}</div>`:'<div id="f-frag-info" style="margin-top:5px;font-size:11px;color:var(--gold);font-family:monospace;min-height:16px"></div>'}
-        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
-          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('')">Todas</button>
-          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Caballero')">Caballero</button>
-          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Dama')">Dama</button>
-          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Unisex')">Unisex</button>
-          <button type="button" class="btn btn-sm" onclick="mFragLinFilter('Nicho')">Nicho</button>
-        </div>
       </div>
       <div class="form-group" id="f-manual-wrap" style="display:${(p&&!cat.find(x=>x.id===p.codigo)&&p.fragancia)?'block':'none'}">
         <label>Fragancia manual (no está en catálogo)</label><input type="text" id="f-fragmanual" value="${p&&!selFrag?p.fragancia:''}" placeholder="Nombre de la fragancia"/>
       </div>
       <div class="form-row">
-        <div class="form-group"><label>Línea</label>
+        <div class="form-group"><label>Línea <span style="color:var(--red)">*</span></label>
           <select id="f-linea">
-            ${['Caballero','Dama','Unisex','Nicho'].map(l=>`<option ${(p&&p.linea===l)?'selected':''}>${l}</option>`).join('')}
+            <option value="" ${!p?'selected':''}>— Selecciona línea —</option>
+            ${['Caballero','Dama','Unisex','Nicho'].map(l=>`<option value="${l}" ${(p&&p.linea===l)?'selected':''}>${l}</option>`).join('')}
           </select>
         </div>
         <div class="form-group"><label>Canal</label>
@@ -1041,46 +1034,47 @@ function mRecalc(){
 function savePed(){
   const fragVal=document.getElementById('f-frag-val')?.value||'';
   const esOtra=fragVal==='__otra__'||fragVal==='';
-  const fragTxt=document.getElementById('f-frag-search')?.value||'';
+  const fragTxt=document.getElementById('f-frag-search')?.value.trim()||'';
   const fragNombre=esOtra?(document.getElementById('f-fragmanual')?.value||fragTxt||'Sin nombre'):fragTxt.split(' — ')[0];
   const dis=esOtra?'':(document.getElementById('f-frag-dis')?.value||'');
   const codigo=esOtra?'OTRO':fragVal;
+  const cliente=document.getElementById('f-cliente')?.value.trim()||'';
+  const linea=document.getElementById('f-linea')?.value||'';
+
+  // Validaciones obligatorias
+  if(!cliente){toast('⚠ El nombre del cliente es obligatorio');return;}
+  if(!fragTxt&&!esOtra){toast('⚠ Selecciona una fragancia');return;}
+  if(!linea){toast('⚠ Selecciona la línea del perfume');return;}
 
   if(_modalId){
     const p=peds.find(x=>x.id===_modalId); if(!p)return;
     p.fecha=document.getElementById('f-fecha').value;
-    p.cliente=document.getElementById('f-cliente').value.trim()||'Sin nombre';
+    p.cliente=cliente||'Sin nombre';
     p.codigo=codigo; p.fragancia=fragNombre; p.disenador=dis;
-    p.linea=document.getElementById('f-linea').value;
+    p.linea=linea;
     p.estatus=document.getElementById('f-estatus')?.value||p.estatus;
     p.canal=document.getElementById('f-canal').value;
     p.fechaPromesa=document.getElementById('f-promesa').value;
     p.precio=parseFloat(document.getElementById('f-precio').value)||cfg.pventa;
-    p.costoEsencia=parseFloat(document.getElementById('f-cesencia').value)||1.70;
+    p.costoEsencia=parseFloat(document.getElementById('f-cesencia').value)||2.80;
     p.notas=document.getElementById('f-notas').value;
-    toast('Pedido actualizado ✓');
+    toast(`Pedido #${p.id} actualizado ✓`);
   } else {
-    const registrador=document.getElementById('f-registrador')?.value.trim()||'';
-    if(registrador) localStorage.setItem('if_registrador', registrador);
     const nuevoPedidoId=nextId;
     peds.push({
       id:nextId++,
       fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
-      cliente:document.getElementById('f-cliente').value.trim()||'Sin nombre',
+      cliente:cliente||'Sin nombre',
       codigo,fragancia:fragNombre,disenador:dis,
-      linea:document.getElementById('f-linea').value,
+      linea,
       estatus:'Pedido',
       canal:document.getElementById('f-canal').value,
       fechaPromesa:document.getElementById('f-promesa').value,
       precio:parseFloat(document.getElementById('f-precio').value)||cfg.pventa,
       costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||2.80,
       notas:document.getElementById('f-notas').value,
-      registradoPor:registrador,
     });
-    const msg=registrador
-      ? `✓ Pedido #${nuevoPedidoId} registrado por ${registrador}`
-      : `✓ Pedido #${nuevoPedidoId} registrado`;
-    toast(msg);
+    toast(`✓ Pedido #${nuevoPedidoId} registrado`);
     enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
   }
   save();fbSave(); closeModal(); renderAll();
