@@ -884,7 +884,7 @@ function openModal(mode,id=null){
       <div class="modal-handle"></div>
       <div class="modal-title">${r?'Editar fragancia':'Nueva fragancia'}</div>
       <div class="form-row">
-        <div class="form-group"><label>ID / Código</label><input type="text" id="fc-id" value="${r?r.id:''}" placeholder="CP01234" ${r?'readonly':''}/></div>
+        <div class="form-group"><label>ID / Código</label><input type="text" id="fc-id" value="${r?r.id:''}" placeholder="CP01234" ${r?'readonly':''} oninput="autoLineaFrag(this.value)"/></div>
         <div class="form-group"><label>Línea</label>
           <select id="fc-linea">${['Caballero','Dama','Unisex','Nicho'].map(l=>`<option ${(r&&r.linea===l)?'selected':''}>${l}</option>`).join('')}</select>
         </div>
@@ -1080,6 +1080,10 @@ function savePed(){
   save();fbSave(); closeModal(); renderAll();
 }
 
+function autoLineaFrag(val){
+  const linea=lineaDesdeId(val.trim().toUpperCase());
+  if(linea){const el=document.getElementById('fc-linea');if(el)el.value=linea;}
+}
 function saveFrag(existingId){
   existingId = existingId==='null'||existingId===''||existingId===null?null:existingId;
   const id=(document.getElementById('fc-id')?.value||'').trim().toUpperCase();
