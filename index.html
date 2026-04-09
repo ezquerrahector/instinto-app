@@ -323,7 +323,7 @@ nav::-webkit-scrollbar{display:none}
     </div>
     <div class="export-area">
       <h4>Desglose de costos por perfume</h4>
-      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">El costo de esencia varía por fragancia — aquí se muestra con el promedio $1.70/g. El envase depende de la línea.</p>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:12px">El costo de esencia varía por fragancia — aquí se muestra con el promedio $2.80/g. El envase depende de la línea.</p>
       <div id="cfg-desglose"></div>
     </div>
   </div>
@@ -396,7 +396,7 @@ const costoFijo = (linea='Caballero') => {
   return cfg.gfijador*matFijador + cfg.gferomonas*matFeromonas + cfg.gperfumol*matPerfumol
     + matEnvase + matAtomizador + (cfg.sticker||4) + (cfg.envprov||5);
 };
-const costoProd = (ce, linea='Caballero') => costoFijo(linea) + cfg.gesencia*(parseFloat(ce)||1.70);
+const costoProd = (ce, linea='Caballero') => costoFijo(linea) + cfg.gesencia*(parseFloat(ce)||2.80);
 const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia, p.linea||lineaDesdeId(p.codigo||''));
 const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 function lineaDesdeId(id){
@@ -864,7 +864,7 @@ function openModal(mode,id=null){
       </div>
       <div class="form-row">
         <div class="form-group"><label>Precio venta ($)</label><input type="number" id="f-precio" value="${p?p.precio:cfg.pventa}"/></div>
-        <div class="form-group"><label>Costo esencia ($/g)</label><input type="number" id="f-cesencia" value="${p?p.costoEsencia:1.70}" step="0.10" oninput="mRecalc()"/></div>
+        <div class="form-group"><label>Costo esencia ($/g)</label><input type="number" id="f-cesencia" value="${p?p.costoEsencia:2.80}" step="0.10" oninput="mRecalc()"/></div>
       </div>
       <div class="form-row">
         <div class="form-group"><label>Fecha promesa entrega</label><input type="date" id="f-promesa" value="${p&&p.fechaPromesa?p.fechaPromesa:''}"/></div>
@@ -897,7 +897,7 @@ function openModal(mode,id=null){
       <div class="form-group"><label>Diseñador / Casa</label><input type="text" id="fc-dis" value="${r?r.disenador:''}" placeholder="MAISON FRANCIS KURKDJIAN"/></div>
       <div class="form-group"><label>Nombre interno / Base (opcional)</label><input type="text" id="fc-base" value="${r?r.base||'':''}" placeholder="BASE ROJO BACCARAT NICHE"/></div>
       <div class="form-row">
-        <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fc-cesencia" value="${r?r.costoEsencia:1.70}" step="0.10"/></div>
+        <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fc-cesencia" value="${r?r.costoEsencia:2.80}" step="0.10"/></div>
         <div class="form-group"><label>Stock inicial (gramos)</label><input type="number" id="fc-stock" value="${r?r.stockGramos:60}"/></div>
       </div>
       <div class="modal-footer">
@@ -1016,7 +1016,7 @@ function mFragSelect(id,txt,linea,dis,ce){
     }
     info.innerHTML=`<span style="font-family:monospace;color:var(--gold)">${id}</span> · ${bLin(linAuto)} ${stockHtml}`;
   }
-  const ceEl=document.getElementById('f-cesencia'); if(ceEl){ceEl.value=parseFloat(ce)||1.70;mRecalc();}
+  const ceEl=document.getElementById('f-cesencia'); if(ceEl){ceEl.value=parseFloat(ce)||2.80;mRecalc();}
 }
 function mFragSelectOtra(){
   document.getElementById('f-frag-val').value='__otra__';
@@ -1129,7 +1129,7 @@ function saveCfg(){
 }
 function updateCfgDisplay(){
   const el=document.getElementById('cfg-desglose'); if(!el)return;
-  const esencia=1.70; // promedio
+  const esencia=2.80; // promedio real de esencias Instinto
   const lineas=[
     {nombre:'Caballero/Unisex/Nicho',linea:'Caballero'},
     {nombre:'Dama',linea:'Dama'}
