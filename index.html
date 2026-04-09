@@ -433,14 +433,13 @@ function renderDash(){
 
   // Ventas por mes (últimos 6 meses)
   const meses={};
+  const mesesCount={};
   ent.forEach(p=>{
     let mes='';
     if(p.fecha){
       if(p.fecha.includes('-')){
-        // YYYY-MM-DD
         mes=p.fecha.slice(0,7);
       } else if(p.fecha.includes('/')){
-        // DD/MM/YY o DD/MM/YYYY
         const partes=p.fecha.split('/');
         if(partes.length===3){
           const anio=partes[2].length===2?'20'+partes[2]:partes[2];
@@ -448,7 +447,10 @@ function renderDash(){
         }
       }
     }
-    if(mes) meses[mes]=(meses[mes]||0)+(parseFloat(p.precio)||cfg.pventa);
+    if(mes){
+      meses[mes]=(meses[mes]||0)+(parseFloat(p.precio)||cfg.pventa);
+      mesesCount[mes]=(mesesCount[mes]||0)+1;
+    }
   });
   const mesesKeys=Object.keys(meses).sort().slice(-6);
   const maxVenta=Math.max(...mesesKeys.map(k=>meses[k]),1);
@@ -488,7 +490,8 @@ function renderDash(){
           return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%">
             <div style="font-size:9px;color:var(--gold);font-weight:600">${fmt(meses[k]).replace('$','')}</div>
             <div style="width:80%;height:${h}px;background:var(--gold);border-radius:3px 3px 0 0;min-height:3px"></div>
-            <div style="font-size:9px;color:var(--text2);padding:3px 0">${mNames[mes-1]||mes} ${anio}</div>
+            <div style="font-size:9px;color:var(--text2);padding:2px 0">${mNames[mes-1]||mes} ${anio}</div>
+            <div style="font-size:9px;color:var(--text3)">${mesesCount[k]} perfume${mesesCount[k]!==1?'s':''}</div>
           </div>`;
         }).join('')}
       </div>
