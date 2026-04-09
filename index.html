@@ -147,7 +147,7 @@ nav::-webkit-scrollbar{display:none}
 <!-- PEDIDOS -->
 <div id="pedidos" class="section">
   <div class="search-bar">
-    <input type="search" placeholder="Buscar cliente o fragancia..." oninput="filterPedidos(this.value)"/>
+    <input type="search" placeholder="Buscar cliente, fragancia, código o #número..." oninput="filterPedidos(this.value)"/>
     <select onchange="setFilterEst(this.value)">
       <option value="">Todos</option>
       <option>Pedido</option><option>Comprado proveedor</option>
@@ -584,7 +584,7 @@ function setOrden(v){_fOrden=v;renderPedidos();}
 
 function renderPedidos(){
   let list=peds.filter(p=>{
-    const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt));
+    const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt))||String(p.id)===_fTxt.replace('#','').trim();
     return m&&(!_fEst||p.estatus===_fEst);
   });
 
@@ -823,11 +823,13 @@ function openModal(mode,id=null){
     const selFragTxt = selFrag?`${selFrag.referencia} — ${selFrag.disenador}`:(p&&!selFrag&&p.fragancia?p.fragancia:'');
     mc.innerHTML=`
       <div class="modal-handle"></div>
-      <div class="modal-title">${p?'Editar pedido':'Nuevo pedido'}</div>
+      <div class="modal-title">${p?`Editar pedido #${p.id}`:'Nuevo pedido'}</div>
+      ${!p?`<div style="background:var(--bg3);border-radius:var(--radius-sm);padding:8px 12px;margin-bottom:12px;font-size:12px;color:var(--text2)">El número de pedido se asignará automáticamente al guardar (#${nextId})</div>`:''}
       <div class="form-row">
         <div class="form-group"><label>Cliente</label><input type="text" id="f-cliente" value="${p?p.cliente:''}" placeholder="Nombre"/></div>
         <div class="form-group"><label>Fecha</label><input type="date" id="f-fecha" value="${p?p.fecha:new Date().toISOString().slice(0,10)}"/></div>
       </div>
+      ${!p?`<div class="form-group"><label>Registrado por</label><input type="text" id="f-registrador" placeholder="Tu nombre (quien captura el pedido)" value="${localStorage.getItem('if_registrador')||''}"/></div>`:''}
       <div class="form-group">
         <label>Fragancia</label>
         <div style="position:relative">
@@ -1058,6 +1060,9 @@ function savePed(){
     p.notas=document.getElementById('f-notas').value;
     toast('Pedido actualizado ✓');
   } else {
+    const registrador=document.getElementById('f-registrador')?.value.trim()||'';
+    if(registrador) localStorage.setItem('if_registrador', registrador);
+    const nuevoPedidoId=nextId;
     peds.push({
       id:nextId++,
       fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
@@ -1068,11 +1073,15 @@ function savePed(){
       canal:document.getElementById('f-canal').value,
       fechaPromesa:document.getElementById('f-promesa').value,
       precio:parseFloat(document.getElementById('f-precio').value)||cfg.pventa,
-      costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||1.70,
+      costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||2.80,
       notas:document.getElementById('f-notas').value,
+      registradoPor:registrador,
     });
-    toast('Pedido guardado ✓');
-    enviarNotificacion('🆕 Nuevo pedido', peds[peds.length-1]);
+    const msg=registrador
+      ? `✓ Pedido #${nuevoPedidoId} registrado por ${registrador}`
+      : `✓ Pedido #${nuevoPedidoId} registrado`;
+    toast(msg);
+    enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
   }
   save();fbSave(); closeModal(); renderAll();
 }
