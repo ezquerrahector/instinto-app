@@ -1631,9 +1631,28 @@ function renderMateriales(){
 }
 
 function openModalMaterial(matId){
-  const m=materiales.find(x=>x.id===matId); if(!m)return;
   const overlay=document.getElementById('modal-overlay');
   const mc=document.getElementById('modal-content');
+
+  if(!matId){
+    // Mostrar todos los materiales para ajuste rápido
+    mc.innerHTML=`
+      <div class="modal-handle"></div>
+      <div class="modal-title">Ajustar stock de materiales</div>
+      ${materiales.map(m=>`
+        <div class="form-group">
+          <label style="font-weight:600">${m.nombre} <span style="font-weight:400;color:var(--text2)">(actual: ${m.stockActual} ${m.unidad==='piezas'?'pzas':'g'})</span></label>
+          <input type="number" id="fm-all-${m.id}" value="${m.stockActual}" step="${m.unidad==='piezas'?1:0.5}"/>
+        </div>`).join('')}
+      <div class="modal-footer">
+        <button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+        <button class="btn btn-gold" type="button" onclick="saveAllMat()">Guardar todo</button>
+      </div>`;
+    overlay.classList.add('open');
+    return;
+  }
+
+  const m=materiales.find(x=>x.id===matId); if(!m)return;
   mc.innerHTML=`
     <div class="modal-handle"></div>
     <div class="modal-title">Actualizar: ${m.nombre}</div>
@@ -1652,6 +1671,14 @@ function openModalMaterial(matId){
       <button class="btn btn-gold" type="button" onclick="saveMatStock('${m.id}')">Guardar</button>
     </div>`;
   overlay.classList.add('open');
+}
+
+function saveAllMat(){
+  materiales.forEach(m=>{
+    const el=document.getElementById(`fm-all-${m.id}`);
+    if(el) m.stockActual=parseFloat(el.value)||0;
+  });
+  saveMat(); closeModal(); renderMateriales(); toast('Stock actualizado ✓');
 }
 
 function saveMatStock(id){
