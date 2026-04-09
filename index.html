@@ -434,8 +434,21 @@ function renderDash(){
   // Ventas por mes (últimos 6 meses)
   const meses={};
   ent.forEach(p=>{
-    const mes=p.fecha?p.fecha.slice(0,7):'';
-    if(mes){meses[mes]=(meses[mes]||0)+(parseFloat(p.precio)||cfg.pventa);}
+    let mes='';
+    if(p.fecha){
+      if(p.fecha.includes('-')){
+        // YYYY-MM-DD
+        mes=p.fecha.slice(0,7);
+      } else if(p.fecha.includes('/')){
+        // DD/MM/YY o DD/MM/YYYY
+        const partes=p.fecha.split('/');
+        if(partes.length===3){
+          const anio=partes[2].length===2?'20'+partes[2]:partes[2];
+          mes=`${anio}-${partes[1].padStart(2,'0')}`;
+        }
+      }
+    }
+    if(mes) meses[mes]=(meses[mes]||0)+(parseFloat(p.precio)||cfg.pventa);
   });
   const mesesKeys=Object.keys(meses).sort().slice(-6);
   const maxVenta=Math.max(...mesesKeys.map(k=>meses[k]),1);
