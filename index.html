@@ -132,6 +132,7 @@ nav::-webkit-scrollbar{display:none}
   <button class="nav-tab active" onclick="showTab('dashboard',this)">Dashboard</button>
   <button class="nav-tab" onclick="showTab('pedidos',this)">Pedidos</button>
   <button class="nav-tab" onclick="showTab('inventario',this)">Inventario</button>
+  <button class="nav-tab" onclick="showTab('materiales',this)">📦 Materiales</button>
   <button class="nav-tab" onclick="showTab('catalogo',this)">Catálogo</button>
   <button class="nav-tab" onclick="showTab('proveedor',this)">🛒 Proveedor</button>
   <button class="nav-tab" onclick="showTab('config',this)">⚙ Config</button>
@@ -206,6 +207,16 @@ nav::-webkit-scrollbar{display:none}
       </div>
     </div>
   </div>
+</div>
+
+<!-- MATERIALES -->
+<div id="materiales" class="section">
+  <div class="section-head">
+    <span class="section-title">Stock de materiales</span>
+    <button class="btn btn-sm btn-gold" onclick="openModalMaterial()">+ Ajustar stock</button>
+  </div>
+  <div id="mat-alertas" style="margin-bottom:12px"></div>
+  <div id="mat-list"></div>
 </div>
 
 <!-- CATÁLOGO -->
@@ -399,6 +410,7 @@ function showTab(id,btn){
   if(id==='pedidos')    renderPedidos();
   if(id==='config')     loadCfg();
   if(id==='proveedor')  renderProveedor();
+  if(id==='materiales') renderMateriales();
 }
 function showStab(id,btn){
   document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
@@ -415,6 +427,25 @@ function renderDash(){
   const ventas=ent.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
   const gan=ent.reduce((s,p)=>s+ganancia(p),0);
   const margen=ventas>0?Math.round(gan/ventas*100):0;
+
+  // Costo materiales totales
+  const costoMatTot=materiales.reduce((s,m)=>(parseFloat(m.stockActual)||0)*(parseFloat(m.costo)||0)+s,0);
+  const matAlertas=materiales.filter(m=>(parseFloat(m.stockActual)||0)<=(parseFloat(m.alerta)||0)).length;
+
+  // Ventas por mes (últimos 6 meses)
+  const meses={};
+  ent.forEach(p=>{
+    const mes=p.fecha?p.fecha.slice(0,7):'';
+    if(mes){meses[mes]=(meses[mes]||0)+(parseFloat(p.precio)||cfg.pventa);}
+  });
+  const mesesKeys=Object.keys(meses).sort().slice(-6);
+  const maxVenta=Math.max(...mesesKeys.map(k=>meses[k]),1);
+
+  // Pedidos por línea
+  const porLinea={Caballero:0,Dama:0,Unisex:0,Nicho:0};
+  ent.forEach(p=>{const l=p.linea||lineaDesdeId(p.codigo||'');if(porLinea[l]!==undefined)porLinea[l]++;});
+  const totalLinea=ent.length||1;
+
   document.getElementById('kpis').innerHTML=`
     <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
     <div class="kpi"><div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
@@ -424,14 +455,86 @@ function renderDash(){
     <div class="kpi"><div class="kpi-label">Ganancia total</div><div class="kpi-val kv-green" style="font-size:18px">${fmt(gan)}</div></div>
     <div class="kpi"><div class="kpi-label">Margen promedio</div><div class="kpi-val kv-blue">${margen}%</div></div>
     <div class="kpi"><div class="kpi-label">Fragancias catálogo</div><div class="kpi-val kv-gold">${cat.length}</div></div>
+    <div class="kpi"><div class="kpi-label">Valor materiales</div><div class="kpi-val kv-blue" style="font-size:16px">${fmt(costoMatTot)}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="document.querySelector('[onclick*=materiales]').click()">
+      <div class="kpi-label">Alertas materiales</div>
+      <div class="kpi-val ${matAlertas>0?'kv-red':'kv-green'}">${matAlertas>0?matAlertas+' ⚠':'✓ OK'}</div>
+    </div>
   `;
-  document.getElementById('recent-list').innerHTML=[...peds].reverse().slice(0,6).map(p=>`
+
+  // Gráfica ventas por mes
+  const barChart = mesesKeys.length ? `
+    <div style="margin-bottom:20px">
+      <div class="section-title" style="margin-bottom:10px">Ventas por mes</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:80px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px">
+        ${mesesKeys.map(k=>{
+          const h=Math.round((meses[k]/maxVenta)*60);
+          const label=k.slice(5); // MM
+          const mNames=['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="font-size:9px;color:var(--gold);font-weight:600">${fmt(meses[k]).replace('$','')}</div>
+            <div style="width:100%;height:${h}px;background:var(--gold);border-radius:3px 3px 0 0;min-height:3px"></div>
+            <div style="font-size:9px;color:var(--text2)">${mNames[parseInt(label)]||label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  // Gráfica por línea (dona simple con CSS)
+  const lineaChart = ent.length ? `
+    <div style="margin-bottom:20px">
+      <div class="section-title" style="margin-bottom:10px">Ventas por línea</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
+        ${Object.entries(porLinea).filter(([,v])=>v>0).map(([l,v])=>{
+          const pct=Math.round(v/totalLinea*100);
+          const colors={Caballero:'#5B9BD5',Dama:'#E07090',Unisex:'#D4A017',Nicho:'#4CAF7D'};
+          return `<div style="margin-bottom:8px">
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+              <span style="color:var(--text2)">${l}</span>
+              <span style="font-weight:600;color:${colors[l]}">${v} (${pct}%)</span>
+            </div>
+            <div style="height:8px;background:var(--bg4);border-radius:4px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${colors[l]};border-radius:4px"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  // Stock materiales mini
+  const matMini = `
+    <div style="margin-bottom:20px">
+      <div class="section-title" style="margin-bottom:10px">Stock de materiales</div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px">
+        ${materiales.map(m=>{
+          const stock=parseFloat(m.stockActual)||0;
+          const alerta=parseFloat(m.alerta)||0;
+          const max=alerta*4;
+          const pct=max>0?Math.min(100,Math.round(stock/max*100)):100;
+          const cls=stock<=0?'var(--red)':stock<=alerta?'var(--amber)':'var(--green)';
+          return `<div style="margin-bottom:6px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px">
+              <span style="color:var(--text2)">${m.nombre}</span>
+              <span style="font-weight:600;color:${cls}">${stock} ${m.unidad==='piezas'?'pzas':'g'}</span>
+            </div>
+            <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+              <div style="height:100%;width:${pct}%;background:${cls};border-radius:3px"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  document.getElementById('recent-list').innerHTML = barChart + lineaChart + matMini + `
+    <div class="section-title" style="margin-bottom:8px">Pedidos recientes</div>
+    ${[...peds].reverse().slice(0,5).map(p=>`
     <div class="card">
       <div class="card-top">
-        <div><div class="card-name"><span style="font-size:11px;font-weight:600;background:var(--bg4);color:var(--text2);padding:2px 7px;border-radius:4px;margin-right:6px">#${p.id}</span>${p.cliente}</div><div class="card-sub">${p.fragancia} · ${p.disenador||''}</div><div class="card-sub">${p.fecha}</div></div>
+        <div><div class="card-name"><span style="font-size:11px;font-weight:600;background:var(--bg4);color:var(--text2);padding:2px 7px;border-radius:4px;margin-right:6px">#${p.id}</span>${p.cliente}</div>
+        <div class="card-sub">${p.fragancia} · ${p.disenador||''}</div><div class="card-sub">${p.fecha}</div></div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">${bEst(p.estatus)}<span class="ganancia-pill">${fmt(ganancia(p))}</span></div>
       </div>
-    </div>`).join('');
+    </div>`).join('')}`;
 }
 
 // ── PEDIDOS ───────────────────────────────────────────────────────────────
@@ -528,7 +631,7 @@ function cambiarEst(id,est){
   const p=peds.find(x=>x.id===id); if(!p)return;
   const estAnterior=p.estatus;
   p.estatus=est;
-  if(est==='Elaborado')p.fechaElab=new Date().toISOString().slice(0,10);
+  if(est==='Elaborado'){p.fechaElab=new Date().toISOString().slice(0,10); descontarMateriales(p);}
   if(est==='Entregado'||est==='Cobrado')p.fechaEntrega=new Date().toISOString().slice(0,10);
   save();fbSave();renderAll();toast('Estatus actualizado ✓');
   if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
@@ -1130,83 +1233,61 @@ if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catc
 
 // ── PROVEEDOR ─────────────────────────────────────────────────────────────
 function renderProveedor(){
-  // 1. Calcular stock consumido por pedidos elaborados/entregados
   const consumido={};
   peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
     .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
-
-  // 2. Stock disponible por fragancia
   const stockDisp={};
-  cat.forEach(r=>{
-    stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);
-  });
-
-  // 3. Pedidos activos que necesitan esencia — asignar stock en orden
-  const pedActivos=[...peds]
-    .filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
-    .sort((a,b)=>a.id-b.id);
-
+  cat.forEach(r=>{stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);});
+  const pedActivos=[...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor').sort((a,b)=>a.id-b.id);
   const stockTemp={...stockDisp};
   const necesitan=[];
-
   pedActivos.forEach(p=>{
-    const fragCat=cat.find(x=>x.id===p.codigo);
-    if(!fragCat) return; // sin catálogo, ignorar
-    if(stockTemp[p.codigo]>=cfg.gesencia){
-      stockTemp[p.codigo]-=cfg.gesencia; // alcanza, descontar
-    } else {
-      necesitan.push({p, fragCat}); // no alcanza → pedir al proveedor
-    }
+    const fragCat=cat.find(x=>x.id===p.codigo); if(!fragCat)return;
+    if((stockTemp[p.codigo]||0)>=cfg.gesencia){stockTemp[p.codigo]-=cfg.gesencia;}
+    else{necesitan.push({p,fragCat});}
   });
-
+  const matBajos=materiales.filter(m=>(parseFloat(m.stockActual)||0)<=(parseFloat(m.alerta)||0));
   const resEl=document.getElementById('prov-resumen');
   const tablaEl=document.getElementById('prov-tabla');
   const accionesEl=document.getElementById('prov-acciones');
-
-  if(!necesitan.length){
-    resEl.innerHTML=`<div class="prov-ok">✓ Tienes stock suficiente para todos los pedidos activos. No necesitas pedir nada al proveedor por ahora.</div>`;
-    tablaEl.innerHTML='';
-    accionesEl.style.display='none';
-    return;
+  if(!necesitan.length&&!matBajos.length){
+    resEl.innerHTML='<div class="prov-ok">✓ Tienes stock suficiente de esencias y materiales.</div>';
+    tablaEl.innerHTML=''; accionesEl.style.display='none'; return;
   }
-
-  resEl.innerHTML=`<div class="prov-alert">⚠ Necesitas pedir <strong>${necesitan.length} esencia${necesitan.length!==1?'s':''}</strong> al proveedor para cubrir todos los pedidos activos.</div>`;
-
-  // Agrupar por fragancia para saber gramos totales a pedir
+  let alertHTML='';
+  if(necesitan.length) alertHTML+=`<div class="prov-alert" style="margin-bottom:8px">⚠ <strong>${necesitan.length} esencia${necesitan.length!==1?'s':''}</strong> sin stock.</div>`;
+  if(matBajos.length) alertHTML+=`<div class="prov-alert">⚠ <strong>${matBajos.length} material${matBajos.length!==1?'es':''}</strong> bajo el mínimo: ${matBajos.map(m=>m.nombre).join(', ')}</div>`;
+  resEl.innerHTML=alertHTML;
   const agrupado={};
   necesitan.forEach(({p,fragCat})=>{
-    const id=p.codigo;
-    if(!agrupado[id]) agrupado[id]={fragCat, pedidos:[], gramos:0};
-    agrupado[id].pedidos.push(p);
-    agrupado[id].gramos+=cfg.gesencia; // 30g por pedido
+    if(!agrupado[p.codigo]) agrupado[p.codigo]={fragCat,pedidos:[],gramos:0};
+    agrupado[p.codigo].pedidos.push(p); agrupado[p.codigo].gramos+=cfg.gesencia;
   });
-
-  // Tabla estilo proveedor
-  let html=`<div class="table-wrap"><table class="prov-table">
-    <thead><tr><th>Código</th><th>Base (nombre interno)</th><th>Casa / Diseñador</th><th>Fragancia referencia</th><th>Gramos</th><th>Pedidos</th></tr></thead><tbody>`;
-
   const lineas=[];
-  Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
-    const clientes=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
-    html+=`<tr>
-      <td class="cod">${fragCat.id}</td>
-      <td>${fragCat.base||'—'}</td>
-      <td>${fragCat.disenador}</td>
-      <td>${fragCat.referencia}</td>
-      <td style="font-weight:600;color:var(--gold)">${gramos}g</td>
-      <td style="font-size:11px;color:var(--text2)">${clientes}</td>
-    </tr>`;
-    lineas.push(`${fragCat.id} | ${fragCat.base||fragCat.referencia} | ${fragCat.disenador} | ${fragCat.referencia} | ${gramos}g`);
-  });
-  html+=`</tbody></table></div>`;
+  let html='';
+  if(necesitan.length){
+    html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Gramos</th><th>Pedidos</th></tr></thead><tbody>';
+    Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
+      const cl=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
+      html+=`<tr><td class="cod">${fragCat.id}</td><td>${fragCat.base||'—'}</td><td>${fragCat.disenador}</td><td>${fragCat.referencia}</td><td style="font-weight:600;color:var(--gold)">${gramos}g</td><td style="font-size:11px;color:var(--text2)">${cl}</td></tr>`;
+      lineas.push(`${fragCat.id} | ${fragCat.base||fragCat.referencia} | ${fragCat.disenador} | ${fragCat.referencia} | ${gramos}g`);
+    });
+    html+='</tbody></table></div><br>';
+  }
+  if(matBajos.length){
+    html+='<div class="section-title" style="margin-bottom:8px">Materiales a resurtir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Material</th><th>Código</th><th>Stock actual</th><th>Pedir</th></tr></thead><tbody>';
+    matBajos.forEach(m=>{
+      html+=`<tr><td style="font-weight:600">${m.nombre}</td><td class="cod">${m.codigo}</td><td style="color:var(--red)">${m.stockActual} ${m.unidad==='piezas'?'pzas':'g'}</td><td style="font-weight:600;color:var(--gold)">${m.resurtir} ${m.unidad==='piezas'?'pzas':'g'}</td></tr>`;
+      lineas.push(`${m.codigo} | ${m.nombre} | ${m.resurtir} ${m.unidad==='piezas'?'pzas':'g'}`);
+    });
+    html+='</tbody></table></div>';
+  }
   tablaEl.innerHTML=html;
-
-  // Mensaje WhatsApp
   const hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-  const msg=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
-  document.getElementById('prov-msg').value=msg;
+  document.getElementById('prov-msg').value=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
   accionesEl.style.display='block';
 }
+
 
 function copiarMsgProveedor(){
   const txt=document.getElementById('prov-msg').value;
@@ -1433,6 +1514,104 @@ async function enviarNotificacion(tipo, p){
     });
     console.log('Notificación enviada:', tipo);
   } catch(e){ console.warn('EmailJS envío falló:', e); }
+}
+
+// ── MATERIALES ────────────────────────────────────────────────────────────
+const MAT_DEF = [
+  {id:'env_mate',   nombre:'Envase color mate',   codigo:'Okra 060ml R18 NEGRO MATE VG 821NM',unidad:'piezas',stockActual:6,  alerta:10,resurtir:30,  costo:13.50,usoPorPerfume:1,   lineas:['Caballero','Unisex','Nicho']},
+  {id:'env_cristal',nombre:'Envase cristal',       codigo:'Okra 060ml R18 cristalino VG 821',  unidad:'piezas',stockActual:3,  alerta:10,resurtir:30,  costo:8.50, usoPorPerfume:1,   lineas:['Dama']},
+  {id:'atomizador', nombre:'Atomizador tapa oro',  codigo:'R18 tapa oro',                       unidad:'piezas',stockActual:9,  alerta:10,resurtir:30,  costo:17.50,usoPorPerfume:1,   lineas:['Caballero','Dama','Unisex','Nicho']},
+  {id:'feromonas',  nombre:'Feromonas',            codigo:'Feromonas',                          unidad:'gramos',stockActual:500,alerta:250,resurtir:1000,costo:2.00, usoPorPerfume:3.5, lineas:['Caballero','Dama','Unisex','Nicho']},
+  {id:'fijador',    nombre:'Fijador',              codigo:'Fijador',                            unidad:'gramos',stockActual:500,alerta:250,resurtir:1000,costo:0.35, usoPorPerfume:5,   lineas:['Caballero','Dama','Unisex','Nicho']},
+  {id:'perfumol',   nombre:'Perfumol',             codigo:'Perfumol 1L',                        unidad:'gramos',stockActual:1000,alerta:500,resurtir:1000,costo:0.06,usoPorPerfume:21.5,lineas:['Caballero','Dama','Unisex','Nicho']},
+];
+
+let materiales = JSON.parse(localStorage.getItem('if_mat')||'null') || MAT_DEF.map(x=>({...x}));
+
+function saveMat(){ localStorage.setItem('if_mat',JSON.stringify(materiales)); }
+
+function descontarMateriales(pedido){
+  const linea = pedido.linea || lineaDesdeId(pedido.codigo||'') || 'Caballero';
+  materiales.forEach(m=>{
+    if(m.id==='env_mate'    && !['Caballero','Unisex','Nicho'].includes(linea)) return;
+    if(m.id==='env_cristal' && linea!=='Dama') return;
+    m.stockActual = Math.max(0, (parseFloat(m.stockActual)||0) - (parseFloat(m.usoPorPerfume)||0));
+  });
+  saveMat();
+}
+
+function getCostoMateriales(linea){
+  return materiales.reduce((s,m)=>{
+    if(m.id==='env_mate'    && !['Caballero','Unisex','Nicho'].includes(linea)) return s;
+    if(m.id==='env_cristal' && linea!=='Dama') return s;
+    return s + (parseFloat(m.usoPorPerfume)||0)*(parseFloat(m.costo)||0);
+  },0);
+}
+
+function renderMateriales(){
+  const alertas=materiales.filter(m=>(parseFloat(m.stockActual)||0)<=(parseFloat(m.alerta)||0));
+  document.getElementById('mat-alertas').innerHTML = alertas.length
+    ? `<div class="prov-alert">⚠ ${alertas.length} material${alertas.length!==1?'es':''} bajo el mínimo: <strong>${alertas.map(m=>m.nombre).join(', ')}</strong></div>`
+    : `<div class="prov-ok">✓ Todos los materiales están sobre el mínimo recomendado.</div>`;
+
+  document.getElementById('mat-list').innerHTML = materiales.map(m=>{
+    const stock=parseFloat(m.stockActual)||0;
+    const alerta=parseFloat(m.alerta)||0;
+    const max=alerta*4;
+    const pct=max>0?Math.min(100,Math.round(stock/max*100)):100;
+    const cls=stock<=0?'out':stock<=alerta?'low':'ok';
+    const val=fmt(stock*m.costo);
+    return `<div class="card">
+      <div class="card-top">
+        <div style="flex:1;min-width:0">
+          <div class="card-name">${m.nombre}</div>
+          <div class="card-sub">${m.codigo}</div>
+          <div class="card-sub" style="margin-top:2px">Mínimo: ${alerta} ${m.unidad} · Resurtir: ${m.resurtir} ${m.unidad} · $${m.costo}/${m.unidad==='piezas'?'pza':'g'} · ${m.usoPorPerfume} ${m.unidad==='piezas'?'pza':'g'} x perfume</div>
+          <div class="inv-bar-wrap"><div class="inv-bar ${cls}" style="width:${pct}%"></div></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;margin-left:12px">
+          <div class="inv-stock ${cls}">${stock}${m.unidad==='piezas'?' pzas':'g'}</div>
+          <div style="font-size:11px;color:var(--text2)">${val}</div>
+          <button class="btn btn-sm btn-blue" onclick="openModalMaterial('${m.id}')">✏ Editar</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openModalMaterial(matId){
+  const m=materiales.find(x=>x.id===matId); if(!m)return;
+  const overlay=document.getElementById('modal-overlay');
+  const mc=document.getElementById('modal-content');
+  mc.innerHTML=`
+    <div class="modal-handle"></div>
+    <div class="modal-title">Actualizar: ${m.nombre}</div>
+    <div class="form-group"><label>¿Cuántos tienes ahora? (${m.unidad})</label>
+      <input type="number" id="fm-stock" value="${m.stockActual}" step="${m.unidad==='piezas'?1:0.5}"/></div>
+    <div class="form-group"><label>Agregar cantidad recibida del proveedor</label>
+      <input type="number" id="fm-agregar" value="0" step="${m.unidad==='piezas'?1:0.5}"/></div>
+    <div class="form-group"><label>Alerta mínima (${m.unidad})</label>
+      <input type="number" id="fm-alerta" value="${m.alerta}"/></div>
+    <div class="form-group"><label>Cantidad a resurtir (${m.unidad})</label>
+      <input type="number" id="fm-resurtir" value="${m.resurtir}"/></div>
+    <div class="form-group"><label>Costo por ${m.unidad==='piezas'?'pieza':'gramo'} ($)</label>
+      <input type="number" id="fm-costo" value="${m.costo}" step="0.01"/></div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" type="button" onclick="saveMatStock('${m.id}')">Guardar</button>
+    </div>`;
+  overlay.classList.add('open');
+}
+
+function saveMatStock(id){
+  const m=materiales.find(x=>x.id===id); if(!m)return;
+  const base=parseFloat(document.getElementById('fm-stock')?.value)||0;
+  const agregar=parseFloat(document.getElementById('fm-agregar')?.value)||0;
+  m.stockActual=base+agregar;
+  m.alerta=parseFloat(document.getElementById('fm-alerta')?.value)||m.alerta;
+  m.resurtir=parseFloat(document.getElementById('fm-resurtir')?.value)||m.resurtir;
+  m.costo=parseFloat(document.getElementById('fm-costo')?.value)||m.costo;
+  saveMat(); closeModal(); renderMateriales(); toast('Material actualizado ✓');
 }
 
 const FB_CFG = {
