@@ -636,6 +636,42 @@ function cambiarEst(id,est){
   if(est==='Entregado'||est==='Cobrado'){p.fechaEntrega=new Date().toISOString().slice(0,10); if(!p.matDescontado){descontarMateriales(p);p.matDescontado=true;}}
   save();fbSave();renderAll();toast('Estatus actualizado ✓');
   if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
+
+  // Verificar si la fragancia se quedó sin stock
+  if(est==='Elaborado'||est==='Entregado'||est==='Cobrado'){
+    const fragCat=cat.find(x=>x.id===p.codigo);
+    if(fragCat){
+      const consumido=peds.filter(x=>x.codigo===p.codigo&&(x.estatus==='Elaborado'||x.estatus==='Entregado'||x.estatus==='Cobrado'||x.estatus==='Entregado/Cobrado')).length;
+      const restante=Math.max(0,(parseFloat(fragCat.stockGramos)||0)-consumido*cfg.gesencia);
+      if(restante<cfg.gesencia){
+        // Hay pedidos activos sin stock para esta fragancia?
+        const yaHayPedidoStock=peds.some(x=>x.codigo===p.codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
+        if(!yaHayPedidoStock){
+          setTimeout(()=>{
+            if(confirm(`⚠ La esencia "${fragCat.referencia}" se quedó sin stock (${restante}g restantes).\n\n¿Quieres crear un pedido automático para resurtir al proveedor?`)){
+              peds.push({
+                id:nextId++,
+                fecha:new Date().toISOString().slice(0,10),
+                cliente:'Para stock',
+                codigo:fragCat.id,
+                fragancia:fragCat.referencia,
+                disenador:fragCat.disenador,
+                linea:fragCat.linea,
+                estatus:'Pedido',
+                canal:'Directo',
+                fechaPromesa:'',
+                precio:0,
+                costoEsencia:fragCat.costoEsencia||1.70,
+                notas:'Resurtido automático — stock agotado',
+              });
+              save();fbSave();renderAll();
+              toast(`Pedido de resurtido creado para ${fragCat.referencia} ✓`);
+            }
+          },300);
+        }
+      }
+    }
+  }
 }
 function eliminarPed(id){
   if(!confirm('¿Eliminar este pedido?'))return;
