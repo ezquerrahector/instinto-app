@@ -468,13 +468,14 @@ function renderDash(){
       <div style="display:flex;align-items:flex-end;gap:6px;height:100px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 10px 0">
         ${mesesKeys.map(k=>{
           const h=Math.round((meses[k]/maxVenta)*70);
-          const mes=parseInt(k.slice(5));
-          const anio=k.slice(2,4);
+          const partes=k.split('-'); // ['2026','04']
+          const mes=parseInt(partes[1]);
+          const anio=(partes[0]||'').slice(2);
           const mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
           return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%">
             <div style="font-size:9px;color:var(--gold);font-weight:600">${fmt(meses[k]).replace('$','')}</div>
             <div style="width:80%;height:${h}px;background:var(--gold);border-radius:3px 3px 0 0;min-height:3px"></div>
-            <div style="font-size:9px;color:var(--text2);padding:3px 0">${mNames[mes-1]} ${anio}</div>
+            <div style="font-size:9px;color:var(--text2);padding:3px 0">${mNames[mes-1]||mes} ${anio}</div>
           </div>`;
         }).join('')}
       </div>
