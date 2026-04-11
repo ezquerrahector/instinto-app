@@ -505,13 +505,13 @@ function renderDash(){
       <div style="display:flex;align-items:flex-end;gap:6px;height:100px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px 10px 0">
         ${mesesKeys.map(k=>{
           const h=Math.round((meses[k]/maxVenta)*70);
-          const partes=k.split('-'); // ['2026','04']
+          const partes=k.split('-');
           const mes=parseInt(partes[1]);
           const anio=(partes[0]||'').slice(2);
           const mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%">
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;justify-content:flex-end;height:100%;cursor:pointer" onclick="verDetalleMes('${k}')" title="Ver detalle">
             <div style="font-size:9px;color:var(--gold);font-weight:600">${fmt(meses[k]).replace('$','')}</div>
-            <div style="width:80%;height:${h}px;background:var(--gold);border-radius:3px 3px 0 0;min-height:3px"></div>
+            <div style="width:80%;height:${h}px;background:var(--gold);border-radius:3px 3px 0 0;min-height:3px;transition:opacity 0.15s" onmouseover="this.style.opacity=0.7" onmouseout="this.style.opacity=1"></div>
             <div style="font-size:9px;color:var(--text2);padding:2px 0">${mNames[mes-1]||mes} ${anio}</div>
             <div style="font-size:9px;color:var(--text3)">${mesesCount[k]} perfume${mesesCount[k]!==1?'s':''}</div>
           </div>`;
@@ -1082,6 +1082,96 @@ function savePed(){
     enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
   }
   save();fbSave(); closeModal(); renderAll();
+}
+
+function verDetalleMes(mesKey){
+  const mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const partes=mesKey.split('-');
+  const mesNombre=`${mNames[parseInt(partes[1])-1]} ${partes[0]}`;
+
+  const pedsMes=peds.filter(p=>{
+    if(p.estatus!=='Entregado'&&p.estatus!=='Cobrado'&&p.estatus!=='Entregado/Cobrado') return false;
+    let key='';
+    if(p.fecha){
+      if(p.fecha.includes('-')) key=p.fecha.slice(0,7);
+      else if(p.fecha.includes('/')){
+        const pt=p.fecha.split('/');
+        if(pt.length===3){const a=pt[2].length===2?'20'+pt[2]:pt[2];key=`${a}-${pt[1].padStart(2,'0')}`;}
+      }
+    }
+    return key===mesKey;
+  });
+
+  const total=pedsMes.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
+  const ganTotal=pedsMes.reduce((s,p)=>s+ganancia(p),0);
+
+  let sortCol='id', sortAsc=true;
+
+  function renderTabla(){
+    const sorted=[...pedsMes].sort((a,b)=>{
+      let va,vb;
+      if(sortCol==='id'){va=a.id;vb=b.id;}
+      else if(sortCol==='cliente'){va=a.cliente;vb=b.cliente;}
+      else if(sortCol==='fragancia'){va=a.fragancia;vb=b.fragancia;}
+      else if(sortCol==='linea'){va=a.linea||'';vb=b.linea||'';}
+      else if(sortCol==='venta'){va=parseFloat(a.precio)||cfg.pventa;vb=parseFloat(b.precio)||cfg.pventa;}
+      else if(sortCol==='ganancia'){va=ganancia(a);vb=ganancia(b);}
+      if(typeof va==='string') return sortAsc?va.localeCompare(vb):vb.localeCompare(va);
+      return sortAsc?va-vb:vb-va;
+    });
+
+    const arrow=col=>sortCol===col?(sortAsc?' ↑':' ↓'):'';
+    const th=(col,label,align='left')=>`<th style="padding:7px 8px;text-align:${align};color:var(--text2);cursor:pointer;user-select:none;white-space:nowrap" onclick="__sortMes('${col}')">${label}${arrow(col)}</th>`;
+
+    document.getElementById('mes-tabla').innerHTML=`
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:var(--bg4);position:sticky;top:0">
+          ${th('id','#')}${th('cliente','Cliente')}${th('fragancia','Fragancia')}${th('linea','Línea')}${th('venta','Venta','right')}${th('ganancia','Ganancia','right')}
+        </tr></thead>
+        <tbody>
+          ${sorted.map((p,i)=>`<tr style="border-bottom:1px solid var(--border);background:${i%2===0?'var(--bg2)':'var(--bg3)'}">
+            <td style="padding:6px 8px;color:var(--text2);font-family:monospace">#${p.id}</td>
+            <td style="padding:6px 8px;font-weight:500">${p.cliente}</td>
+            <td style="padding:6px 8px;color:var(--text2)">${p.fragancia}</td>
+            <td style="padding:6px 8px">${bLin(p.linea||lineaDesdeId(p.codigo||''))}</td>
+            <td style="padding:6px 8px;text-align:right;color:var(--gold);font-weight:600">${fmt(parseFloat(p.precio)||cfg.pventa)}</td>
+            <td style="padding:6px 8px;text-align:right;color:var(--green);font-weight:600">${fmt(ganancia(p))}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+
+  window.__sortMes=(col)=>{
+    if(sortCol===col) sortAsc=!sortAsc;
+    else{sortCol=col;sortAsc=true;}
+    renderTabla();
+  };
+
+  const overlay=document.getElementById('modal-overlay');
+  const mc=document.getElementById('modal-content');
+  mc.innerHTML=`
+    <div class="modal-handle"></div>
+    <div class="modal-title">📅 ${mesNombre}</div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <div style="flex:1;background:var(--bg3);border-radius:var(--radius-sm);padding:10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2)">Perfumes</div>
+        <div style="font-size:20px;font-weight:700;color:var(--gold)">${pedsMes.length}</div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border-radius:var(--radius-sm);padding:10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2)">Ventas</div>
+        <div style="font-size:20px;font-weight:700;color:var(--gold)">${fmt(total)}</div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border-radius:var(--radius-sm);padding:10px;text-align:center">
+        <div style="font-size:11px;color:var(--text2)">Ganancia</div>
+        <div style="font-size:20px;font-weight:700;color:var(--green)">${fmt(ganTotal)}</div>
+      </div>
+    </div>
+    <div id="mes-tabla" style="max-height:55vh;overflow-y:auto"></div>
+    <div class="modal-footer">
+      <button class="btn btn-gold" type="button" onclick="closeModal()">Cerrar</button>
+    </div>`;
+  overlay.classList.add('open');
+  renderTabla();
 }
 
 function autoLineaFrag(val){
@@ -1691,7 +1781,7 @@ const MAT_DEF = [
   {id:'perfumol',   nombre:'Perfumol',             codigo:'Perfumol 1L',                        unidad:'gramos',stockActual:1000,alerta:500,resurtir:1000,costo:0.06,usoPorPerfume:21.5,lineas:['Caballero','Dama','Unisex','Nicho']},
 ];
 
-let materiales = JSON.parse(localStorage.getItem('if_mat')||'null') || MAT_DEF.map(x=>({...x}));
+let materiales = JSON.parse(localStorage.getItem('if_mat')||'null') || [];
 
 function saveMat(){ localStorage.setItem('if_mat',JSON.stringify(materiales)); fbSave(); }
 
@@ -1880,10 +1970,17 @@ async function fbLoad(){
       setSyncStatus('ok');
       toast('Datos sincronizados desde la nube ✓');
     } else {
+      // Primera vez — sin datos en Firebase, arrancar vacío y subir
       setSyncStatus('ok');
+      renderAll(); loadCfg(); renderMateriales();
       await fbSave();
     }
-  } catch(e){ setSyncStatus('err'); console.warn('Firebase load error:', e); }
+  } catch(e){
+    setSyncStatus('err');
+    console.warn('Firebase load error:', e);
+    // Si falla Firebase, al menos renderizar con lo que hay en localStorage
+    renderAll(); loadCfg(); renderMateriales();
+  }
 }
 
 // Sobreescribir save para que también suba a Firebase
@@ -1915,14 +2012,11 @@ function addSyncButtons(){
   el.prepend(wrap2);
 }
 
-// Al arrancar: carga desde Firebase y activa auto-sync
+// Al arrancar: siempre esperar Firebase antes de renderizar
 window.addEventListener('load', async () => {
-  await fbLoad();
+  await fbLoad(); // fbLoad ya llama renderAll + loadCfg + renderMateriales internamente
   addSyncButtons();
 });
-
-renderAll();
-loadCfg();
 </script>
 </body>
 </html>
