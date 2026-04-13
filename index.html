@@ -420,6 +420,11 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2400);
 }
 
+function goTab(id){
+  const btn=document.querySelector(`.nav-tab[onclick*="'${id}'"]`);
+  if(btn) btn.click();
+}
+
 // ── TABS ──────────────────────────────────────────────────────────────────
 function showTab(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -483,19 +488,27 @@ function renderDash(){
   const totalLinea=ent.length||1;
 
   document.getElementById('kpis').innerHTML=`
-    <div class="kpi"><div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
-    <div class="kpi"><div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
-    <div class="kpi"><div class="kpi-label">En proceso</div><div class="kpi-val kv-gold">${proc}</div></div>
-    <div class="kpi"><div class="kpi-label">Pendientes</div><div class="kpi-val kv-red">${pend}</div></div>
-    <div class="kpi"><div class="kpi-label">Ventas totales</div><div class="kpi-val kv-gold" style="font-size:18px">${fmt(ventas)}</div></div>
-    <div class="kpi"><div class="kpi-label">Ganancia total</div><div class="kpi-val kv-green" style="font-size:18px">${fmt(gan)}</div></div>
-    <div class="kpi"><div class="kpi-label">Margen promedio</div><div class="kpi-val kv-blue">${margen}%</div></div>
-    <div class="kpi"><div class="kpi-label">Fragancias catálogo</div><div class="kpi-val kv-gold">${cat.length}</div></div>
-    <div class="kpi"><div class="kpi-label">Valor materiales</div><div class="kpi-val kv-blue" style="font-size:16px">${fmt(costoMatTot)}</div></div>
-    <div class="kpi" style="cursor:pointer" onclick="document.querySelector('[onclick*=materiales]').click()">
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pedidos">
+      <div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver entregados">
+      <div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver en proceso">
+      <div class="kpi-label">En proceso</div><div class="kpi-val kv-gold">${proc}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pendientes">
+      <div class="kpi-label">Pendientes</div><div class="kpi-val kv-red">${pend}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pedidos">
+      <div class="kpi-label">Ventas totales</div><div class="kpi-val kv-gold" style="font-size:18px">${fmt(ventas)}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver ganancias">
+      <div class="kpi-label">Ganancia total</div><div class="kpi-val kv-green" style="font-size:18px">${fmt(gan)}</div></div>
+    <div class="kpi">
+      <div class="kpi-label">Margen promedio</div><div class="kpi-val kv-blue">${margen}%</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('catalogo')" title="Ver catálogo">
+      <div class="kpi-label">Fragancias catálogo</div><div class="kpi-val kv-gold">${cat.length}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('materiales')" title="Ver materiales">
+      <div class="kpi-label">Valor materiales</div><div class="kpi-val kv-blue" style="font-size:16px">${fmt(costoMatTot)}</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="goTab('materiales')" title="Ver alertas de materiales">
       <div class="kpi-label">Alertas materiales</div>
-      <div class="kpi-val ${matAlertas>0?'kv-red':'kv-green'}">${matAlertas>0?matAlertas+' ⚠':'✓ OK'}</div>
-    </div>
+      <div class="kpi-val ${matAlertas>0?'kv-red':'kv-green'}">${matAlertas>0?matAlertas+' ⚠':'✓ OK'}</div></div>
   `;
 
   // Gráfica ventas por mes
