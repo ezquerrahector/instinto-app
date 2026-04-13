@@ -425,6 +425,14 @@ function goTab(id){
   if(btn) btn.click();
 }
 
+function goTabFiltro(id, filtro){
+  const btn=document.querySelector(`.nav-tab[onclick*="'${id}'"]`);
+  if(btn) btn.click();
+  // Aplicar filtro tras el click
+  const sel=document.querySelector(`select[onchange*="setFilterEst"]`);
+  if(sel){sel.value=filtro; setFilterEst(filtro);}
+}
+
 // ── TABS ──────────────────────────────────────────────────────────────────
 function showTab(id,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
@@ -494,7 +502,7 @@ function renderDash(){
       <div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
     <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver en proceso">
       <div class="kpi-label">En proceso</div><div class="kpi-val kv-gold">${proc}</div></div>
-    <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pendientes">
+    <div class="kpi" style="cursor:pointer" onclick="goTabFiltro('pedidos','Pedido')" title="Ver pendientes">
       <div class="kpi-label">Pendientes</div><div class="kpi-val kv-red">${pend}</div></div>
     <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pedidos">
       <div class="kpi-label">Ventas totales</div><div class="kpi-val kv-gold" style="font-size:18px">${fmt(ventas)}</div></div>
