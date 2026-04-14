@@ -420,6 +420,16 @@ function toast(msg){
   setTimeout(()=>t.classList.remove('show'),2400);
 }
 
+function copiarFragancia(frag, dis){
+  const txt = dis ? `${frag} — ${dis}` : frag;
+  navigator.clipboard.writeText(txt).then(()=>toast(`📋 Copiado: ${txt}`)).catch(()=>{
+    const ta=document.createElement('textarea');
+    ta.value=txt; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    toast(`📋 Copiado: ${txt}`);
+  });
+}
+
 function goTab(id){
   const btn=document.querySelector(`.nav-tab[onclick*="'${id}'"]`);
   if(btn) btn.click();
@@ -668,7 +678,10 @@ function renderPedidos(){
             <div class="card-name">${p.cliente}</div>
             ${stockBadge}
           </div>
-          <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.fragancia} · ${p.disenador||''}</div>
+          <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            ${p.fragancia} · ${p.disenador||''}
+            <span onclick="copiarFragancia('${(p.fragancia||'').replace(/'/g,"\\'")}','${(p.disenador||'').replace(/'/g,"\\'")}');event.stopPropagation()" title="Copiar fragancia" style="cursor:pointer;margin-left:6px;opacity:0.5;font-size:12px" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">📋</span>
+          </div>
           <div class="card-sub">${p.fecha}${p.canal?' · '+p.canal:''}${p.codigo?' · <span style="font-family:monospace;color:var(--gold)">' + p.codigo + '</span>':''}</div>
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
