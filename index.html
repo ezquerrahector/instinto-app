@@ -1566,8 +1566,17 @@ function renderProveedor(){
     html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Gramos</th><th>Pedidos</th></tr></thead><tbody>';
     Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
       const cl=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
-      html+=`<tr><td class="cod">${fragCat.id}</td><td>${fragCat.base||'—'}</td><td>${fragCat.disenador}</td><td>${fragCat.referencia}</td><td style="font-weight:600;color:var(--gold)">${gramos}g</td><td style="font-size:11px;color:var(--text2)">${cl}</td></tr>`;
-      lineas.push(`${fragCat.id} | ${fragCat.base||fragCat.referencia} | ${fragCat.disenador} | ${fragCat.referencia} | ${gramos}g`);
+      html+=`<tr>
+        <td class="cod">${fragCat.id}</td>
+        <td>${fragCat.base||'—'}</td>
+        <td>${fragCat.disenador}</td>
+        <td>${fragCat.referencia}</td>
+        <td><input type="number" value="${gramos}" min="1" step="30"
+          style="width:70px;padding:4px 6px;border-radius:4px;border:1px solid var(--gold);background:var(--bg3);color:var(--gold);font-weight:600;text-align:center"
+          data-cod="${fragCat.id}" data-base="${fragCat.base||fragCat.referencia}" data-dis="${fragCat.disenador}" data-ref="${fragCat.referencia}"
+          oninput="actualizarMsgProveedor()"/>g</td>
+        <td style="font-size:11px;color:var(--text2)">${cl}</td>
+      </tr>`;
     });
     html+='</tbody></table></div><br>';
   }
@@ -1575,15 +1584,37 @@ function renderProveedor(){
     html+='<div class="section-title" style="margin-bottom:8px">Materiales a resurtir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Material</th><th>Código</th><th>Stock actual</th><th>Pedir</th></tr></thead><tbody>';
     matBajos.forEach(m=>{
       const pedir=Math.max(0,(parseFloat(m.resurtir)||0)-(parseFloat(m.stockActual)||0));
-      html+=`<tr><td style="font-weight:600">${m.nombre}</td><td class="cod">${m.codigo}</td><td style="color:var(--red)">${m.stockActual} ${m.unidad==='piezas'?'pzas':'g'}</td><td style="font-weight:600;color:var(--gold)">${pedir} ${m.unidad==='piezas'?'pzas':'g'}</td></tr>`;
-      lineas.push(`${m.codigo} | ${m.nombre} | ${pedir} ${m.unidad==='piezas'?'pzas':'g'}`);
+      const linea=`${m.codigo} | ${m.nombre} | ${pedir} ${m.unidad==='piezas'?'pzas':'g'}`;
+      html+=`<tr data-mat="${linea}"><td style="font-weight:600">${m.nombre}</td><td class="cod">${m.codigo}</td><td style="color:var(--red)">${m.stockActual} ${m.unidad==='piezas'?'pzas':'g'}</td><td style="font-weight:600;color:var(--gold)">${pedir} ${m.unidad==='piezas'?'pzas':'g'}</td></tr>`;
     });
     html+='</tbody></table></div>';
   }
   tablaEl.innerHTML=html;
-  const hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
-  document.getElementById('prov-msg').value=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
+  // Generar mensaje inicial
+  actualizarMsgProveedor();
   accionesEl.style.display='block';
+}
+
+function actualizarMsgProveedor(){
+  const lineas=[];
+  // Leer gramos editables de esencias
+  document.querySelectorAll('#prov-tabla input[data-cod]').forEach(inp=>{
+    const g=parseInt(inp.value)||0;
+    if(g>0) lineas.push(`${inp.dataset.cod} | ${inp.dataset.base} | ${inp.dataset.dis} | ${inp.dataset.ref} | ${g}g`);
+  });
+  // Materiales fijos
+  document.querySelectorAll('#prov-tabla tr[data-mat]').forEach(tr=>{
+    lineas.push(tr.dataset.mat);
+  });
+  // Fallback: leer materiales del DOM si no hay data-mat
+  if(!document.querySelector('#prov-tabla tr[data-mat]')){
+    document.querySelectorAll('#prov-tabla .mat-linea').forEach(el=>{
+      lineas.push(el.textContent);
+    });
+  }
+  const hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
+  const msgEl=document.getElementById('prov-msg');
+  if(msgEl) msgEl.value=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
 }
 
 
