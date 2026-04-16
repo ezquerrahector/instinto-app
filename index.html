@@ -957,12 +957,8 @@ function renderCat(){
 
 function pedirParaStock(id){
   const r=cat.find(x=>x.id===id); if(!r)return;
-  // Verificar si ya hay un pedido Para stock activo de esta fragancia
   const yaExiste=peds.some(p=>p.codigo===id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
-  if(yaExiste){
-    toast(`⚠ Ya hay un pedido Para stock de ${r.referencia}`);
-    return;
-  }
+  if(yaExiste){toast(`⚠ Ya hay un pedido Para stock de ${r.referencia}`);return;}
   if(!confirm(`¿Crear pedido para resurtir "${r.referencia}" al proveedor?`))return;
   peds.push({
     id:nextId++,
@@ -980,6 +976,8 @@ function pedirParaStock(id){
     notas:'Resurtido manual desde Catálogo',
   });
   save();fbSave();
+  renderDash(); // Actualizar dashboard para reflejar el cambio
+  if(document.getElementById('catalogo').classList.contains('active')) renderCat();
   toast(`✓ Pedido Para stock creado — ${r.referencia}`);
 }
 function eliminarFrag(id){
