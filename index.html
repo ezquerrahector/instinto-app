@@ -664,7 +664,7 @@ function renderDash(){
       <div class="section-title" style="margin-bottom:8px">🏆 Top ${linea}</div>
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">
         ${items.map((x,i)=>{
-          const fragCat=cat.find(r=>r.id===x.codigo);
+          const fragCat=cat.find(r=>r.id===x.codigo) || cat.find(r=>norm(r.referencia)===norm(x.fragancia));
           const ini=parseFloat(fragCat?.stockGramos)||0;
           const usado=(consumidoTop[x.codigo]||0)*cfg.gesencia;
           const rest=Math.max(0,ini-usado);
@@ -676,7 +676,7 @@ function renderDash(){
             <div style="font-size:13px;font-weight:700;color:${i===0?coloresTop[linea]:'var(--text2)'};width:20px;text-align:center;flex-shrink:0">${i+1}</div>
             <div style="flex:1;min-width:0">
               <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.fragancia}</div>
-              <div style="font-size:11px;color:var(--text2)">${x.disenador}</div>
+              <div style="font-size:11px;color:var(--text2)">${x.disenador}${x.codigo?' · <span style="font-family:monospace;color:var(--gold)">'+x.codigo+'</span>':''}</div>
               <div style="margin-top:4px;height:4px;background:var(--bg4);border-radius:2px">
                 <div style="height:100%;width:${Math.round(x.count/maxCount*100)}%;background:${coloresTop[linea]};border-radius:2px"></div>
               </div>
@@ -688,7 +688,9 @@ function renderDash(){
               <div style="font-size:13px;font-weight:700;color:${coloresTop[linea]}">${x.count}</div>
               ${fragCat ? (yaHayPedido
                 ? `<span style="font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px">En pedido</span>`
-                : `<button onclick="pedirParaStock('${x.codigo}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`)
+                : perfumesDisp===0
+                  ? `<button onclick="pedirParaStock('${x.codigo}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`
+                  : '')
               : ''}
             </div>
           </div>`;
