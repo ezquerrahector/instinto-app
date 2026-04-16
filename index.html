@@ -208,17 +208,9 @@ nav::-webkit-scrollbar{display:none}
     <button class="btn btn-sm" onclick="_gramosEditados={};renderProveedor()">↺ Actualizar</button>
   </div>
   <div id="prov-resumen" style="margin-bottom:12px"></div>
-  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
     <input type="search" id="prov-buscar" placeholder="Filtrar por código o fragancia..." oninput="filtrarProveedor(this.value)"
-      style="flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
-    <div style="display:flex;gap:6px">
-      <button class="chip active" id="prov-chip-todos" onclick="setProvTipo('todos',this)">Todos</button>
-      <button class="chip" id="prov-chip-clientes" onclick="setProvTipo('clientes',this)">Solo clientes</button>
-      <button class="chip" id="prov-chip-stock" onclick="setProvTipo('stock',this)">Para stock</button>
-    </div>
-  </div>
-  <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input type="search" id="prov-buscar" placeholder="Buscar por fragancia, cliente, código..." oninput="filtrarProveedor(this.value)" style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
+      style="flex:1;min-width:180px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
     <button class="chip active" id="chip-prov-todos" onclick="setProvChip(this,'')">Todos</button>
     <button class="chip" id="chip-prov-cliente" onclick="setProvChip(this,'cliente')">Solo clientes</button>
     <button class="chip" id="chip-prov-stock" onclick="setProvChip(this,'stock')">Para stock</button>
