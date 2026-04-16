@@ -205,7 +205,7 @@ nav::-webkit-scrollbar{display:none}
 <div id="proveedor" class="section">
   <div class="section-head">
     <span class="section-title">Pedido al proveedor</span>
-    <button class="btn btn-sm" onclick="_gramosEditados={};renderProveedor()">↺ Actualizar</button>
+    <button class="btn btn-sm" onclick="_gramosEditados={};localStorage.removeItem('if_gramos_edit');renderProveedor()">↺ Actualizar</button>
   </div>
   <div id="prov-resumen" style="margin-bottom:12px"></div>
   <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
@@ -1820,7 +1820,7 @@ function renderProveedor(){
   accionesEl.style.display='block';
 }
 
-let _gramosEditados = {}; // Guarda ediciones del usuario en Proveedor
+let _gramosEditados = JSON.parse(localStorage.getItem('if_gramos_edit')||'{}');
 
 function actualizarMsgProveedor(){
   const lineas=[];
@@ -1828,7 +1828,8 @@ function actualizarMsgProveedor(){
 
   document.querySelectorAll('#prov-tabla input[data-cod]').forEach(inp=>{
     const g=parseInt(inp.value)||0;
-    _gramosEditados[inp.dataset.cod]=g; // Guardar edición
+    _gramosEditados[inp.dataset.cod]=g;
+    localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados));
     if(g>0){
       lineas.push(`${inp.dataset.cod} | ${inp.dataset.base} | ${inp.dataset.dis} | ${inp.dataset.ref} | ${g}g`);
       const fragCat=cat.find(x=>x.id===inp.dataset.cod);
