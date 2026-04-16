@@ -885,9 +885,38 @@ function renderCat(){
       </div>
       <div class="card-actions">
         <button class="btn btn-sm btn-blue" onclick="openModal('fragancia','${r.id}')">✏ Editar</button>
+        <button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>
         <button class="btn btn-sm btn-danger" onclick="eliminarFrag('${r.id}')">✕ Eliminar</button>
       </div>
     </div>`).join('')||'<div class="empty">Sin fragancias.</div>';
+}
+
+function pedirParaStock(id){
+  const r=cat.find(x=>x.id===id); if(!r)return;
+  // Verificar si ya hay un pedido Para stock activo de esta fragancia
+  const yaExiste=peds.some(p=>p.codigo===id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
+  if(yaExiste){
+    toast(`⚠ Ya hay un pedido Para stock de ${r.referencia}`);
+    return;
+  }
+  if(!confirm(`¿Crear pedido para resurtir "${r.referencia}" al proveedor?`))return;
+  peds.push({
+    id:nextId++,
+    fecha:new Date().toISOString().slice(0,10),
+    cliente:'Para stock',
+    codigo:r.id,
+    fragancia:r.referencia,
+    disenador:r.disenador,
+    linea:r.linea,
+    estatus:'Pedido',
+    canal:'Directo',
+    fechaPromesa:'',
+    precio:0,
+    costoEsencia:r.costoEsencia||2.80,
+    notas:'Resurtido manual desde Catálogo',
+  });
+  save();fbSave();
+  toast(`✓ Pedido Para stock creado — ${r.referencia}`);
 }
 function eliminarFrag(id){
   if(!confirm('¿Eliminar esta fragancia del catálogo?'))return;
