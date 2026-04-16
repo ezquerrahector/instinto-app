@@ -774,7 +774,7 @@ function renderPedidos(){
   });
   const stockUsadoPorPedido={};
   const stockTemporal={...stockDisp};
-  [...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor')
+  [...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock')
     .sort((a,b)=>a.id-b.id)
     .forEach(p=>{
       if(stockTemporal[p.codigo]===undefined) return;
@@ -1734,7 +1734,7 @@ function renderProveedor(){
     .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
   const stockDisp={};
   cat.forEach(r=>{stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);});
-  const pedActivos=[...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor').sort((a,b)=>a.id-b.id);
+  const pedActivos=[...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock').sort((a,b)=>a.id-b.id);
   const stockTemp={...stockDisp};
   let necesitan=[];
   pedActivos.forEach(p=>{
