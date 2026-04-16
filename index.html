@@ -986,7 +986,9 @@ function renderCat(){
       </div>
       <div class="card-actions">
         <button class="btn btn-sm btn-blue" onclick="openModal('fragancia','${r.id}')">✏ Editar</button>
-        <button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>
+        ${peds.some(p=>p.codigo===r.id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'))
+          ? `<span style="padding:5px 10px;border-radius:var(--radius-sm);background:var(--bg4);color:var(--text2);font-size:12px">En pedido</span>`
+          : `<button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>`}
         <button class="btn btn-sm btn-danger" onclick="eliminarFrag('${r.id}')">✕ Eliminar</button>
       </div>
     </div>`).join('')||'<div class="empty">Sin fragancias.</div>';
