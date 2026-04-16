@@ -636,8 +636,14 @@ function renderDash(){
   // Top 10 por línea
   const conteo={};
   ent.forEach(p=>{
-    const key=p.codigo||p.fragancia;
-    if(!conteo[key]) conteo[key]={fragancia:p.fragancia,disenador:p.disenador||'',linea:p.linea||lineaDesdeId(p.codigo||'')||'',codigo:p.codigo||'',count:0};
+    const key=p.codigo&&p.codigo!=='OTRO'?p.codigo:p.fragancia;
+    if(!conteo[key]) conteo[key]={
+      fragancia:p.fragancia,
+      disenador:p.disenador||'',
+      linea:p.linea||lineaDesdeId(p.codigo||'')||'',
+      codigo:p.codigo&&p.codigo!=='OTRO'?p.codigo:'',
+      count:0
+    };
     conteo[key].count++;
   });
 
