@@ -482,37 +482,6 @@ function verEnProveedor(codigo){
   },100);
 }
 
-// ── RESTAURAR STOCK: recalcular stockGramos basado en historial de pedidos ──
-function restaurarStockEsencias(){
-  // Esta función calcula el stockGramos correcto para cada fragancia
-  // usando el stockGramos actual como base y SUMANDO lo que se descontó incorrectamente
-  if(cfg.stockRestaurado) return;
-
-  // Contar pedidos elaborados/entregados/cobrados por fragancia
-  const consumido={};
-  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
-    .filter(p=>p.codigo&&p.codigo!=='OTRO')
-    .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
-
-  // Para cada fragancia, el stockGramos correcto = stockGramos actual + (consumido × 30g)
-  // porque el stock actual fue descontado incorrectamente por la migración
-  let corregidas=0;
-  cat.forEach(r=>{
-    const consum=consumido[r.id]||0;
-    if(consum>0){
-      r.stockGramos=(parseFloat(r.stockGramos)||0) + consum*cfg.gesencia;
-      corregidas++;
-    }
-  });
-
-  cfg.stockRestaurado=true;
-  cfg.stockMigrado=false; // resetear por si acaso
-  save(); fbSave();
-  console.log(`Stock restaurado: ${corregidas} fragancias corregidas`);
-  toast(`✓ Stock restaurado correctamente (${corregidas} fragancias)`);
-  renderAll();
-}
-
 function goTab(id){
   const btn=document.querySelector(`.nav-tab[onclick*="'${id}'"]`);
   if(btn) btn.click();
@@ -2335,8 +2304,6 @@ async function fbLoad(){
       renderAll(); loadCfg(); renderMateriales();
       setSyncStatus('ok');
       toast('Datos sincronizados desde la nube ✓');
-      // Restaurar stock esencias si fue migrado incorrectamente
-      setTimeout(restaurarStockEsencias, 500);
     } else {
       // Primera vez — sin datos en Firebase, arrancar vacío y subir
       setSyncStatus('ok');
