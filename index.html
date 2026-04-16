@@ -218,7 +218,7 @@ nav::-webkit-scrollbar{display:none}
     </div>
   </div>
   <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-    <input type="search" id="prov-buscar" placeholder="Buscar por fragancia, cliente, código..." oninput="renderProveedor()" style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
+    <input type="search" id="prov-buscar" placeholder="Buscar por fragancia, cliente, código..." oninput="filtrarProveedor(this.value)" style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
     <button class="chip active" id="chip-prov-todos" onclick="setProvChip(this,'')">Todos</button>
     <button class="chip" id="chip-prov-cliente" onclick="setProvChip(this,'cliente')">Solo clientes</button>
     <button class="chip" id="chip-prov-stock" onclick="setProvChip(this,'stock')">Para stock</button>
@@ -518,8 +518,13 @@ function showTab(id,btn){
   if(id==='catalogo')   renderCat();
   if(id==='pedidos')    renderPedidos();
   if(id==='config')     loadCfg();
-  if(id==='proveedor')  renderProveedor();
   if(id==='materiales') renderMateriales();
+  if(id==='proveedor'){
+    const tablaEl=document.getElementById('prov-tabla');
+    if(!tablaEl||!tablaEl.innerHTML.trim()) renderProveedor();
+    // Si ya tiene contenido, solo re-aplica el filtro sin regenerar
+    else { const inp=document.getElementById('prov-buscar'); if(inp) filtrarProveedor(inp.value); }
+  }
 }
 function showStab(id,btn){
   document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
