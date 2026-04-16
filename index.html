@@ -1710,18 +1710,18 @@ function renderProveedor(){
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         ${totalEsencias>0?`<div style="flex:1;min-width:120px;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 12px">
           <div style="font-size:11px;color:var(--text2)">Esencias</div>
-          <div style="font-size:16px;font-weight:700;color:var(--gold)">${fmt(totalEsencias)}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--gold)" id="total-esencias">${fmt(totalEsencias)}</div>
         </div>`:''}
         ${totalMateriales>0?`<div style="flex:1;min-width:120px;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 12px">
           <div style="font-size:11px;color:var(--text2)">Materiales</div>
-          <div style="font-size:16px;font-weight:700;color:var(--gold)">${fmt(totalMateriales)}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--gold)" id="total-materiales">${fmt(totalMateriales)}</div>
         </div>`:''}
         <div style="flex:1;min-width:120px;background:var(--bg4);border-radius:var(--radius-sm);padding:8px 12px;border:1px solid var(--gold3)">
           <div style="font-size:11px;color:var(--text2)">Total estimado</div>
-          <div style="font-size:18px;font-weight:700;color:var(--gold)">${fmt(totalGeneral)}</div>
+          <div style="font-size:18px;font-weight:700;color:var(--gold)" id="total-general">${fmt(totalGeneral)}</div>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--text3);margin-top:6px">* Esencias calculadas con el costo por gramo de cada fragancia + $${cfg.envprov||5} envase proveedor. Puede variar.</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">* Esencias calculadas con el costo por gramo de cada fragancia + $${cfg.envprov||5} envase proveedor. Actualiza automáticamente al cambiar gramos.</div>
     </div>`;
     tablaEl.innerHTML+=resumenHTML;
   }
@@ -1733,21 +1733,41 @@ function renderProveedor(){
 
 function actualizarMsgProveedor(){
   const lineas=[];
+  let totalEsencias=0;
+
   // Leer gramos editables de esencias
   document.querySelectorAll('#prov-tabla input[data-cod]').forEach(inp=>{
     const g=parseInt(inp.value)||0;
-    if(g>0) lineas.push(`${inp.dataset.cod} | ${inp.dataset.base} | ${inp.dataset.dis} | ${inp.dataset.ref} | ${g}g`);
+    if(g>0){
+      lineas.push(`${inp.dataset.cod} | ${inp.dataset.base} | ${inp.dataset.dis} | ${inp.dataset.ref} | ${g}g`);
+      const fragCat=cat.find(x=>x.id===inp.dataset.cod);
+      const ce=parseFloat(fragCat?.costoEsencia)||2.80;
+      totalEsencias += g * ce + (cfg.envprov||5);
+    }
   });
-  // Materiales fijos
+
+  // Materiales fijos desde data-mat
+  let totalMateriales=0;
   document.querySelectorAll('#prov-tabla tr[data-mat]').forEach(tr=>{
     lineas.push(tr.dataset.mat);
+    // Calcular costo del material
+    const m=materiales.find(x=>tr.dataset.mat.startsWith(x.codigo));
+    if(m){
+      const pedir=Math.max(0,(parseFloat(m.resurtir)||0)-(parseFloat(m.stockActual)||0));
+      totalMateriales+=pedir*(parseFloat(m.costo)||0);
+    }
   });
-  // Fallback: leer materiales del DOM si no hay data-mat
-  if(!document.querySelector('#prov-tabla tr[data-mat]')){
-    document.querySelectorAll('#prov-tabla .mat-linea').forEach(el=>{
-      lineas.push(el.textContent);
-    });
-  }
+
+  // Actualizar totales en pantalla
+  const totalGeneral=totalEsencias+totalMateriales;
+  const elEsencias=document.getElementById('total-esencias');
+  const elMat=document.getElementById('total-materiales');
+  const elTotal=document.getElementById('total-general');
+  if(elEsencias) elEsencias.textContent=fmt(totalEsencias);
+  if(elMat) elMat.textContent=fmt(totalMateriales);
+  if(elTotal) elTotal.textContent=fmt(totalGeneral);
+
+  // Actualizar mensaje WhatsApp
   const hoy=new Date().toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'});
   const msgEl=document.getElementById('prov-msg');
   if(msgEl) msgEl.value=`Buen día, me pudieran por favor preparar los siguientes:\n\n${lineas.join('\n')}\n\nFecha: ${hoy}\nGracias 🙏`;
