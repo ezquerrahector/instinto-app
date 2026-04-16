@@ -207,6 +207,12 @@ nav::-webkit-scrollbar{display:none}
     <span class="section-title">Pedido al proveedor</span>
     <button class="btn btn-sm" onclick="renderProveedor()">↺ Actualizar</button>
   </div>
+  <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input type="search" id="prov-buscar" placeholder="Buscar por fragancia, cliente, código..." oninput="renderProveedor()" style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
+    <button class="chip active" id="chip-prov-todos" onclick="setProvChip(this,'')">Todos</button>
+    <button class="chip" id="chip-prov-cliente" onclick="setProvChip(this,'cliente')">Solo clientes</button>
+    <button class="chip" id="chip-prov-stock" onclick="setProvChip(this,'stock')">Para stock</button>
+  </div>
   <div id="prov-resumen" style="margin-bottom:12px"></div>
   <div id="prov-tabla" style="margin-bottom:12px"></div>
   <div id="prov-acciones" style="display:none">
@@ -1599,8 +1605,18 @@ function renderAll(){ renderDash(); renderPedidos(); }
 // ── SERVICE WORKER ────────────────────────────────────────────────────────
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
+let _provTipo='';
+function setProvChip(btn, tipo){
+  document.querySelectorAll('#chip-prov-todos,#chip-prov-cliente,#chip-prov-stock').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  _provTipo=tipo;
+  renderProveedor();
+}
+
 // ── PROVEEDOR ─────────────────────────────────────────────────────────────
 function renderProveedor(){
+  const buscar=(document.getElementById('prov-buscar')?.value||'').toLowerCase().trim();
+
   const consumido={};
   peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
     .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
@@ -1608,12 +1624,25 @@ function renderProveedor(){
   cat.forEach(r=>{stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);});
   const pedActivos=[...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor').sort((a,b)=>a.id-b.id);
   const stockTemp={...stockDisp};
-  const necesitan=[];
+  let necesitan=[];
   pedActivos.forEach(p=>{
     const fragCat=cat.find(x=>x.id===p.codigo); if(!fragCat)return;
     if((stockTemp[p.codigo]||0)>=cfg.gesencia){stockTemp[p.codigo]-=cfg.gesencia;}
     else{necesitan.push({p,fragCat});}
   });
+
+  // Aplicar filtros de búsqueda y tipo
+  if(buscar){
+    necesitan=necesitan.filter(({p,fragCat})=>
+      norm(fragCat.referencia).includes(norm(buscar))||
+      norm(fragCat.disenador).includes(norm(buscar))||
+      norm(fragCat.id).includes(norm(buscar))||
+      norm(p.cliente).includes(norm(buscar))
+    );
+  }
+  if(_provTipo==='stock') necesitan=necesitan.filter(({p})=>p.cliente==='Para stock');
+  if(_provTipo==='cliente') necesitan=necesitan.filter(({p})=>p.cliente!=='Para stock');
+
   const matBajos=materiales.filter(m=>(parseFloat(m.stockActual)||0)<=(parseFloat(m.alerta)||0));
   const resEl=document.getElementById('prov-resumen');
   const tablaEl=document.getElementById('prov-tabla');
