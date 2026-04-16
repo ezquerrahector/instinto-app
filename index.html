@@ -1774,15 +1774,18 @@ function renderProveedor(){
   const lineas=[];
   let html='';
   if(necesitan.length){
-    html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Gramos</th><th>Pedidos</th><th></th></tr></thead><tbody>';
+    html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Stock</th><th>Gramos</th><th>Pedidos</th><th></th></tr></thead><tbody>';
     Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
       const cl=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
       const gramosAMostrar=_gramosEditados[fragCat.id]??gramos;
+      const stockDisponible=Math.max(0,(parseFloat(fragCat.stockGramos)||0)-(consumido[fragCat.id]||0)*cfg.gesencia);
+      const stockColor=stockDisponible===0?'var(--red)':stockDisponible<cfg.gesencia?'var(--amber)':'var(--green)';
       html+=`<tr id="prov-row-${fragCat.id}">
         <td class="cod">${fragCat.id}</td>
         <td>${fragCat.base||'—'}</td>
         <td>${fragCat.disenador}</td>
         <td>${fragCat.referencia}</td>
+        <td style="font-size:11px;font-weight:600;color:${stockColor};white-space:nowrap">${stockDisponible}g</td>
         <td><input type="number" value="${gramosAMostrar}" min="1" step="30"
           style="width:70px;padding:4px 6px;border-radius:4px;border:1px solid var(--gold);background:var(--bg3);color:var(--gold);font-weight:600;text-align:center"
           data-cod="${fragCat.id}" data-base="${fragCat.base||fragCat.referencia}" data-dis="${fragCat.disenador}" data-ref="${fragCat.referencia}"
