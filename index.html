@@ -207,13 +207,13 @@ nav::-webkit-scrollbar{display:none}
     <span class="section-title">Pedido al proveedor</span>
     <button class="btn btn-sm" onclick="renderProveedor()">↺ Actualizar</button>
   </div>
+  <div id="prov-resumen" style="margin-bottom:12px"></div>
   <div style="margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <input type="search" id="prov-buscar" placeholder="Buscar por fragancia, cliente, código..." oninput="renderProveedor()" style="flex:1;min-width:200px;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:13px"/>
     <button class="chip active" id="chip-prov-todos" onclick="setProvChip(this,'')">Todos</button>
     <button class="chip" id="chip-prov-cliente" onclick="setProvChip(this,'cliente')">Solo clientes</button>
     <button class="chip" id="chip-prov-stock" onclick="setProvChip(this,'stock')">Para stock</button>
   </div>
-  <div id="prov-resumen" style="margin-bottom:12px"></div>
   <div id="prov-tabla" style="margin-bottom:12px"></div>
   <div id="prov-acciones" style="display:none">
     <div class="export-area">
