@@ -116,6 +116,8 @@ nav::-webkit-scrollbar{display:none}
 .tab-settings{display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px;overflow-x:auto}
 .stab{padding:5px 12px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);white-space:nowrap}
 .stab.active{background:var(--gold);color:#111;border-color:var(--gold)}
+.chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
+.chip.active{background:var(--gold);color:#1A1A1A;border-color:var(--gold);font-weight:600}
 </style>
 </head>
 <body>
@@ -148,11 +150,6 @@ nav::-webkit-scrollbar{display:none}
 <div id="pedidos" class="section">
   <div class="search-bar">
     <input type="search" placeholder="Buscar cliente, fragancia, código o #número..." oninput="filterPedidos(this.value)"/>
-    <select onchange="setFilterEst(this.value)">
-      <option value="">Todos</option>
-      <option>Pedido</option><option>Comprado proveedor</option>
-      <option>Elaborado</option><option>Entregado</option><option>Cobrado</option>
-    </select>
     <select onchange="setOrden(this.value)">
       <option value="fecha">Más reciente</option>
       <option value="stock">Con stock primero</option>
@@ -160,6 +157,21 @@ nav::-webkit-scrollbar{display:none}
       <option value="numero">Núm. pedido</option>
       <option value="fragancia">Fragancia A-Z</option>
     </select>
+  </div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+    <span style="font-size:11px;color:var(--text2);margin-right:2px">Filtros:</span>
+    <button class="chip active" onclick="toggleChip(this,'est','')">Todos</button>
+    <button class="chip" onclick="toggleChip(this,'est','Pedido')">Pedido</button>
+    <button class="chip" onclick="toggleChip(this,'est','Comprado proveedor')">Comprado</button>
+    <button class="chip" onclick="toggleChip(this,'est','Elaborado')">Elaborado</button>
+    <button class="chip" onclick="toggleChip(this,'est','Entregado')">Entregado</button>
+    <button class="chip" onclick="toggleChip(this,'est','Cobrado')">Cobrado</button>
+    <span style="color:var(--border);margin:0 4px">|</span>
+    <button class="chip" onclick="toggleChip(this,'stock','ok')">✓ Con stock</button>
+    <button class="chip" onclick="toggleChip(this,'stock','sin')">✕ Sin stock</button>
+    <span style="color:var(--border);margin:0 4px">|</span>
+    <button class="chip" onclick="toggleChip(this,'tipo','normal')">Clientes</button>
+    <button class="chip" onclick="toggleChip(this,'tipo','stock')">Para stock</button>
   </div>
   <div id="pedidos-count" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
   <div id="pedidos-list"></div>
@@ -475,7 +487,7 @@ function showStab(id,btn){
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash(){
   const ent=peds.filter(p=>p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado');
-  const pend=peds.filter(p=>p.estatus==='Pedido').length;
+  const pend=peds.filter(p=>p.estatus==='Pedido'&&p.cliente!=='Para stock').length;
   const proc=peds.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
   const ventas=ent.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
   const gan=ent.reduce((s,p)=>s+ganancia(p),0);
@@ -617,18 +629,32 @@ function renderDash(){
 }
 
 // ── PEDIDOS ───────────────────────────────────────────────────────────────
-let _fTxt='',_fEst='',_fOrden='fecha';
+let _fTxt='', _fEst='', _fOrden='fecha', _fStock='', _fTipo='';
 function filterPedidos(v){_fTxt=v.toLowerCase();renderPedidos();}
 function setFilterEst(v){_fEst=v;renderPedidos();}
 function setOrden(v){_fOrden=v;renderPedidos();}
+function toggleChip(btn, grupo, valor){
+  // Chips de estatus: solo uno activo a la vez (excepto "Todos" que limpia)
+  if(grupo==='est'){
+    document.querySelectorAll('.chip[onclick*="\'est\'"]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _fEst=valor;
+  } else if(grupo==='stock'){
+    const wasActive=btn.classList.contains('active');
+    document.querySelectorAll('.chip[onclick*="\'stock\'"]').forEach(b=>b.classList.remove('active'));
+    _fStock=wasActive?'':valor;
+    if(!wasActive) btn.classList.add('active');
+  } else if(grupo==='tipo'){
+    const wasActive=btn.classList.contains('active');
+    document.querySelectorAll('.chip[onclick*="\'tipo\'"]').forEach(b=>b.classList.remove('active'));
+    _fTipo=wasActive?'':valor;
+    if(!wasActive) btn.classList.add('active');
+  }
+  renderPedidos();
+}
 
 function renderPedidos(){
-  let list=peds.filter(p=>{
-    const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt))||String(p.id)===_fTxt.replace('#','').trim();
-    return m&&(!_fEst||p.estatus===_fEst);
-  });
-
-  // Calcular stock ANTES de ordenar (para poder ordenar por stock)
+  // Calcular stock ANTES de ordenar
   const stockDisp={};
   cat.forEach(r=>{
     const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
@@ -641,12 +667,17 @@ function renderPedidos(){
     .forEach(p=>{
       if(stockTemporal[p.codigo]===undefined) return;
       if(stockTemporal[p.codigo]>=cfg.gesencia){
-        stockUsadoPorPedido[p.id]='ok';
-        stockTemporal[p.codigo]-=cfg.gesencia;
-      } else {
-        stockUsadoPorPedido[p.id]='sin';
-      }
+        stockUsadoPorPedido[p.id]='ok'; stockTemporal[p.codigo]-=cfg.gesencia;
+      } else { stockUsadoPorPedido[p.id]='sin'; }
     });
+
+  let list=peds.filter(p=>{
+    const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt))||String(p.id)===_fTxt.replace('#','').trim();
+    const est=!_fEst||p.estatus===_fEst;
+    const stock=!_fStock||((_fStock==='ok'&&(stockUsadoPorPedido[p.id]==='ok'||p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'))||(_fStock==='sin'&&stockUsadoPorPedido[p.id]==='sin'));
+    const tipo=!_fTipo||((_fTipo==='stock'&&p.cliente==='Para stock')||(_fTipo==='normal'&&p.cliente!=='Para stock'));
+    return m&&est&&stock&&tipo;
+  });
 
   // Ordenar
   if(_fOrden==='nombre') list=[...list].sort((a,b)=>a.cliente.localeCompare(b.cliente));
@@ -1590,6 +1621,42 @@ function renderProveedor(){
     html+='</tbody></table></div>';
   }
   tablaEl.innerHTML=html;
+
+  // Calcular totales estimados
+  let totalEsencias=0;
+  Object.values(agrupado).forEach(({fragCat,gramos})=>{
+    totalEsencias += gramos * (parseFloat(fragCat.costoEsencia)||2.80);
+    totalEsencias += (cfg.envprov||5); // envase proveedor por esencia
+  });
+  let totalMateriales=0;
+  matBajos.forEach(m=>{
+    const pedir=Math.max(0,(parseFloat(m.resurtir)||0)-(parseFloat(m.stockActual)||0));
+    totalMateriales += pedir * (parseFloat(m.costo)||0);
+  });
+  const totalGeneral=totalEsencias+totalMateriales;
+
+  if(totalGeneral>0){
+    const resumenHTML=`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-top:12px">
+      <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">💰 Estimado del pedido</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${totalEsencias>0?`<div style="flex:1;min-width:120px;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 12px">
+          <div style="font-size:11px;color:var(--text2)">Esencias</div>
+          <div style="font-size:16px;font-weight:700;color:var(--gold)">${fmt(totalEsencias)}</div>
+        </div>`:''}
+        ${totalMateriales>0?`<div style="flex:1;min-width:120px;background:var(--bg2);border-radius:var(--radius-sm);padding:8px 12px">
+          <div style="font-size:11px;color:var(--text2)">Materiales</div>
+          <div style="font-size:16px;font-weight:700;color:var(--gold)">${fmt(totalMateriales)}</div>
+        </div>`:''}
+        <div style="flex:1;min-width:120px;background:var(--bg4);border-radius:var(--radius-sm);padding:8px 12px;border:1px solid var(--gold3)">
+          <div style="font-size:11px;color:var(--text2)">Total estimado</div>
+          <div style="font-size:18px;font-weight:700;color:var(--gold)">${fmt(totalGeneral)}</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--text3);margin-top:6px">* Esencias calculadas con el costo por gramo de cada fragancia + $${cfg.envprov||5} envase proveedor. Puede variar.</div>
+    </div>`;
+    tablaEl.innerHTML+=resumenHTML;
+  }
+
   // Generar mensaje inicial
   actualizarMsgProveedor();
   accionesEl.style.display='block';
