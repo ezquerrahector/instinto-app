@@ -205,7 +205,7 @@ nav::-webkit-scrollbar{display:none}
 <div id="proveedor" class="section">
   <div class="section-head">
     <span class="section-title">Pedido al proveedor</span>
-    <button class="btn btn-sm" onclick="_gramosEditados={};localStorage.removeItem('if_gramos_edit');renderProveedor()">↺ Actualizar</button>
+    <button class="btn btn-sm" onclick="_gramosEditados={};localStorage.removeItem('if_gramos_edit');fbSave();renderProveedor()">↺ Actualizar</button>
   </div>
   <div id="prov-resumen" style="margin-bottom:12px"></div>
   <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap">
@@ -460,6 +460,11 @@ function copiarFragancia(frag, dis){
   });
 }
 
+function quitarFilaProveedor(cod){
+  const row=document.getElementById(`prov-row-${cod}`);
+  if(row){ row.remove(); actualizarMsgProveedor(); }
+}
+
 function filtrarProveedor(txt){
   const q=(txt||'').toLowerCase().trim();
   document.querySelectorAll('#prov-tabla tbody tr').forEach(tr=>{
@@ -710,12 +715,13 @@ function renderDash(){
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
               <div style="font-size:13px;font-weight:700;color:${coloresTop[linea]}">${x.count}</div>
-              ${fragCat ? (yaHayPedido
-                ? `<span onclick="verEnProveedor('${x.codigo}')" style="font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px;cursor:pointer" title="Ver en Proveedor">En pedido →</span>`
-                : perfumesDisp===0
-                  ? `<button onclick="pedirParaStock('${x.codigo}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`
-                  : '')
-              : ''}
+              ${fragCat ? (
+                perfumesDisp > 0
+                  ? `<span style="font-size:10px;color:var(--green);background:rgba(76,175,125,0.12);padding:2px 7px;border-radius:4px;font-weight:600">✓ Con stock</span>`
+                  : yaHayPedido
+                    ? `<span onclick="verEnProveedor('${fragCat.id}')" style="font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px;cursor:pointer" title="Ver en Proveedor">En pedido →</span>`
+                    : `<button onclick="pedirParaStock('${fragCat.id}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`
+              ) : ''}
             </div>
           </div>`;
         }).join('')}
@@ -988,10 +994,26 @@ function renderCat(){
 }
 
 function pedirParaStock(id){
-  const r=cat.find(x=>x.id===id); if(!r)return;
-  const yaExiste=peds.some(p=>p.codigo===id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
+  const r=cat.find(x=>x.id===id); if(!r){toast('⚠ Fragancia no encontrada en catálogo');return;}
+  const yaExiste=peds.some(p=>p.codigo?.trim()===id?.trim()&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
   if(yaExiste){toast(`⚠ Ya hay un pedido Para stock de ${r.referencia}`);return;}
-  if(!confirm(`¿Crear pedido para resurtir "${r.referencia}" al proveedor?`))return;
+  const overlay=document.getElementById('modal-overlay');
+  const mc=document.getElementById('modal-content');
+  mc.innerHTML=`
+    <div class="modal-handle"></div>
+    <div class="modal-title">📦 Pedir para stock</div>
+    <div style="margin-bottom:16px;font-size:14px;color:var(--text)">
+      ¿Crear pedido para resurtir <strong>${r.referencia}</strong> — ${r.disenador}?
+    </div>
+    <div class="modal-footer">
+      <button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-gold" type="button" onclick="confirmarPedirStock('${id}')">✓ Crear pedido</button>
+    </div>`;
+  overlay.classList.add('open');
+}
+
+function confirmarPedirStock(id){
+  const r=cat.find(x=>x.id===id); if(!r)return;
   peds.push({
     id:nextId++,
     fecha:new Date().toISOString().slice(0,10),
@@ -1008,7 +1030,8 @@ function pedirParaStock(id){
     notas:'Resurtido manual desde Catálogo',
   });
   save();fbSave();
-  renderDash(); // Actualizar dashboard para reflejar el cambio
+  closeModal();
+  renderDash();
   if(document.getElementById('catalogo').classList.contains('active')) renderCat();
   toast(`✓ Pedido Para stock creado — ${r.referencia}`);
 }
@@ -1751,11 +1774,11 @@ function renderProveedor(){
   const lineas=[];
   let html='';
   if(necesitan.length){
-    html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Gramos</th><th>Pedidos</th></tr></thead><tbody>';
+    html+='<div class="section-title" style="margin-bottom:8px;margin-top:8px">Esencias a pedir</div><div class="table-wrap"><table class="prov-table"><thead><tr><th>Código</th><th>Base</th><th>Casa</th><th>Referencia</th><th>Gramos</th><th>Pedidos</th><th></th></tr></thead><tbody>';
     Object.values(agrupado).forEach(({fragCat,pedidos,gramos})=>{
       const cl=pedidos.map(p=>`#${p.id} ${p.cliente}`).join(', ');
       const gramosAMostrar=_gramosEditados[fragCat.id]??gramos;
-      html+=`<tr>
+      html+=`<tr id="prov-row-${fragCat.id}">
         <td class="cod">${fragCat.id}</td>
         <td>${fragCat.base||'—'}</td>
         <td>${fragCat.disenador}</td>
@@ -1765,6 +1788,7 @@ function renderProveedor(){
           data-cod="${fragCat.id}" data-base="${fragCat.base||fragCat.referencia}" data-dis="${fragCat.disenador}" data-ref="${fragCat.referencia}"
           oninput="actualizarMsgProveedor()"/>g</td>
         <td style="font-size:11px;color:var(--text2)">${cl}</td>
+        <td><button onclick="quitarFilaProveedor('${fragCat.id}')" style="background:transparent;border:none;color:var(--red);cursor:pointer;font-size:16px;padding:0 4px" title="Quitar de este pedido">✕</button></td>
       </tr>`;
     });
     html+='</tbody></table></div><br>';
@@ -1822,6 +1846,12 @@ function renderProveedor(){
 
 let _gramosEditados = JSON.parse(localStorage.getItem('if_gramos_edit')||'{}');
 
+function saveGramos(){
+  localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados));
+  // Guardar en Firebase dentro de cfg para persistir entre dispositivos
+  if(typeof fbSave==='function') fbSave();
+}
+
 function actualizarMsgProveedor(){
   const lineas=[];
   let totalEsencias=0;
@@ -1829,7 +1859,7 @@ function actualizarMsgProveedor(){
   document.querySelectorAll('#prov-tabla input[data-cod]').forEach(inp=>{
     const g=parseInt(inp.value)||0;
     _gramosEditados[inp.dataset.cod]=g;
-    localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados));
+    saveGramos();
     if(g>0){
       lineas.push(`${inp.dataset.cod} | ${inp.dataset.base} | ${inp.dataset.dis} | ${inp.dataset.ref} | ${g}g`);
       const fragCat=cat.find(x=>x.id===inp.dataset.cod);
@@ -2265,7 +2295,7 @@ async function fbSave(){
     setSyncStatus('syncing');
     await loadFirebase();
     const ref = db.collection('instinto').doc('datos');
-    await ref.set({ cfg, cat, peds, materiales, updatedAt: new Date().toISOString() });
+    await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
   } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e); }
 }
@@ -2282,6 +2312,7 @@ async function fbLoad(){
       if(data.cat) cat = data.cat;
       if(data.peds){ peds = data.peds; nextId = Math.max(...peds.map(p=>p.id),0)+1; }
       if(data.materiales) materiales = data.materiales;
+      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
       save();
       localStorage.setItem('if_mat', JSON.stringify(materiales));
       renderAll(); loadCfg(); renderMateriales();
