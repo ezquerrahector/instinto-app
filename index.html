@@ -718,9 +718,9 @@ function renderDash(){
                 perfumesDisp > 0
                   ? `<span style="font-size:10px;color:var(--green);background:rgba(76,175,125,0.12);padding:2px 7px;border-radius:4px;font-weight:600">✓ Con stock</span>`
                   : yaHayPedido
-                    ? `<span onclick="verEnProveedor('${fragCat.id}')" style="font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px;cursor:pointer" title="Ver en Proveedor">En pedido →</span>`
+                    ? `<span onclick="verEnProveedor('${fragCat.id}')" style="font-size:10px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px;cursor:pointer">En pedido →</span>`
                     : `<button onclick="pedirParaStock('${fragCat.id}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`
-              ) : ''}
+              ) : `<button onclick="pedirPorNombre('${x.fragancia.replace(/'/g,"\\'")}','${x.disenador.replace(/'/g,"\\'")}','${x.linea}')" style="font-size:10px;padding:3px 8px;border-radius:4px;border:1px solid ${coloresTop[linea]};background:transparent;color:${coloresTop[linea]};cursor:pointer;font-weight:600">📦 Pedir</button>`}
             </div>
           </div>`;
         }).join('')}
@@ -955,6 +955,9 @@ function renderInv(){
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
           <div class="inv-stock ${cls}" style="margin-left:12px">${rest}g</div>
           <button class="btn btn-sm btn-blue" onclick="openModal('stock','${r.id}')">✏ Stock</button>
+          ${peds.some(p=>p.codigo===r.id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'))
+            ? `<span style="font-size:11px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px">En pedido</span>`
+            : `<button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>`}
         </div>
       </div>
     </div>`;
@@ -992,6 +995,13 @@ function renderCat(){
         <button class="btn btn-sm btn-danger" onclick="eliminarFrag('${r.id}')">✕ Eliminar</button>
       </div>
     </div>`).join('')||'<div class="empty">Sin fragancias.</div>';
+}
+
+function pedirPorNombre(fragancia, disenador, linea){
+  // Buscar en catálogo por nombre
+  const r=cat.find(x=>norm(x.referencia)===norm(fragancia));
+  if(r){ pedirParaStock(r.id); return; }
+  toast(`⚠ "${fragancia}" no está en el catálogo. Agrégala primero desde Catálogo.`);
 }
 
 function pedirParaStock(id){
@@ -1034,6 +1044,7 @@ function confirmarPedirStock(id){
   closeModal();
   renderDash();
   if(document.getElementById('catalogo').classList.contains('active')) renderCat();
+  if(document.getElementById('inventario').classList.contains('active')) renderInv();
   toast(`✓ Pedido Para stock creado — ${r.referencia}`);
 }
 function eliminarFrag(id){
@@ -1734,13 +1745,24 @@ function renderProveedor(){
     .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
   const stockDisp={};
   cat.forEach(r=>{stockDisp[r.id]=Math.max(0,(parseFloat(r.stockGramos)||0)-(consumido[r.id]||0)*cfg.gesencia);});
-  const pedActivos=[...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock').sort((a,b)=>a.id-b.id);
+  // Solo pedidos de CLIENTES consumen stock (no Para stock)
+  const pedClientesActivos=[...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock').sort((a,b)=>a.id-b.id);
+  // Todos los pedidos activos aparecen en Proveedor (incluyendo Para stock)
+  const pedActivos=[...peds].filter(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor').sort((a,b)=>a.id-b.id);
   const stockTemp={...stockDisp};
   let necesitan=[];
-  pedActivos.forEach(p=>{
+  // Calcular qué esencias faltan usando solo pedidos de clientes
+  pedClientesActivos.forEach(p=>{
     const fragCat=cat.find(x=>x.id===p.codigo); if(!fragCat)return;
     if((stockTemp[p.codigo]||0)>=cfg.gesencia){stockTemp[p.codigo]-=cfg.gesencia;}
     else{necesitan.push({p,fragCat});}
+  });
+  // Agregar pedidos Para stock que no estén ya en la lista
+  pedActivos.filter(p=>p.cliente==='Para stock').forEach(p=>{
+    const fragCat=cat.find(x=>x.id===p.codigo); if(!fragCat)return;
+    if(!necesitan.some(n=>n.fragCat.id===fragCat.id)){
+      necesitan.push({p,fragCat});
+    }
   });
 
   // Aplicar filtros de búsqueda y tipo
