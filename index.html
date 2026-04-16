@@ -1848,11 +1848,15 @@ function renderProveedor(){
 }
 
 let _gramosEditados = JSON.parse(localStorage.getItem('if_gramos_edit')||'{}');
+let _gramosTimer = null;
 
 function saveGramos(){
   localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados));
-  // Guardar en Firebase dentro de cfg para persistir entre dispositivos
-  if(typeof fbSave==='function') fbSave();
+  // Debounce: esperar 1s después del último cambio antes de subir a Firebase
+  clearTimeout(_gramosTimer);
+  _gramosTimer = setTimeout(async ()=>{
+    try { await fbSave(); toast('Gramos guardados ✓'); } catch(e){ console.warn('Error guardando gramos en Firebase:', e); }
+  }, 1000);
 }
 
 function actualizarMsgProveedor(){
