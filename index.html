@@ -913,32 +913,112 @@ function cambiarEst(id,est){
       if(restante<cfg.gesencia){
         const yaHayPedidoStock=peds.some(x=>x.codigo===p.codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
         if(!yaHayPedidoStock){
-          setTimeout(()=>{
-            if(confirm(`⚠ La esencia "${fragCat.referencia}" se quedó sin stock (${restante}g restantes).\n\n¿Quieres crear un pedido automático para resurtir al proveedor?`)){
-              peds.push({
-                id:nextId++,
-                fecha:new Date().toISOString().slice(0,10),
-                cliente:'Para stock',
-                codigo:fragCat.id,
-                fragancia:fragCat.referencia,
-                disenador:fragCat.disenador,
-                linea:fragCat.linea,
-                estatus:'Pedido',
-                canal:'Directo',
-                fechaPromesa:'',
-                precio:0,
-                costoEsencia:fragCat.costoEsencia||1.70,
-                notas:'Resurtido automático — stock agotado',
-              });
-              save();fbSave();renderAll();
-              toast(`Pedido de resurtido creado para ${fragCat.referencia} ✓`);
-            }
-          },300);
+          setTimeout(()=>proponerResurtido(fragCat),400);
         }
       }
     }
   }
 }
+function verificarStockAlCargar(){
+  // Buscar pedidos activos (Pedido/Comprado) de clientes con esencia sin stock
+  // y que no tengan ya un pedido Para stock activo
+  const pedidosActivos = peds.filter(p=>
+    p.cliente !== 'Para stock' &&
+    (p.estatus === 'Pedido' || p.estatus === 'Comprado proveedor') &&
+    p.codigo && p.codigo !== 'OTRO'
+  );
+
+  const faltantes = [];
+  const yaRegistrados = new Set();
+
+  pedidosActivos.forEach(p=>{
+    if(yaRegistrados.has(p.codigo)) return;
+    const fragCat = cat.find(x=>x.id===p.codigo);
+    if(!fragCat) return;
+    const restante = Math.max(0, parseFloat(fragCat.stockGramos)||0);
+    if(restante < cfg.gesencia){
+      const yaHayPedidoStock = peds.some(x=>
+        x.codigo===p.codigo &&
+        x.cliente==='Para stock' &&
+        (x.estatus==='Pedido'||x.estatus==='Comprado proveedor')
+      );
+      if(!yaHayPedidoStock){
+        faltantes.push(fragCat);
+        yaRegistrados.add(p.codigo);
+      }
+    }
+  });
+
+  if(faltantes.length === 0) return;
+
+  // Crear pedidos Para stock automáticamente
+  faltantes.forEach(fragCat=>{
+    peds.push({
+      id: nextId++,
+      fecha: new Date().toISOString().slice(0,10),
+      cliente: 'Para stock',
+      codigo: fragCat.id,
+      fragancia: fragCat.referencia,
+      disenador: fragCat.disenador,
+      linea: fragCat.linea,
+      estatus: 'Pedido',
+      canal: 'Directo',
+      fechaPromesa: '',
+      precio: 0,
+      costoEsencia: fragCat.costoEsencia||1.70,
+      notas: 'Resurtido automático — sin stock al cargar',
+    });
+  });
+
+  save(); fbSave();
+  window._provStockDirty = true;
+  renderAll();
+  toast(`📦 ${faltantes.length} esencia${faltantes.length!==1?'s':''} sin stock agregada${faltantes.length!==1?'s':''} al proveedor: ${faltantes.map(f=>f.referencia).join(', ')}`);
+}
+
+function proponerResurtido(fragCat){
+  const restante=Math.max(0,parseFloat(fragCat.stockGramos)||0);
+  const overlay=document.getElementById('modal-overlay');
+  const mc=document.getElementById('modal-content');
+  mc.innerHTML=`
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚠️ Stock agotado</div>
+    <div style="margin-bottom:16px;font-size:14px;color:var(--text)">
+      La esencia <strong>${fragCat.referencia}</strong> se quedó sin stock
+      <span style="color:var(--red)">(${restante}g restantes)</span>.<br><br>
+      ¿Quieres crear un pedido automático al proveedor para resurtirla?
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Ahora no</button>
+      <button class="btn btn-gold" onclick="crearPedidoResurtido('${fragCat.id}')">📦 Crear pedido</button>
+    </div>`;
+  overlay.classList.add('open');
+}
+
+function crearPedidoResurtido(id){
+  const fragCat=cat.find(x=>x.id===id); if(!fragCat)return;
+  peds.push({
+    id:nextId++,
+    fecha:new Date().toISOString().slice(0,10),
+    cliente:'Para stock',
+    codigo:fragCat.id,
+    fragancia:fragCat.referencia,
+    disenador:fragCat.disenador,
+    linea:fragCat.linea,
+    estatus:'Pedido',
+    canal:'Directo',
+    fechaPromesa:'',
+    precio:0,
+    costoEsencia:fragCat.costoEsencia||1.70,
+    notas:'Resurtido automático — stock agotado',
+  });
+  save();fbSave();
+  window._provStockDirty=true;
+  closeModal();
+  renderAll();
+  toast(`✓ Pedido al proveedor creado — ${fragCat.referencia}`);
+}
+
 function eliminarPed(id){
   if(!confirm('¿Eliminar este pedido?'))return;
   peds=peds.filter(x=>x.id!==id);save();fbSave();renderAll();toast('Pedido eliminado');
@@ -1349,6 +1429,18 @@ function savePed(){
     });
     toast(`✓ Pedido #${nuevoPedidoId} registrado`);
     enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
+
+    // Verificar si no hay stock para esta fragancia
+    if(codigo && codigo!=='OTRO'){
+      const fragCat=cat.find(x=>x.id===codigo);
+      if(fragCat){
+        const restante=Math.max(0,parseFloat(fragCat.stockGramos)||0);
+        if(restante<cfg.gesencia){
+          const yaHayPedidoStock=peds.some(x=>x.codigo===codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
+          if(!yaHayPedidoStock) setTimeout(()=>proponerResurtido(fragCat),600);
+        }
+      }
+    }
   }
   save();fbSave(); closeModal(); renderAll();
 }
@@ -2452,6 +2544,7 @@ async function fbLoad(){
       renderAll(); loadCfg(); renderMateriales();
       setSyncStatus('ok');
       toast('Datos sincronizados desde la nube ✓');
+      setTimeout(verificarStockAlCargar, 800);
     } else {
       // Primera vez — sin datos en Firebase, arrancar vacío y subir
       setSyncStatus('ok');
