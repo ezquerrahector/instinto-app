@@ -536,9 +536,10 @@ function showStab(id,btn){
 
 // ── DASHBOARD ─────────────────────────────────────────────────────────────
 function renderDash(){
-  const ent=peds.filter(p=>p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado');
-  const pend=peds.filter(p=>p.estatus==='Pedido'&&p.cliente!=='Para stock').length;
-  const proc=peds.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
+  const pedClientes=peds.filter(p=>p.cliente!=='Para stock');
+  const ent=pedClientes.filter(p=>p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado');
+  const pend=pedClientes.filter(p=>p.estatus==='Pedido').length;
+  const proc=pedClientes.filter(p=>p.estatus==='Comprado proveedor'||p.estatus==='Elaborado').length;
   const ventas=ent.reduce((s,p)=>s+(parseFloat(p.precio)||cfg.pventa),0);
   const gan=ent.reduce((s,p)=>s+ganancia(p),0);
   const margen=ventas>0?Math.round(gan/ventas*100):0;
@@ -575,10 +576,9 @@ function renderDash(){
   const porLinea={Caballero:0,Dama:0,Unisex:0,Nicho:0};
   ent.forEach(p=>{const l=p.linea||lineaDesdeId(p.codigo||'');if(porLinea[l]!==undefined)porLinea[l]++;});
   const totalLinea=ent.length||1;
-
   document.getElementById('kpis').innerHTML=`
     <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver pedidos">
-      <div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${peds.length}</div></div>
+      <div class="kpi-label">Pedidos totales</div><div class="kpi-val kv-blue">${pedClientes.length}</div></div>
     <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver entregados">
       <div class="kpi-label">Entregados / Cobrados</div><div class="kpi-val kv-green">${ent.length}</div></div>
     <div class="kpi" style="cursor:pointer" onclick="goTab('pedidos')" title="Ver en proceso">
