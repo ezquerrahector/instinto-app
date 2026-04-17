@@ -1621,13 +1621,28 @@ function importCSV(input,tipo){
   const file=input.files[0]; if(!file)return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const lines=e.target.result.split('\n').filter(l=>l.trim());
-    const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());
-    const rows=lines.slice(1).map(l=>{
+    const raw=e.target.result;
+
+    // Detectar separador: punto y coma o coma
+    const firstLine=raw.split('\n')[0];
+    const sep=firstLine.includes(';') ? ';' : ',';
+
+    function parseLine(l){
       const vals=[]; let cur='',inQ=false;
-      for(const ch of l+','){if(ch==='"'){inQ=!inQ;}else if(ch===','&&!inQ){vals.push(cur.trim());cur='';}else{cur+=ch;}}
+      for(const ch of l+sep){
+        if(ch==='"'){inQ=!inQ;}
+        else if(ch===sep&&!inQ){vals.push(cur.replace(/^"|"$/g,'').trim());cur='';}
+        else{cur+=ch;}
+      }
+      return vals;
+    }
+
+    const lines=raw.split('\n').filter(l=>l.trim());
+    const headers=parseLine(lines[0]).map(h=>h.replace(/^\uFEFF/,'').trim()); // quitar BOM
+    const rows=lines.slice(1).map(l=>{
+      const vals=parseLine(l);
       const obj={};
-      headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').replace(/^"|"$/g,'').trim(); });
+      headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').trim(); });
       return obj;
     }).filter(r=>Object.values(r).some(v=>v));
 
