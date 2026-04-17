@@ -770,7 +770,6 @@ function renderPedidos(){
   // Calcular stock ANTES de ordenar
   const stockDisp={};
   cat.forEach(r=>{
-    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
     stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0);
   });
   const stockUsadoPorPedido={};
@@ -845,24 +844,25 @@ function renderPedidos(){
         </div>
       </div>
       <div class="card-actions">
-        ${(p.estatus==='Pedido'||p.estatus==='Comprado proveedor') && stockUsadoPorPedido[p.id]==='sin'
-          ? (() => {
-              const yaPedido = peds.some(x=>
-                x.codigo===p.codigo &&
-                x.cliente==='Para stock' &&
-                (x.estatus==='Pedido'||x.estatus==='Comprado proveedor')
-              );
+        ${(()=>{
+          if((p.estatus==='Pedido'||p.estatus==='Comprado proveedor') && stockUsadoPorPedido[p.id]==='sin'){
+            const yaPedido=peds.some(x=>x.codigo===p.codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
+            if(yaPedido){
               return `<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
-                <span style="color:var(--red)">🔒 Sin stock</span>
-                ${yaPedido
-                  ? `<span onclick="verEnProveedor('${p.codigo}')" style="color:var(--gold);cursor:pointer;font-weight:600;white-space:nowrap">📦 En pedido al proveedor →</span>`
-                  : `<button onclick="pedirProveedorDesdePedido('${p.codigo}')" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;font-weight:600;white-space:nowrap">📦 Pedir al proveedor</button>`
-                }
+                <span style="color:var(--red);font-weight:600">🔒 Sin stock</span>
+                <span onclick="verEnProveedor('${p.codigo}')" style="color:var(--gold);cursor:pointer;font-weight:600;white-space:nowrap;text-decoration:underline">📦 Ya pedido al proveedor →</span>
               </div>`;
-            })()
-          : `<select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
-              ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
-            </select>`}
+            } else {
+              return `<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
+                <span style="color:var(--red);font-weight:600">🔒 Sin stock</span>
+                <button onclick="pedirProveedorDesdePedido('${p.codigo}')" style="font-size:11px;padding:3px 10px;border-radius:4px;border:1px solid var(--gold);background:var(--gold);color:#1A1A1A;cursor:pointer;font-weight:600;white-space:nowrap">📦 Pedir al proveedor</button>
+              </div>`;
+            }
+          }
+          return `<select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
+            ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
+          </select>`;
+        })()}
         <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
