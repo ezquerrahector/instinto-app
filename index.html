@@ -287,7 +287,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Importar catálogo desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, base, disenador, referencia, linea, costoEsencia, stockGramos</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv" onchange="importCSV(this,'catalogo')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'catalogo')"/></div>
         <button class="btn" onclick="descargarPlantilla('catalogo')">📋 Plantilla</button>
       </div>
     </div>
@@ -295,7 +295,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Importar pedidos desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: fecha, cliente, codigo, fragancia, disenador, linea, estatus, canal, precio, costoEsencia, notas — Los pedidos nuevos se agregan sin borrar los existentes.</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV pedidos</button><input type="file" accept=".csv" onchange="importCSV(this,'pedidos')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV pedidos</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'pedidos')"/></div>
         <button class="btn" onclick="descargarPlantilla('pedidos')">📋 Plantilla</button>
       </div>
     </div>
@@ -303,7 +303,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Actualizar inventario desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, stockGramos (gramos disponibles <strong>ahora</strong>), costoEsencia — El sistema ajusta automáticamente el histórico de consumo.</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv" onchange="importCSV(this,'inventario')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'inventario')"/></div>
         <button class="btn" onclick="descargarPlantilla('inventario')">📋 Plantilla</button>
       </div>
     </div>
