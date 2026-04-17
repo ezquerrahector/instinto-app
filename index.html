@@ -121,6 +121,7 @@ nav::-webkit-scrollbar{display:none}
 .chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:var(--bg3);color:var(--text2);font-size:11px;cursor:pointer;transition:all 0.15s;white-space:nowrap}
 .chip.active{background:var(--gold);color:#1A1A1A;border-color:var(--gold);font-weight:600}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 
@@ -287,7 +288,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Importar catálogo desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, base, disenador, referencia, linea, costoEsencia, stockGramos</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'catalogo')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV catálogo</button><input type="file" accept=".csv,.xlsx,.xls,.txt" onchange="importCSV(this,'catalogo')"/></div>
         <button class="btn" onclick="descargarPlantilla('catalogo')">📋 Plantilla</button>
       </div>
     </div>
@@ -295,7 +296,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Importar pedidos desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: fecha, cliente, codigo, fragancia, disenador, linea, estatus, canal, precio, costoEsencia, notas — Los pedidos nuevos se agregan sin borrar los existentes.</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV pedidos</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'pedidos')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV pedidos</button><input type="file" accept=".csv,.xlsx,.xls,.txt" onchange="importCSV(this,'pedidos')"/></div>
         <button class="btn" onclick="descargarPlantilla('pedidos')">📋 Plantilla</button>
       </div>
     </div>
@@ -303,7 +304,7 @@ nav::-webkit-scrollbar{display:none}
       <h4>Actualizar inventario desde CSV</h4>
       <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Columnas: codigo, stockGramos (gramos disponibles <strong>ahora</strong>), costoEsencia — El sistema ajusta automáticamente el histórico de consumo.</p>
       <div class="btns">
-        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv,.txt,text/csv,text/plain,application/vnd.ms-excel" onchange="importCSV(this,'inventario')"/></div>
+        <div class="file-input-wrap"><button class="btn btn-blue">📤 Seleccionar CSV inventario</button><input type="file" accept=".csv,.xlsx,.xls,.txt" onchange="importCSV(this,'inventario')"/></div>
         <button class="btn" onclick="descargarPlantilla('inventario')">📋 Plantilla</button>
       </div>
     </div>
@@ -1619,32 +1620,43 @@ function descargarPlantilla(tipo){
 
 function importCSV(input,tipo){
   const file=input.files[0]; if(!file)return;
+  const isXlsx=file.name.match(/\.xlsx?$/i);
   const reader=new FileReader();
   reader.onload=e=>{
-    const raw=e.target.result;
-
-    // Detectar separador: punto y coma o coma
-    const firstLine=raw.split('\n')[0];
-    const sep=firstLine.includes(';') ? ';' : ',';
-
-    function parseLine(l){
-      const vals=[]; let cur='',inQ=false;
-      for(const ch of l+sep){
-        if(ch==='"'){inQ=!inQ;}
-        else if(ch===sep&&!inQ){vals.push(cur.replace(/^"|"$/g,'').trim());cur='';}
-        else{cur+=ch;}
+    let rows=[];
+    if(isXlsx){
+      // Leer Excel con SheetJS
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      rows=XLSX.utils.sheet_to_json(ws,{defval:''});
+      // Normalizar keys: trim y lowercase para comparación flexible
+      rows=rows.map(r=>{
+        const obj={};
+        Object.keys(r).forEach(k=>{ obj[k.trim()]=String(r[k]).trim(); });
+        return obj;
+      });
+    } else {
+      const raw=e.target.result;
+      const firstLine=raw.split('\n')[0];
+      const sep=firstLine.includes(';')?';':',';
+      function parseLine(l){
+        const vals=[]; let cur='',inQ=false;
+        for(const ch of l+sep){
+          if(ch==='"'){inQ=!inQ;}
+          else if(ch===sep&&!inQ){vals.push(cur.replace(/^"|"$/g,'').trim());cur='';}
+          else{cur+=ch;}
+        }
+        return vals;
       }
-      return vals;
+      const lines=raw.split('\n').filter(l=>l.trim());
+      const headers=parseLine(lines[0]).map(h=>h.replace(/^\uFEFF/,'').trim());
+      rows=lines.slice(1).map(l=>{
+        const vals=parseLine(l);
+        const obj={};
+        headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').trim(); });
+        return obj;
+      }).filter(r=>Object.values(r).some(v=>v));
     }
-
-    const lines=raw.split('\n').filter(l=>l.trim());
-    const headers=parseLine(lines[0]).map(h=>h.replace(/^\uFEFF/,'').trim()); // quitar BOM
-    const rows=lines.slice(1).map(l=>{
-      const vals=parseLine(l);
-      const obj={};
-      headers.forEach((h,i)=>{ obj[h]=(vals[i]||'').trim(); });
-      return obj;
-    }).filter(r=>Object.values(r).some(v=>v));
 
     if(tipo==='catalogo'){
       let added=0,updated=0;
@@ -1751,7 +1763,8 @@ function importCSV(input,tipo){
     }
     input.value='';
   };
-  reader.readAsText(file);
+  if(isXlsx) reader.readAsArrayBuffer(file);
+  else reader.readAsText(file);
 }
 
 function importJSON(input){
