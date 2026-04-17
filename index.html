@@ -518,9 +518,13 @@ function showTab(id,btn){
   if(id==='materiales') renderMateriales();
   if(id==='proveedor'){
     const tablaEl=document.getElementById('prov-tabla');
-    if(!tablaEl||!tablaEl.innerHTML.trim()) renderProveedor();
-    // Si ya tiene contenido, solo re-aplica el filtro sin regenerar
-    else { const inp=document.getElementById('prov-buscar'); if(inp) filtrarProveedor(inp.value); }
+    if(!tablaEl||!tablaEl.innerHTML.trim()||window._provStockDirty) {
+      window._provStockDirty=false;
+      renderProveedor();
+    } else {
+      const inp=document.getElementById('prov-buscar');
+      if(inp) filtrarProveedor(inp.value);
+    }
   }
 }
 function showStab(id,btn){
@@ -898,6 +902,7 @@ function cambiarEst(id,est){
   }
 
   save();fbSave();renderAll();toast('Estatus actualizado ✓');
+  window._provStockDirty=true;
   if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
 
   // Verificar si la fragancia se quedó sin stock
@@ -1474,6 +1479,7 @@ function saveStock(id){
   // stockGramos ES el stock real disponible ahora
   r.stockGramos=disponible+agregar;
   r.costoEsencia=parseFloat(document.getElementById('fs-cesencia')?.value)||r.costoEsencia;
+  window._provStockDirty=true;
   save();fbSave(); closeModal(); renderInv(); toast('Stock actualizado ✓');
 }
 
@@ -1725,6 +1731,7 @@ function importCSV(input,tipo){
       });
 
       save();fbSave(); renderInv();
+      window._provStockDirty=true;
 
       // Mostrar log detallado
       const overlay=document.getElementById('modal-overlay');
