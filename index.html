@@ -1673,22 +1673,66 @@ function importCSV(input,tipo){
 
     } else if(tipo==='inventario'){
       let updated=0;
+      const logOk=[], logError=[];
+
       rows.forEach(r=>{
-        if(!r.codigo)return;
-        const frag=cat.find(x=>x.id===r.codigo.toUpperCase());
-        if(frag){
-          const disponible = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
-                           : r.restante!==undefined    ? parseFloat(r.restante)
-                           : null;
-          if(disponible!==null && !isNaN(disponible)){
-            if(disponible!==null && !isNaN(disponible)) frag.stockGramos=disponible;
-          }
-          if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
-          updated++;
+        const codigo=(r.codigo||'').toString().trim().toUpperCase();
+        if(!codigo){ logError.push({codigo:'(vacío)', motivo:'Sin código'}); return; }
+
+        const frag=cat.find(x=>x.id===codigo);
+        if(!frag){ logError.push({codigo, motivo:'No encontrado en catálogo'}); return; }
+
+        const disponible = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
+                         : r.restante!==undefined    ? parseFloat(r.restante)
+                         : null;
+
+        if(disponible===null||isNaN(disponible)){
+          logError.push({codigo, motivo:'Valor de stock inválido: "'+r.stockGramos+'"'});
+          return;
         }
+
+        frag.stockGramos=disponible;
+        if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
+        logOk.push({codigo, referencia:frag.referencia, gramos:disponible});
+        updated++;
       });
+
       save();fbSave(); renderInv();
-      toast(`Inventario: ${updated} fragancias actualizadas ✓`);
+
+      // Mostrar log detallado
+      const overlay=document.getElementById('modal-overlay');
+      const mc=document.getElementById('modal-content');
+      mc.innerHTML=`
+        <div class="modal-handle"></div>
+        <div class="modal-title">📊 Resultado de importación</div>
+        <div style="margin-bottom:12px">
+          <span style="color:var(--green);font-weight:600">✅ ${logOk.length} actualizadas</span>
+          ${logError.length>0?`&nbsp;&nbsp;<span style="color:var(--red);font-weight:600">❌ ${logError.length} con error</span>`:''}
+        </div>
+        ${logError.length>0?`
+        <div style="margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:6px">❌ No se pudieron cargar:</div>
+          <div style="max-height:200px;overflow-y:auto;background:var(--bg3);border-radius:var(--radius-sm);padding:8px">
+            ${logError.map(e=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+              <span style="font-family:monospace;color:var(--red)">${e.codigo}</span>
+              <span style="color:var(--text2)"> — ${e.motivo}</span>
+            </div>`).join('')}
+          </div>
+        </div>`:''}
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px">✅ Cargadas correctamente:</div>
+          <div style="max-height:200px;overflow-y:auto;background:var(--bg3);border-radius:var(--radius-sm);padding:8px">
+            ${logOk.map(e=>`<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border)">
+              <span style="font-family:monospace;color:var(--gold)">${e.codigo}</span>
+              <span style="color:var(--text)"> ${e.referencia}</span>
+              <span style="color:var(--green);float:right">${e.gramos}g</span>
+            </div>`).join('')}
+          </div>
+        </div>
+        <div class="modal-footer" style="margin-top:12px">
+          <button class="btn btn-gold" onclick="closeModal()">Cerrar</button>
+        </div>`;
+      overlay.classList.add('open');
     }
     input.value='';
   };
