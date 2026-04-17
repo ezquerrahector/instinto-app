@@ -846,9 +846,20 @@ function renderPedidos(){
       </div>
       <div class="card-actions">
         ${(p.estatus==='Pedido'||p.estatus==='Comprado proveedor') && stockUsadoPorPedido[p.id]==='sin'
-          ? `<div style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px;color:var(--text2)">
-              <span style="color:var(--red)">🔒</span> Sin stock — registra esencia en Inventario para cambiar estatus
-            </div>`
+          ? (() => {
+              const yaPedido = peds.some(x=>
+                x.codigo===p.codigo &&
+                x.cliente==='Para stock' &&
+                (x.estatus==='Pedido'||x.estatus==='Comprado proveedor')
+              );
+              return `<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
+                <span style="color:var(--red)">🔒 Sin stock</span>
+                ${yaPedido
+                  ? `<span onclick="verEnProveedor('${p.codigo}')" style="color:var(--gold);cursor:pointer;font-weight:600;white-space:nowrap">📦 En pedido al proveedor →</span>`
+                  : `<button onclick="pedirProveedorDesdePedido('${p.codigo}')" style="font-size:11px;padding:2px 8px;border-radius:4px;border:1px solid var(--red);background:transparent;color:var(--red);cursor:pointer;font-weight:600;white-space:nowrap">📦 Pedir al proveedor</button>`
+                }
+              </div>`;
+            })()
           : `<select class="btn btn-sm" onchange="cambiarEst(${p.id},this.value)" style="flex:1">
               ${TODOS_EST.map(e=>`<option ${e===p.estatus?'selected':''}>${e}</option>`).join('')}
             </select>`}
@@ -974,6 +985,33 @@ function verificarStockAlCargar(){
   window._provStockDirty = true;
   renderAll();
   toast(`📦 ${faltantes.length} esencia${faltantes.length!==1?'s':''} sin stock agregada${faltantes.length!==1?'s':''} al proveedor: ${faltantes.map(f=>f.referencia).join(', ')}`);
+}
+
+function pedirProveedorDesdePedido(codigo){
+  const fragCat=cat.find(x=>x.id===codigo);
+  if(!fragCat){toast('⚠ Fragancia no encontrada en catálogo');return;}
+  const yaExiste=peds.some(p=>p.codigo===codigo&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
+  if(yaExiste){verEnProveedor(codigo);return;}
+  peds.push({
+    id:nextId++,
+    fecha:new Date().toISOString().slice(0,10),
+    cliente:'Para stock',
+    codigo:fragCat.id,
+    fragancia:fragCat.referencia,
+    disenador:fragCat.disenador,
+    linea:fragCat.linea,
+    estatus:'Pedido',
+    canal:'Directo',
+    fechaPromesa:'',
+    precio:0,
+    costoEsencia:fragCat.costoEsencia||1.70,
+    notas:'Resurtido desde pedido sin stock',
+  });
+  save();fbSave();
+  window._provStockDirty=true;
+  renderAll();
+  toast(`✓ Pedido al proveedor creado — ${fragCat.referencia}`);
+  setTimeout(()=>verEnProveedor(codigo),500);
 }
 
 function proponerResurtido(fragCat){
