@@ -764,7 +764,10 @@ function toggleChip(btn, grupo, valor){
 function renderPedidos(){
   // Calcular stock ANTES de ordenar
   const stockDisp={};
-  cat.forEach(r=>{ stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0); });
+  cat.forEach(r=>{
+    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+    stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0);
+  });
   const stockUsadoPorPedido={};
   const stockTemporal={...stockDisp};
   [...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock')
@@ -855,19 +858,53 @@ function renderPedidos(){
 function cambiarEst(id,est){
   const p=peds.find(x=>x.id===id); if(!p)return;
   const estAnterior=p.estatus;
+  if(est===estAnterior) return;
+
+  const elaborados=['Elaborado','Entregado','Cobrado','Entregado/Cobrado'];
+  const eraElaborado=elaborados.includes(estAnterior);
+  const ahoraElaborado=elaborados.includes(est);
+
   p.estatus=est;
-  if(est==='Elaborado'){p.fechaElab=new Date().toISOString().slice(0,10); if(!p.matDescontado){descontarMateriales(p);p.matDescontado=true;}}
-  if(est==='Entregado'||est==='Cobrado'){p.fechaEntrega=new Date().toISOString().slice(0,10); if(!p.matDescontado){descontarMateriales(p);p.matDescontado=true;}}
+  if(est==='Elaborado') p.fechaElab=new Date().toISOString().slice(0,10);
+  if(est==='Entregado'||est==='Cobrado') p.fechaEntrega=new Date().toISOString().slice(0,10);
+
+  // ── Descuento: pasa a elaborado por primera vez ──
+  if(ahoraElaborado && !eraElaborado){
+    // Materiales
+    if(!p.matDescontado){ descontarMateriales(p); p.matDescontado=true; }
+    // Esencia
+    if(!p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
+      const fragCat=cat.find(x=>x.id===p.codigo);
+      if(fragCat){
+        fragCat.stockGramos=Math.max(0,(parseFloat(fragCat.stockGramos)||0)-cfg.gesencia);
+        p.esenciaDescontada=true;
+      }
+    }
+  }
+
+  // ── Reversión: regresa de elaborado a pedido/comprado ──
+  if(eraElaborado && !ahoraElaborado){
+    // Materiales
+    if(p.matDescontado){ revertirMateriales(p); p.matDescontado=false; }
+    // Esencia
+    if(p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
+      const fragCat=cat.find(x=>x.id===p.codigo);
+      if(fragCat){
+        fragCat.stockGramos=(parseFloat(fragCat.stockGramos)||0)+cfg.gesencia;
+        p.esenciaDescontada=false;
+      }
+    }
+  }
+
   save();fbSave();renderAll();toast('Estatus actualizado ✓');
   if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
 
   // Verificar si la fragancia se quedó sin stock
-  if(est==='Elaborado'||est==='Entregado'||est==='Cobrado'){
+  if(ahoraElaborado){
     const fragCat=cat.find(x=>x.id===p.codigo);
     if(fragCat){
       const restante=Math.max(0,parseFloat(fragCat.stockGramos)||0);
       if(restante<cfg.gesencia){
-        // Hay pedidos activos sin stock para esta fragancia?
         const yaHayPedidoStock=peds.some(x=>x.codigo===p.codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
         if(!yaHayPedidoStock){
           setTimeout(()=>{
@@ -1179,9 +1216,13 @@ function mFragSearch(txt){
     return matchLin&&matchTxt;
   }).slice(0,30);
   if(!results.length&&!txt){dd.style.display='none';return;}
+  const consumoAct={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoAct[p.codigo]=(consumoAct[p.codigo]||0)+1;});
   const LIN_COLOR={'Caballero':'#5B9BD5','Dama':'#E07090','Unisex':'#D4A017','Nicho':'#4CAF7D'};
   dd.innerHTML=results.map(r=>{
-    const rest=Math.max(0,parseFloat(r.stockGramos)||0);
+    const ini=parseFloat(r.stockGramos)||0;
+    const usado=(consumoAct[r.id]||0)*cfg.gesencia;
+    const rest=Math.max(0,ini-usado);
     const stockInd=rest>=cfg.gesencia
       ?`<span style="font-size:10px;color:var(--green);flex-shrink:0">✓ ${rest}g</span>`
       :rest>0
@@ -1221,9 +1262,13 @@ function mFragSelect(id,txt,linea,dis,ce){
   const info=document.getElementById('f-frag-info');
   if(info){
     const fragCat=cat.find(x=>x.id===id);
+    const consumoPed={};
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoPed[p.codigo]=(consumoPed[p.codigo]||0)+1;});
     let stockHtml='';
     if(fragCat){
-      const rest=Math.max(0,parseFloat(fragCat.stockGramos)||0);
+      const ini=parseFloat(fragCat.stockGramos)||0;
+      const usado=(consumoPed[id]||0)*cfg.gesencia;
+      const rest=Math.max(0,ini-usado);
       if(rest>=cfg.gesencia){
         stockHtml=`<span style="background:rgba(76,175,125,0.15);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">✓ En stock (${rest}g)</span>`;
       } else if(rest>0){
@@ -1425,6 +1470,7 @@ function saveStock(id){
   const r=cat.find(x=>x.id===id); if(!r)return;
   const disponible=parseFloat(document.getElementById('fs-disponible')?.value)||0;
   const agregar=parseFloat(document.getElementById('fs-agregar')?.value)||0;
+  // stockGramos ES el stock real disponible ahora
   r.stockGramos=disponible+agregar;
   r.costoEsencia=parseFloat(document.getElementById('fs-cesencia')?.value)||r.costoEsencia;
   save();fbSave(); closeModal(); renderInv(); toast('Stock actualizado ✓');
@@ -1536,10 +1582,14 @@ function exportCSV(tipo){
     cat.forEach(r=>{ csv+=`"${r.id}","${r.base||''}","${r.disenador}","${r.referencia}","${r.linea}",${r.costoEsencia},${r.stockGramos}\n`; });
   } else {
     fn='instinto_inventario.csv';
-    csv='codigo,referencia,disenador,linea,stockGramos,costoEsencia\n';
+    const consumoCSV={};
+    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoCSV[p.codigo]=(consumoCSV[p.codigo]||0)+1;});
+    csv='codigo,referencia,disenador,linea,stockGramos,usado,restante,costoEsencia\n';
     cat.forEach(r=>{
-      const rest=Math.max(0,parseFloat(r.stockGramos)||0);
-      if(rest>0) csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${rest},${r.costoEsencia}\n`;
+      const ini=parseFloat(r.stockGramos)||0;
+      const uso=(consumoCSV[r.id]||0)*cfg.gesencia;
+      const rest=Math.max(0,ini-uso);
+      if(rest>0) csv+=`"${r.id}","${r.referencia}","${r.disenador}","${r.linea}",${ini},${uso},${rest},${r.costoEsencia}\n`;
     });
   }
   dlBlob(csv,'text/csv',fn);
@@ -1630,7 +1680,9 @@ function importCSV(input,tipo){
           const disponible = r.stockGramos!==undefined ? parseFloat(r.stockGramos)
                            : r.restante!==undefined    ? parseFloat(r.restante)
                            : null;
-          if(disponible!==null && !isNaN(disponible)) frag.stockGramos=disponible;
+          if(disponible!==null && !isNaN(disponible)){
+            if(disponible!==null && !isNaN(disponible)) frag.stockGramos=disponible;
+          }
           if(r.costoEsencia) frag.costoEsencia=parseFloat(r.costoEsencia);
           updated++;
         }
@@ -1704,7 +1756,10 @@ function renderProveedor(){
 
   const consumido={};
   const stockDisp={};
-  cat.forEach(r=>{ stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0); });
+  cat.forEach(r=>{
+    const consumido=peds.filter(p=>p.codigo===r.id&&(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')).length;
+    stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0);
+  });
   // Solo pedidos de CLIENTES consumen stock (no Para stock)
   const pedClientesActivos=[...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock').sort((a,b)=>a.id-b.id);
   // Todos los pedidos activos aparecen en Proveedor (incluyendo Para stock)
@@ -1897,7 +1952,11 @@ function abrirWhatsApp(){
 
 // ── REPORTE EXISTENCIA ────────────────────────────────────────────────────
 function getConStock(){
+  const consumido={};
+  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado')
+    .forEach(p=>{consumido[p.codigo]=(consumido[p.codigo]||0)+1;});
   return cat.filter(r=>{
+    const ini=parseFloat(r.stockGramos)||0;
     const rest=Math.max(0,parseFloat(r.stockGramos)||0);
     return rest>=cfg.gesencia;
   }).sort((a,b)=>{
@@ -2125,6 +2184,16 @@ function descontarMateriales(pedido){
     if(m.id==='env_mate'    && !['Caballero','Unisex','Nicho'].includes(linea)) return;
     if(m.id==='env_cristal' && linea!=='Dama') return;
     m.stockActual = Math.max(0, (parseFloat(m.stockActual)||0) - (parseFloat(m.usoPorPerfume)||0));
+  });
+  saveMat();
+}
+
+function revertirMateriales(pedido){
+  const linea = pedido.linea || lineaDesdeId(pedido.codigo||'') || 'Caballero';
+  materiales.forEach(m=>{
+    if(m.id==='env_mate'    && !['Caballero','Unisex','Nicho'].includes(linea)) return;
+    if(m.id==='env_cristal' && linea!=='Dama') return;
+    m.stockActual = (parseFloat(m.stockActual)||0) + (parseFloat(m.usoPorPerfume)||0);
   });
   saveMat();
 }
