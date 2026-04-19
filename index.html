@@ -675,9 +675,9 @@ function renderDash(){
       </div>
     </div>`;
 
-  // Top 10 por línea
+  // Top 10 por línea — cuenta TODOS los pedidos de clientes (no solo entregados)
   const conteo={};
-  ent.forEach(p=>{
+  pedClientes.forEach(p=>{
     const key=p.codigo&&p.codigo!=='OTRO'?p.codigo:p.fragancia;
     if(!conteo[key]) conteo[key]={
       fragancia:p.fragancia,
@@ -697,7 +697,10 @@ function renderDash(){
   const coloresTop={Caballero:'#5B9BD5',Dama:'#E07090',Unisex:'#D4A017',Nicho:'#4CAF7D'};
 
   const top10HTML = lineasTop.map(linea=>{
-    const items=todos.filter(x=>x.linea===linea).slice(0,10);
+    const porLinea=todos.filter(x=>x.linea===linea);
+    // Incluir todos los que empaten en el puesto 10
+    const corte=porLinea[9]?.count||0;
+    const items=porLinea.filter((x,i)=>i<10||x.count===corte);
     if(!items.length) return '';
     const maxCount=items[0].count;
     return `<div style="margin-bottom:20px">
