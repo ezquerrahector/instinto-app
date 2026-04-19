@@ -461,8 +461,17 @@ function copiarFragancia(frag, dis){
 }
 
 function quitarFilaProveedor(cod){
+  // Eliminar el pedido Para stock de peds
+  const pedParaStock=peds.find(p=>p.codigo===cod&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
+  if(pedParaStock){
+    peds=peds.filter(p=>p.id!==pedParaStock.id);
+    save(); fbSave();
+  }
+  // Quitar fila del DOM
   const row=document.getElementById(`prov-row-${cod}`);
   if(row){ row.remove(); actualizarMsgProveedor(); }
+  window._provStockDirty=false; // ya está actualizado
+  toast('Esencia eliminada del pedido al proveedor ✓');
 }
 
 function filtrarProveedor(txt){
