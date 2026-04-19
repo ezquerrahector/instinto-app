@@ -845,6 +845,22 @@ function renderPedidos(){
       </div>
       <div class="card-actions">
         ${(()=>{
+          // Pedidos Para stock — verificar si ya hay stock
+          if(p.cliente==='Para stock'){
+            const fragCat=cat.find(x=>x.id===p.codigo);
+            const stockActual=Math.max(0,parseFloat(fragCat?.stockGramos)||0);
+            if(stockActual>=cfg.gesencia){
+              return `<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;background:rgba(76,175,125,0.1);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
+                <span style="color:var(--green);font-weight:600">✓ Ya resurtido (${stockActual}g)</span>
+                <span style="color:var(--text2);font-size:10px">Puedes eliminar este pedido</span>
+              </div>`;
+            }
+            return `<div style="flex:1;display:flex;align-items:center;justify-content:space-between;gap:6px;background:rgba(91,155,213,0.1);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
+              <span style="color:var(--blue);font-weight:600">📦 Pedido al proveedor</span>
+              <span onclick="verEnProveedor('${p.codigo}')" style="color:var(--gold);cursor:pointer;font-weight:600;white-space:nowrap;text-decoration:underline">Ver en Proveedor →</span>
+            </div>`;
+          }
+          // Pedidos de clientes sin stock
           if((p.estatus==='Pedido'||p.estatus==='Comprado proveedor') && stockUsadoPorPedido[p.id]==='sin'){
             const yaPedido=peds.some(x=>x.codigo===p.codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
             if(yaPedido){
