@@ -795,7 +795,15 @@ function renderPedidos(){
   let list=peds.filter(p=>{
     const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt))||String(p.id)===_fTxt.replace('#','').trim();
     const est=!_fEst||p.estatus===_fEst;
-    const stock=!_fStock||((_fStock==='ok'&&(stockUsadoPorPedido[p.id]==='ok'||p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'))||(_fStock==='sin'&&stockUsadoPorPedido[p.id]==='sin'));
+    const stock=!_fStock||(()=>{
+      if(p.cliente==='Para stock'){
+        // Para stock: revisar si la fragancia ya tiene stock real
+        const fragCat=cat.find(x=>x.id===p.codigo);
+        const tieneStock=(parseFloat(fragCat?.stockGramos)||0)>=cfg.gesencia;
+        return (_fStock==='ok'&&tieneStock)||(_fStock==='sin'&&!tieneStock);
+      }
+      return (_fStock==='ok'&&(stockUsadoPorPedido[p.id]==='ok'||p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'))||(_fStock==='sin'&&stockUsadoPorPedido[p.id]==='sin');
+    })();
     const tipo=!_fTipo||((_fTipo==='stock'&&p.cliente==='Para stock')||(_fTipo==='normal'&&p.cliente!=='Para stock'));
     return m&&est&&stock&&tipo;
   });
