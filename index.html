@@ -1376,13 +1376,9 @@ function mFragSearch(txt){
     return matchLin&&matchTxt;
   }).slice(0,30);
   if(!results.length&&!txt){dd.style.display='none';return;}
-  const consumoAct={};
-  peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoAct[p.codigo]=(consumoAct[p.codigo]||0)+1;});
   const LIN_COLOR={'Caballero':'#5B9BD5','Dama':'#E07090','Unisex':'#D4A017','Nicho':'#4CAF7D'};
   dd.innerHTML=results.map(r=>{
-    const ini=parseFloat(r.stockGramos)||0;
-    const usado=(consumoAct[r.id]||0)*cfg.gesencia;
-    const rest=Math.max(0,ini-usado);
+    const rest=Math.max(0,parseFloat(r.stockGramos)||0);
     const stockInd=rest>=cfg.gesencia
       ?`<span style="font-size:10px;color:var(--green);flex-shrink:0">✓ ${rest}g</span>`
       :rest>0
@@ -1422,13 +1418,9 @@ function mFragSelect(id,txt,linea,dis,ce){
   const info=document.getElementById('f-frag-info');
   if(info){
     const fragCat=cat.find(x=>x.id===id);
-    const consumoPed={};
-    peds.filter(p=>p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado'||p.estatus==='Entregado/Cobrado').forEach(p=>{consumoPed[p.codigo]=(consumoPed[p.codigo]||0)+1;});
     let stockHtml='';
     if(fragCat){
-      const ini=parseFloat(fragCat.stockGramos)||0;
-      const usado=(consumoPed[id]||0)*cfg.gesencia;
-      const rest=Math.max(0,ini-usado);
+      const rest=Math.max(0,parseFloat(fragCat.stockGramos)||0);
       if(rest>=cfg.gesencia){
         stockHtml=`<span style="background:rgba(76,175,125,0.15);color:var(--green);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600">✓ En stock (${rest}g)</span>`;
       } else if(rest>0){
