@@ -1503,20 +1503,20 @@ function savePed(){
     });
     toast(`✓ Pedido #${nuevoPedidoId} registrado`);
     enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
+  }
+  save();fbSave(); closeModal(); renderAll();
 
-    // Verificar si no hay stock para esta fragancia
-    if(codigo && codigo!=='OTRO'){
-      const fragCat=cat.find(x=>x.id===codigo);
-      if(fragCat){
-        const restante=Math.max(0,parseFloat(fragCat.stockGramos)||0);
-        if(restante<cfg.gesencia){
-          const yaHayPedidoStock=peds.some(x=>x.codigo===codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
-          if(!yaHayPedidoStock) setTimeout(()=>proponerResurtido(fragCat),600);
-        }
+  // Verificar stock DESPUÉS de cerrar el modal del pedido
+  if(codigo && codigo!=='OTRO'){
+    const fragCat=cat.find(x=>x.id===codigo);
+    if(fragCat){
+      const restante=Math.max(0,parseFloat(fragCat.stockGramos)||0);
+      if(restante<cfg.gesencia){
+        const yaHayPedidoStock=peds.some(x=>x.codigo===codigo&&x.cliente==='Para stock'&&(x.estatus==='Pedido'||x.estatus==='Comprado proveedor'));
+        if(!yaHayPedidoStock) setTimeout(()=>proponerResurtido(fragCat),400);
       }
     }
   }
-  save();fbSave(); closeModal(); renderAll();
 }
 
 function verDetalleMes(mesKey){
