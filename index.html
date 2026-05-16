@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.0</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.1</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.0</div>
+  <div class="app-version-badge">v3.1</div>
 </body></html>`;
 }
 
@@ -2950,14 +2950,14 @@ function dibujarFrontal(canvas, p){
   // cx-3 compensa el desplazamiento óptico del tracking en INSTINTO
   drawBrand(ctx,cx-3,115,usableW,52);
 
-  drawTextSharp(ctx, sub, cx, 158, {
+  drawTextSharp(ctx, sub, cx, 180, {
     font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.1,
     stroke:.28,
     color:'#000'
   });
 
-  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 338, {
+  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 355, {
     font:'400 15px Cinzel, Georgia, "Times New Roman", serif',
     tracking:2.2,
     stroke:.34,
@@ -2972,7 +2972,7 @@ function dibujarFrontal(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW-10);
   }
   const lineH=fSz+10;
-  const firstY = 378 - ((lines.length-1)*lineH/2);
+  const firstY = 395 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.34,
@@ -3063,7 +3063,7 @@ function dibujarDetras(canvas, p){
   setTimeout(()=>tryDrawQR(0),60);
 
   // Inspiración + nombre con mayor fuerza óptica
-  drawTextSharp(ctx,'INSPIRACIÓN:',cx,280,{
+  drawTextSharp(ctx,'INSPIRACIÓN:',cx,300,{
     font:'400 13px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.0,
     stroke:.30,
@@ -3078,7 +3078,7 @@ function dibujarDetras(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
   }
   const lineH=fSz+7;
-  const firstY=308 - ((lines.length-1)*lineH/2);
+  const firstY=328 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.30,
