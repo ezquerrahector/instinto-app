@@ -2906,129 +2906,135 @@ function dibujarDetras(canvas, p){
   const fecha=ahora.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
   const hora=ahora.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
 
-  // Fondo + tarjeta
-  ctx.fillStyle='#EBEBEB'; ctx.fillRect(0,0,W,H);
+  // ── Fondo gris perla exterior
+  ctx.fillStyle='#E8E8E8'; ctx.fillRect(0,0,W,H);
+
+  // ── Tarjeta blanca con esquinas redondeadas
   const m=14, r=20;
   roundRectPath(ctx,m,m,W-m*2,H-m*2,r);
   ctx.fillStyle='#FFFFFF'; ctx.fill();
-  const usableW=W-m*2-12;
 
-  // ── INSTINTO auto-fit
-  let iSz=46;
+  const inner = m+16;        // margen interior de contenido
+  const innerW = W-inner*2;  // ancho útil
+
+  // ══ SECCIÓN 1: INSTINTO ══════════════════════════════════════════
+  let iSz=44;
   ctx.font=`bold ${iSz}px Cinzel,"Times New Roman",serif`;
   while(iSz>16){
-    let tw=0,sp=iSz*0.12;
+    let tw=0, sp=iSz*0.14;
     for(const ch of 'INSTINTO') tw+=ctx.measureText(ch).width+sp;
-    if(tw<=usableW) break;
+    if(tw<=innerW) break;
     iSz--; ctx.font=`bold ${iSz}px Cinzel,"Times New Roman",serif`;
   }
-  ctx.fillStyle='#0D0D0D';
-  const instY=m+22+iSz;
-  drawSpaced(ctx,'INSTINTO',cx,instY,iSz*0.12);
+  ctx.fillStyle='#0A0A0A';
+  const instTop=m+20;
+  const instY=instTop+iSz;
+  drawSpaced(ctx,'INSTINTO',cx,instY,iSz*0.14);
 
-  // Línea bajo INSTINTO
-  const lineY=instY+10;
-  ctx.strokeStyle='#CCCCCC'; ctx.lineWidth=0.8;
-  ctx.beginPath(); ctx.moveTo(m+10,lineY); ctx.lineTo(W-m-10,lineY); ctx.stroke();
+  // Línea ornamental delgada bajo INSTINTO
+  const lineA=instY+14;
+  ctx.strokeStyle='#AAAAAA'; ctx.lineWidth=0.7;
+  ctx.beginPath(); ctx.moveTo(inner,lineA); ctx.lineTo(W-inner,lineA); ctx.stroke();
 
-  // ── QR: tamaño fijo 120px, bien centrado
-  const qrSize=120;
+  // ══ SECCIÓN 2: QR — solo imagen, sin URL ═════════════════════════
+  const qrSize=118;
   const qrX=cx-qrSize/2;
-  const qrY=lineY+10;
+  const qrY=lineA+16;
 
-  // Dibujar QR con retry robusto (funciona en móvil)
   const qrDiv=document.createElement('div');
-  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:240px;height:240px;';
+  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:236px;height:236px;';
   document.body.appendChild(qrDiv);
   let qrDone=false;
   try{
-    new QRCode(qrDiv,{text:urlQR,width:240,height:240,colorDark:'#111111',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
-  }catch(e){console.warn('QR init',e);}
+    new QRCode(qrDiv,{text:urlQR,width:236,height:236,colorDark:'#0A0A0A',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+  }catch(e){console.warn('QR',e);}
 
-  function tryDrawQR(attempt){
+  function tryDrawQR(n){
     if(qrDone) return;
     const q=qrDiv.querySelector('canvas')||qrDiv.querySelector('img');
     if(q){
       try{
-        if(q.tagName==='CANVAS'){
-          ctx.drawImage(q,qrX,qrY,qrSize,qrSize);
-          qrDone=true; qrDiv.remove();
-        } else if(q.complete&&q.naturalWidth>0){
-          ctx.drawImage(q,qrX,qrY,qrSize,qrSize);
-          qrDone=true; qrDiv.remove();
-        } else {
-          q.onload=()=>{ if(!qrDone){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();} };
-        }
+        if(q.tagName==='CANVAS'){ ctx.drawImage(q,qrX,qrY,qrSize,qrSize); qrDone=true; qrDiv.remove(); return; }
+        if(q.complete&&q.naturalWidth>0){ ctx.drawImage(q,qrX,qrY,qrSize,qrSize); qrDone=true; qrDiv.remove(); return; }
+        q.onload=()=>{ if(!qrDone){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();} };
       }catch(e){console.warn('QR draw',e);}
     }
-    if(!qrDone && attempt<20) setTimeout(()=>tryDrawQR(attempt+1), 100);
-    else if(!qrDone){ qrDiv.remove(); }
+    if(n<25) setTimeout(()=>tryDrawQR(n+1),90);
+    else qrDiv.remove();
   }
-  setTimeout(()=>tryDrawQR(0), 80);
+  setTimeout(()=>tryDrawQR(0),80);
 
-  // URL bajo QR
-  const urlY=qrY+qrSize+10;
-  ctx.fillStyle='#666'; ctx.font='8px Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('instintofragancias.com',cx,urlY);
+  // ══ SECCIÓN 3: INSPIRACIÓN + NOMBRE ══════════════════════════════
+  const sep1=qrY+qrSize+14;
 
-  // Línea sep1
-  const sep1=urlY+9;
-  ctx.strokeStyle='#DDDDDD'; ctx.lineWidth=0.8;
-  ctx.beginPath(); ctx.moveTo(m+10,sep1); ctx.lineTo(W-m-10,sep1); ctx.stroke();
+  // Línea doble ornamental
+  ctx.strokeStyle='#CCCCCC'; ctx.lineWidth=0.6;
+  ctx.beginPath(); ctx.moveTo(inner,sep1); ctx.lineTo(W-inner,sep1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(inner,sep1+3); ctx.lineTo(W-inner,sep1+3); ctx.stroke();
 
-  // INSPIRACIÓN label
-  ctx.fillStyle='#777'; ctx.font='8px Cinzel,"Times New Roman",serif';
-  drawSpaced(ctx,'INSPIRACIÓN:',cx,sep1+14,1.5);
+  // INSPIRACIÓN label centrado
+  ctx.fillStyle='#888888';
+  ctx.font='italic 9px Georgia,"Times New Roman",serif';
+  ctx.textAlign='center';
+  ctx.fillText('I N S P I R A C I Ó N',cx,sep1+16);
 
-  // Nombre perfume
+  // Nombre + diseñador
   const nombreCompleto=disenador?`${fragancia} — ${disenador}`:fragancia;
-  let fSz=17;
+  let fSz=16;
   ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;
-  let flines=wrapTextCanvas(ctx,nombreCompleto,usableW);
-  if(flines.length>=2){fSz=14;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-  if(flines.length>=3){fSz=12;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-  ctx.fillStyle='#0D0D0D'; ctx.textAlign='center';
-  const lhD=fSz+6;
-  let ny=sep1+28;
-  flines.forEach((ln,i)=>ctx.fillText(ln,cx,ny+i*lhD));
-  let afterY=ny+flines.length*lhD;
+  let flines=wrapTextCanvas(ctx,nombreCompleto,innerW);
+  if(flines.length>=2){fSz=14;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,innerW);}
+  if(flines.length>=3){fSz=12;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,innerW);}
+  ctx.fillStyle='#0A0A0A'; ctx.textAlign='center';
+  const lhN=fSz+7;
+  const nameY=sep1+30;
+  flines.forEach((ln,i)=>ctx.fillText(ln,cx,nameY+i*lhN));
+  const afterName=nameY+flines.length*lhN;
 
-  // Línea sep2
-  const sep2=afterY+8;
-  ctx.strokeStyle='#DDDDDD';
-  ctx.beginPath(); ctx.moveTo(m+10,sep2); ctx.lineTo(W-m-10,sep2); ctx.stroke();
+  // ══ SECCIÓN 4: FECHA ══════════════════════════════════════════════
+  const sep2=afterName+10;
+  ctx.strokeStyle='#CCCCCC'; ctx.lineWidth=0.6;
+  ctx.beginPath(); ctx.moveTo(inner,sep2); ctx.lineTo(W-inner,sep2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(inner,sep2+3); ctx.lineTo(W-inner,sep2+3); ctx.stroke();
 
-  // Producción
-  ctx.fillStyle='#555'; ctx.font='8px Arial,sans-serif'; ctx.textAlign='center';
-  ctx.fillText('Producción: '+fecha+'  '+hora,cx,sep2+13);
+  ctx.fillStyle='#999999';
+  ctx.font='italic 8.5px Georgia,"Times New Roman",serif';
+  ctx.textAlign='center';
+  ctx.fillText(fecha+'  ·  '+hora,cx,sep2+15);
 
-  // ── Código de barras — altura FIJA para no invadir el teléfono
-  const telH=22;          // espacio reservado para PEDIDOS al fondo
-  const bcY=sep2+24;
-  const bcH=H-m-telH-bcY; // altura del barcode = espacio disponible menos teléfono
-  const bcW=usableW;
-  const padX=(W-bcW)/2;
+  // ══ SECCIÓN 5: CÓDIGO DE BARRAS con altura controlada ═════════════
+  // Reservar espacio fijo para PEDIDOS al fondo
+  const telReserve=28;
+  const bcY=sep2+26;
+  const bcH=H-m-telReserve-bcY;   // altura controlada
+  const bcW=Math.round(innerW*0.88);
+  const bcX=(W-bcW)/2;
 
   const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
   svgEl.setAttribute('width',bcW); svgEl.setAttribute('height',bcH);
   document.body.appendChild(svgEl);
   try{
-    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.4,height:bcH-4,displayValue:false,margin:0,lineColor:'#111111'});
+    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.2,height:bcH-2,displayValue:false,margin:0,lineColor:'#0A0A0A'});
     const sd=new XMLSerializer().serializeToString(svgEl);
-    const sb=new Blob([sd],{type:'image/svg+xml;charset=utf-8'});
-    const su=URL.createObjectURL(sb);
-    const bi=new Image();
-    bi.onload=()=>{
-      ctx.drawImage(bi,padX,bcY,bcW,bcH-4);
-      URL.revokeObjectURL(su); svgEl.remove();
-      // PEDIDOS — centrado en el espacio reservado al fondo
-      ctx.fillStyle='#0D0D0D';
-      ctx.font='bold 10.5px Arial,sans-serif';
+    const blob=new Blob([sd],{type:'image/svg+xml;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const img=new Image();
+    img.onload=()=>{
+      ctx.drawImage(img,bcX,bcY,bcW,bcH-2);
+      URL.revokeObjectURL(url); svgEl.remove();
+
+      // ── PEDIDOS al fondo — elegante, espaciado
+      ctx.fillStyle='#0A0A0A';
+      ctx.font='bold 10px Arial,sans-serif';
       ctx.textAlign='center';
-      drawSpaced(ctx,'PEDIDOS  '+tel,cx,H-m-8,1.2);
+      // Pequeña línea decorativa sobre el teléfono
+      ctx.strokeStyle='#DDDDDD'; ctx.lineWidth=0.6;
+      const telLineY=H-m-telReserve+4;
+      ctx.beginPath(); ctx.moveTo(inner,telLineY); ctx.lineTo(W-inner,telLineY); ctx.stroke();
+      drawSpaced(ctx,'PEDIDOS  '+tel,cx,H-m-10,1.5);
     };
-    bi.src=su;
+    img.src=url;
   }catch(e){console.warn('Barcode',e);svgEl.remove();}
 }
 
