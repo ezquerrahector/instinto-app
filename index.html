@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.2</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.3</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.2</div>
+  <div class="app-version-badge">v3.3</div>
 </body></html>`;
 }
 
@@ -2950,17 +2950,17 @@ function dibujarFrontal(canvas, p){
   // cx-3 compensa el desplazamiento óptico del tracking en INSTINTO
   drawBrand(ctx,cx-3,115,usableW,52);
 
-  drawTextSharp(ctx, sub, cx, 148, {
-    font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
+  drawTextSharp(ctx, sub, cx, 150, {
+    font:'600 16px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.1,
-    stroke:.28,
+    stroke:.9,
     color:'#000'
   });
 
-  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 355, {
-    font:'400 15px Cinzel, Georgia, "Times New Roman", serif',
+  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 357, {
+    font:'600 16px Cinzel, Georgia, "Times New Roman", serif',
     tracking:2.2,
-    stroke:.34,
+    stroke:.9,
     color:'#000'
   });
 
@@ -3064,9 +3064,9 @@ function dibujarDetras(canvas, p){
 
   // Inspiración + nombre con mayor fuerza óptica
   drawTextSharp(ctx,'INSPIRACIÓN:',cx,300,{
-    font:'400 13px Cinzel, Georgia, "Times New Roman", serif',
+    font:'600 15px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.0,
-    stroke:.30,
+    stroke:.9,
     color:'#000'
   });
 
@@ -3086,8 +3086,8 @@ function dibujarDetras(canvas, p){
   });
 
   drawTextSharp(ctx,producido,cx,362,{
-    font:'500 13px Arial, sans-serif',
-    stroke:.16,
+    font:'600 13px Arial, sans-serif',
+    stroke:.7,
     color:'#000'
   });
 
