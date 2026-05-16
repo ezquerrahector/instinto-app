@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.5</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.6</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.5</div>
+  <div class="app-version-badge">v2.6</div>
 </body></html>`;
 }
 
@@ -2902,19 +2902,20 @@ function drawBrand(ctx, cx, y, maxW, startSize=38){
   // Se dibuja sin espacios en el texto y con tracking controlado para llenar el ancho.
   const text = 'INSTINTO';
   let size = startSize;
-  let tracking = 12;
-  while(size >= 28){
+  let tracking = 14;
+  while(size >= 32){
     ctx.font = `400 ${size}px Cinzel, Georgia, "Times New Roman", serif`;
     let w = 0;
     for(let i=0;i<text.length;i++) w += ctx.measureText(text[i]).width + (i<text.length-1?tracking:0);
     if(w <= maxW) break;
     tracking -= .5;
-    if(tracking < 6){ tracking = 12; size -= 1; }
+    if(tracking < 6){ tracking = 14; size -= 1; }
   }
+  const strokeW = size >= 48 ? .55 : size >= 40 ? .48 : .42;
   drawTextSharp(ctx, text, cx, y, {
     font:`400 ${size}px Cinzel, Georgia, "Times New Roman", serif`,
     tracking,
-    stroke:.42,
+    stroke: strokeW,
     color:'#000'
   });
 }
@@ -2979,13 +2980,13 @@ function dibujarFrontal(canvas, p){
   const nombreCompleto = labelNombre(p);
   const linea=p.linea||lineaDesdeId(p.codigo||'')||'Caballero';
   const sub=linea==='Nicho'?'NICHO':'ELIXIR';
-  const usableW = W - 36;
+  const usableW = W - 16;
 
   // Marca: más grande y con tracking real, no dependiente de espacios manuales.
-  drawBrand(ctx,cx,82,usableW,39);
+  drawBrand(ctx,cx,82,usableW,52);
 
   // Submarca más visible, pero pequeña y elegante.
-  drawTextSharp(ctx, sub, cx, 116, {
+  drawTextSharp(ctx, sub, cx, 130, {
     font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.1,
     stroke:.28,
@@ -2993,7 +2994,7 @@ function dibujarFrontal(canvas, p){
   });
 
   // Bloque central: subimos tamaño y grosor óptico para que no se pierda.
-  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 286, {
+  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 295, {
     font:'400 15px Cinzel, Georgia, "Times New Roman", serif',
     tracking:2.2,
     stroke:.34,
@@ -3008,7 +3009,7 @@ function dibujarFrontal(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW-10);
   }
   const lineH=fSz+9;
-  const firstY = 326 - ((lines.length-1)*lineH/2);
+  const firstY = 335 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.34,
@@ -3063,15 +3064,15 @@ function dibujarDetras(canvas, p){
   const hh=String(ahora.getHours()).padStart(2,'0');
   const mi=String(ahora.getMinutes()).padStart(2,'0');
   const producido=`Producido: ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-  const usableW=W-42;
+  const usableW=W-16;
 
   // Marca
-  drawBrand(ctx,cx,62,usableW,34);
+  drawBrand(ctx,cx,68,usableW,48);
 
   // QR más grande y limpio
   const qrSize=132;
   const qrX=cx-qrSize/2;
-  const qrY=82;
+  const qrY=98;
 
   const qrDiv=document.createElement('div');
   qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:396px;height:396px;background:#fff;';
