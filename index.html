@@ -406,7 +406,7 @@ const save = () => {
   localStorage.setItem('if_cfg',  JSON.stringify(cfg));
   localStorage.setItem('if_cat',  JSON.stringify(cat));
   localStorage.setItem('if_peds', JSON.stringify(peds));
-
+  localStorage.setItem('if_updated', Date.now().toString());
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -2592,9 +2592,27 @@ async function fbSave(){
     setSyncStatus('syncing');
     await loadFirebase();
     const ref = db.collection('instinto').doc('datos');
+
+    // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
+    // Antes de sobreescribir Firebase, verificar que no estamos subiendo
+    // menos pedidos de los que ya están guardados en la nube.
+    try {
+      const snap = await ref.get();
+      if(snap.exists){
+        const cloudPeds = snap.data().peds || [];
+        if(peds.length < cloudPeds.length){
+          console.warn(`fbSave bloqueado: local(${peds.length}) < nube(${cloudPeds.length}). Posible pérdida de datos.`);
+          setSyncStatus('err');
+          toast('⚠ Guardado bloqueado: hay más pedidos en la nube. Recarga la página y verifica.');
+          return;
+        }
+      }
+    } catch(checkErr){ /* si falla la verificación, continuar normal */ }
+
     await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
   } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e); }
+}
 }
 
 async function fbLoad(){
@@ -2605,22 +2623,47 @@ async function fbLoad(){
     const snap = await ref.get();
     if(snap.exists){
       const data = snap.data();
-      if(data.cfg) cfg = data.cfg;
-      if(data.cat) cat = data.cat;
-      if(data.peds){ peds = data.peds; nextId = Math.max(...peds.map(p=>p.id),0)+1; }
-      if(data.materiales) materiales = data.materiales;
-      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
-      save();
-      localStorage.setItem('if_mat', JSON.stringify(materiales));
-      renderAll(); loadCfg(); renderMateriales();
-      setSyncStatus('ok');
-      toast('Datos sincronizados desde la nube ✓');
-      setTimeout(verificarStockAlCargar, 800);
+
+      // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
+      // Solo reemplazamos peds desde Firebase si Firebase tiene MÁS o IGUAL
+      // cantidad de pedidos que lo que ya hay en memoria (localStorage).
+      // Esto evita que una carga tardía o un doc vacío borre pedidos nuevos.
+      const firebasePeds = data.peds || [];
+      const localPeds    = peds;
+      // También comparamos el timestamp: si local es más reciente que Firebase, local gana
+      const fbTime   = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+      const localTime = parseInt(localStorage.getItem('if_updated')||'0');
+
+      if(firebasePeds.length >= localPeds.length || fbTime >= localTime){
+        // Firebase tiene igual o más pedidos, o es más reciente → confiar en Firebase
+        if(data.cfg) cfg = data.cfg;
+        if(data.cat) cat = data.cat;
+        peds = firebasePeds;
+        nextId = Math.max(...peds.map(p=>p.id), 0) + 1;
+        if(data.materiales) materiales = data.materiales;
+        if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+        save();
+        localStorage.setItem('if_mat', JSON.stringify(materiales));
+        renderAll(); loadCfg(); renderMateriales();
+        setSyncStatus('ok');
+        toast('Datos sincronizados desde la nube ✓');
+        setTimeout(verificarStockAlCargar, 800);
+      } else {
+        // Local tiene MÁS pedidos Y es más reciente que Firebase → local gana, subir local a Firebase
+        console.warn(`fbLoad: local(${localPeds.length}) > firebase(${firebasePeds.length}), conservando local y re-subiendo.`);
+        setSyncStatus('ok');
+        renderAll(); loadCfg(); renderMateriales();
+        await fbSave(); // re-sincronizar Firebase con datos locales (más completos)
+        toast('✓ Datos locales conservados y subidos a la nube');
+      }
     } else {
-      // Primera vez — sin datos en Firebase, arrancar vacío y subir
+      // Primera vez — Firebase vacío
+      // ⚠ Solo subir si ya tenemos pedidos locales; no borrar con vacío
       setSyncStatus('ok');
       renderAll(); loadCfg(); renderMateriales();
-      await fbSave();
+      if(peds.length > 0 || cat.length > 0){
+        await fbSave(); // subir lo que ya teníamos localmente
+      }
     }
   } catch(e){
     setSyncStatus('err');
@@ -2666,222 +2709,174 @@ window.addEventListener('load', async () => {
 });
 
 /* ═══════════════════════════════════════════════
-   GENERADOR DE ETIQUETAS 30×50mm — INSTINTO
+   GENERADOR DE ETIQUETAS — INSTINTO
+   50×30mm apaisada @ 300dpi = 590×354px
    ═══════════════════════════════════════════════ */
 function generarEtiqueta(id){
   const p = peds.find(x=>x.id===id);
   if(!p) return;
 
-  // Fecha de elaboración o ahora
-  const fechaElab = p.fechaElab ? new Date(p.fechaElab+'T00:00:00') : new Date();
-  const fechaStr = fechaElab.toLocaleDateString('es-MX',{year:'numeric',month:'2-digit',day:'2-digit'});
-  const horaStr = new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-
   const fragancia  = (p.fragancia||'').toUpperCase();
   const disenador  = (p.disenador||'').toUpperCase();
   const codigo     = (p.codigo&&p.codigo!=='OTRO') ? p.codigo : (p.fragancia||'INSTINTO').substring(0,8).toUpperCase().replace(/\s/g,'');
   const telDisplay = '81 20 28 21 20';
-  const telBarcode = '8120282120';
   const urlQR      = 'https://instintofragancias.com';
+  const ahora = new Date();
+  const fechaStr = ahora.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const horaStr  = ahora.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
 
-  // Crear modal overlay
+  // 50mm x 30mm a 300dpi
+  const PW = 590, PH = 354;
+
   const overlay = document.createElement('div');
   overlay.id = 'etiqueta-overlay';
-  overlay.style.cssText = `
-    position:fixed;top:0;left:0;width:100%;height:100%;
-    background:rgba(0,0,0,0.85);z-index:9999;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    padding:16px;gap:16px;
-  `;
-
-  // Contenedor de la etiqueta — 30mm × 50mm (a 96dpi: 113px × 189px; usamos escala 3x para pantalla)
-  const SCALE = 3;
-  const W = Math.round(113 * SCALE); // ~339px
-  const H = Math.round(189 * SCALE); // ~567px
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;overflow-y:auto;';
 
   overlay.innerHTML = `
-    <div style="display:flex;flex-direction:column;align-items:center;gap:12px;width:100%;max-width:420px">
-      <div style="color:#F0C040;font-size:14px;font-weight:600;text-align:center">
-        🏷 Etiqueta — ${p.fragancia}
-      </div>
-
-      <!-- LA ETIQUETA -->
-      <div id="etiqueta-print" style="
-        width:${W}px;height:${H}px;
-        background:#fff;border-radius:12px;
-        padding:10px 10px 8px;
-        display:flex;flex-direction:column;align-items:center;
-        justify-content:space-between;
-        box-shadow:0 4px 24px rgba(0,0,0,0.5);
-        font-family:'Times New Roman',serif;
-        box-sizing:border-box;
-        position:relative;
-        overflow:hidden;
-      ">
-        <!-- Línea decorativa top -->
-        <div style="width:100%;height:2px;background:#111;border-radius:1px;margin-bottom:4px"></div>
-
-        <!-- LOGO INSTINTO -->
-        <div style="
-          font-family:'Cinzel',Georgia,'Times New Roman',serif;
-          font-size:${24*SCALE/3}px;
-          font-weight:700;
-          letter-spacing:${3*SCALE/3}px;
-          color:#111;
-          text-align:center;
-          line-height:1;
-          margin-bottom:2px;
-        ">INSTINTO</div>
-
-        <!-- QR Code -->
-        <div id="etiqueta-qr" style="
-          width:${60*SCALE/3}px;height:${60*SCALE/3}px;
-          display:flex;align-items:center;justify-content:center;
-          margin:2px 0;
-        "></div>
-
-        <!-- Separador -->
-        <div style="width:85%;height:1px;background:#ccc;margin:2px 0"></div>
-
-        <!-- Inspiración label -->
-        <div style="
-          font-family:Georgia,'Times New Roman',serif;
-          font-size:${7*SCALE/3}px;
-          letter-spacing:${1.5*SCALE/3}px;
-          color:#555;
-          text-transform:uppercase;
-          text-align:center;
-          margin-bottom:1px;
-        ">Inspiración</div>
-
-        <!-- Nombre del perfume -->
-        <div style="
-          font-family:'Cinzel',Georgia,'Times New Roman',serif;
-          font-size:${9*SCALE/3}px;
-          font-weight:700;
-          color:#111;
-          text-align:center;
-          line-height:1.15;
-          letter-spacing:0.5px;
-          max-width:95%;
-        ">${fragancia}</div>
-
-        <!-- Diseñador -->
-        <div style="
-          font-family:Georgia,serif;
-          font-size:${7.5*SCALE/3}px;
-          color:#444;
-          text-align:center;
-          letter-spacing:1px;
-          font-style:italic;
-        ">${disenador}</div>
-
-        <!-- Fecha -->
-        <div style="
-          font-family:Arial,sans-serif;
-          font-size:${6*SCALE/3}px;
-          color:#666;
-          text-align:center;
-          margin-top:2px;
-        ">${fechaStr} · ${horaStr}</div>
-
-        <!-- Separador -->
-        <div style="width:85%;height:1px;background:#ccc;margin:2px 0"></div>
-
-        <!-- Código de barras -->
-        <svg id="etiqueta-barcode" style="width:${100*SCALE/3}px;max-height:${32*SCALE/3}px"></svg>
-
-        <!-- Teléfono -->
-        <div style="
-          font-family:Arial,sans-serif;
-          font-size:${6*SCALE/3}px;
-          letter-spacing:${2*SCALE/3}px;
-          color:#111;
-          font-weight:600;
-          text-align:center;
-          margin-top:1px;
-        ">PEDIDOS ${telDisplay}</div>
-
-        <!-- Línea decorativa bottom -->
-        <div style="width:100%;height:2px;background:#111;border-radius:1px;margin-top:4px"></div>
-      </div>
-
-      <!-- Botones -->
-      <div style="display:flex;gap:10px;width:100%;max-width:${W}px">
-        <button onclick="descargarEtiqueta()" style="
-          flex:1;padding:10px;border-radius:8px;
-          background:var(--gold,#D4A017);color:#111;
-          border:none;font-size:13px;font-weight:700;cursor:pointer;
-        ">⬇ Descargar PNG</button>
-        <button onclick="document.getElementById('etiqueta-overlay').remove()" style="
-          flex:1;padding:10px;border-radius:8px;
-          background:#2a2a2a;color:#eee;
-          border:1px solid #444;font-size:13px;cursor:pointer;
-        ">✕ Cerrar</button>
-      </div>
-      <div style="color:#888;font-size:11px;text-align:center">
-        Descarga la imagen y ábrela en la app NIIMBOT para imprimir
-      </div>
+    <div style="color:#F0C040;font-size:13px;font-weight:600;text-align:center">🏷 Etiqueta — ${p.fragancia||''}</div>
+    <div id="etiqueta-wrap" style="width:${PW}px;height:${PH}px;background:#fff;border-radius:10px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.6);flex-shrink:0;position:relative;">
+      <canvas id="etiqueta-canvas" width="${PW}" height="${PH}" style="display:block;width:${PW}px;height:${PH}px;"></canvas>
     </div>
+    <div style="display:flex;gap:10px;width:100%;max-width:${PW}px">
+      <button onclick="descargarEtiqueta()" style="flex:1;padding:10px;border-radius:8px;background:#D4A017;color:#111;border:none;font-size:13px;font-weight:700;cursor:pointer;">⬇ Descargar PNG</button>
+      <button onclick="document.getElementById('etiqueta-overlay').remove()" style="flex:1;padding:10px;border-radius:8px;background:#2a2a2a;color:#eee;border:1px solid #444;font-size:13px;cursor:pointer;">✕ Cerrar</button>
+    </div>
+    <div style="color:#888;font-size:11px;text-align:center;max-width:${PW}px">Descarga el PNG y ábrelo en NIIMBOT para imprimir (50×30mm)</div>
   `;
 
   document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
 
-  // Generar QR
-  try {
-    new QRCode(document.getElementById('etiqueta-qr'), {
-      text: urlQR,
-      width:  Math.round(60*SCALE/3),
-      height: Math.round(60*SCALE/3),
-      colorDark: '#111111',
-      colorLight: '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
-    });
-  } catch(e){ console.warn('QR error:',e); }
+  setTimeout(()=>{
+    const canvas = document.getElementById('etiqueta-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W=PW, H=PH;
 
-  // Generar código de barras
-  try {
-    JsBarcode('#etiqueta-barcode', codigo, {
-      format: 'CODE128',
-      width: Math.max(1, Math.round(1.5*SCALE/3)),
-      height: Math.round(28*SCALE/3),
-      displayValue: false,
-      margin: 0,
-      lineColor: '#111'
-    });
-  } catch(e){ console.warn('Barcode error:',e); }
+    // Fondo blanco
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,W,H);
+    // Bordes horizontales
+    ctx.fillStyle='#111'; ctx.fillRect(0,0,W,5); ctx.fillRect(0,H-5,W,5);
 
-  // Cerrar al click fuera
-  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+    // COLUMNA IZQUIERDA (ancho 178px)
+    const colW=178, pad=12;
+
+    // INSTINTO
+    ctx.fillStyle='#111'; ctx.font='bold 32px Cinzel,"Times New Roman",serif';
+    ctx.textAlign='center'; ctx.fillText('INSTINTO', colW/2, 44);
+    // Línea bajo título
+    ctx.fillStyle='#333'; ctx.fillRect(pad,52,colW-pad*2,2);
+
+    // QR
+    const qrDiv=document.createElement('div');
+    qrDiv.style.cssText='position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(qrDiv);
+    try{ new QRCode(qrDiv,{text:urlQR,width:120,height:120,colorDark:'#111',colorLight:'#fff',correctLevel:QRCode.CorrectLevel.M}); }
+    catch(e){ console.warn('QR',e); }
+
+    const drawQR=()=>{
+      const q=qrDiv.querySelector('img')||qrDiv.querySelector('canvas');
+      if(!q){ return setTimeout(drawQR,60); }
+      const sz=120, qx=(colW-sz)/2, qy=60;
+      if(q.tagName==='CANVAS'){ ctx.drawImage(q,qx,qy,sz,sz); qrDiv.remove(); }
+      else{ const im=new Image(); im.onload=()=>{ ctx.drawImage(im,qx,qy,sz,sz); qrDiv.remove(); }; im.src=q.src; }
+    };
+    setTimeout(drawQR,100);
+
+    // URL debajo QR
+    ctx.fillStyle='#666'; ctx.font='9px Arial,sans-serif'; ctx.textAlign='center';
+    ctx.fillText('instintofragancias.com', colW/2, 192);
+
+    // Línea vertical
+    ctx.fillStyle='#ccc'; ctx.fillRect(colW+6,10,2,H-20);
+
+    // COLUMNA DERECHA
+    const cx2=colW+18;   // inicio X col derecha
+    const cw2=W-cx2-pad; // ancho col derecha
+    const mid=cx2+cw2/2; // centro
+
+    // INSPIRACIÓN label
+    ctx.fillStyle='#555'; ctx.font='bold 11px Arial,sans-serif'; ctx.textAlign='left';
+    ctx.fillText('INSPIRACIÓN:', cx2, 30);
+    ctx.fillStyle='#ddd'; ctx.fillRect(cx2,35,cw2,1.5);
+
+    // Nombre fragancia
+    ctx.fillStyle='#111'; ctx.textAlign='center';
+    let fsize=28;
+    ctx.font=`bold ${fsize}px Cinzel,"Times New Roman",serif`;
+    let flines=wrapTextCanvas(ctx,fragancia,cw2);
+    if(flines.length>=2){ fsize=22; ctx.font=`bold ${fsize}px Cinzel,"Times New Roman",serif`; flines=wrapTextCanvas(ctx,fragancia,cw2); }
+    if(flines.length>=3){ fsize=18; ctx.font=`bold ${fsize}px Cinzel,"Times New Roman",serif`; flines=wrapTextCanvas(ctx,fragancia,cw2); }
+    const lineH=fsize+8;
+    let fy=56;
+    flines.forEach((ln,i)=>ctx.fillText(ln, mid, fy+i*lineH));
+    let afterY=fy+flines.length*lineH;
+
+    // Diseñador
+    if(disenador){
+      ctx.fillStyle='#444'; ctx.font=`italic 15px Georgia,"Times New Roman",serif`;
+      ctx.fillText('\u2014 '+disenador+' \u2014', mid, afterY+10);
+      afterY+=28;
+    }
+
+    // Separador
+    ctx.fillStyle='#ddd'; ctx.fillRect(cx2,afterY+8,cw2,1.5);
+
+    // Fecha/hora
+    ctx.fillStyle='#555'; ctx.font='11px Arial,sans-serif';
+    ctx.fillText('Producción: '+fechaStr+'  '+horaStr, mid, afterY+24);
+
+    // CÓDIGO DE BARRAS
+    const bcY=afterY+34;
+    const bcH=H-bcY-28;
+    const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
+    svgEl.setAttribute('width',cw2); svgEl.setAttribute('height',bcH+10);
+    document.body.appendChild(svgEl);
+    try{
+      JsBarcode(svgEl,codigo,{format:'CODE128',width:2.5,height:bcH,displayValue:false,margin:0,lineColor:'#111'});
+      const sd=new XMLSerializer().serializeToString(svgEl);
+      const sb=new Blob([sd],{type:'image/svg+xml;charset=utf-8'});
+      const su=URL.createObjectURL(sb);
+      const bi=new Image();
+      bi.onload=()=>{
+        ctx.drawImage(bi,cx2,bcY,cw2,bcH);
+        URL.revokeObjectURL(su); svgEl.remove();
+        // Código y teléfono
+        ctx.fillStyle='#111'; ctx.font='bold 10px "Courier New",monospace'; ctx.textAlign='center';
+        ctx.fillText(codigo, mid, H-24);
+        ctx.font='bold 13px Arial,sans-serif';
+        ctx.fillText('PEDIDOS  '+telDisplay, mid, H-10);
+      };
+      bi.src=su;
+    } catch(e){ console.warn('Barcode',e); svgEl.remove(); }
+
+  }, 80);
+}
+
+function wrapTextCanvas(ctx,text,maxW){
+  const words=text.split(' ');
+  const lines=[]; let cur='';
+  for(const w of words){
+    const t=cur?cur+' '+w:w;
+    if(ctx.measureText(t).width>maxW&&cur){ lines.push(cur); cur=w; }
+    else cur=t;
+  }
+  if(cur) lines.push(cur);
+  return lines.length?lines:[text];
 }
 
 function descargarEtiqueta(){
-  const el = document.getElementById('etiqueta-print');
-  if(!el){ toast('No hay etiqueta generada'); return; }
-
-  // Usar html2canvas si disponible, sino fallback a SVG/PNG manual
-  if(typeof html2canvas !== 'undefined'){
-    html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(canvas=>{
-      const a=document.createElement('a');
-      a.href=canvas.toDataURL('image/png');
-      a.download='etiqueta_instinto.png';
-      a.click();
-    });
-  } else {
-    // Carga html2canvas dinámicamente
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload=()=>{
-      html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(canvas=>{
-        const a=document.createElement('a');
-        a.href=canvas.toDataURL('image/png');
-        a.download='etiqueta_instinto.png';
-        a.click();
-      });
-    };
-    document.head.appendChild(s);
-  }
+  const canvas=document.getElementById('etiqueta-canvas');
+  if(!canvas){ toast('No hay etiqueta'); return; }
+  setTimeout(()=>{
+    const a=document.createElement('a');
+    a.href=canvas.toDataURL('image/png');
+    a.download='etiqueta_instinto.png';
+    a.click();
+  }, 500);
 }
+
 </script>
 </body>
 </html>
