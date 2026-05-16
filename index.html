@@ -2652,16 +2652,20 @@ async function fbSave(){
         const cloudPeds = snap.data().peds || [];
         // Comparar por IDs reales, no por conteo (el conteo puede diferir por duplicados/basura)
         const localIds = new Set(peds.map(p => Number(p.id)));
-        const faltantes = cloudPeds.filter(p => p && p.id != null && !localIds.has(Number(p.id)));
+        // Filtrar objetos válidos (con id numérico real) antes de comparar
+        const cloudPedsValidos = cloudPeds.filter(p => p && p.id != null && !isNaN(Number(p.id)));
+        const faltantes = cloudPedsValidos.filter(p => !localIds.has(Number(p.id)));
+        const basura = cloudPeds.length - cloudPedsValidos.length;
+        if(basura > 0) console.warn(`fbSave: ${basura} entrada(s) sin ID válido en Firebase (se ignorarán)`);
         if(faltantes.length > 0){
-          console.warn(`fbSave: fusionando ${faltantes.length} pedido(s) faltante(s) de la nube`);
+          console.warn(`fbSave: fusionando ${faltantes.length} pedido(s) faltante(s):`, faltantes.map(p=>p.id));
           peds = [...peds, ...faltantes].sort((a,b) => Number(b.id) - Number(a.id));
           nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
           save();
           renderAll();
           toast(`✓ ${faltantes.length} pedido(s) recuperado(s) de la nube`);
         }
-        // Siempre continúa y guarda — no bloquear por diferencia de conteo
+        // Siempre continúa y guarda — limpia entradas basura y sube versión fusionada
       }
     } catch(checkErr){ console.warn('fbSave check error (non-fatal):', checkErr.message || checkErr); }
 
@@ -2684,7 +2688,8 @@ async function fbLoad(){
       // Solo reemplazamos peds desde Firebase si Firebase tiene MÁS o IGUAL
       // cantidad de pedidos que lo que ya hay en memoria (localStorage).
       // Esto evita que una carga tardía o un doc vacío borre pedidos nuevos.
-      const firebasePeds = data.peds || [];
+      // Filtrar entradas válidas (con id numérico) antes de cualquier comparación
+      const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
       const localPeds    = peds;
 
       // Fusionar por IDs: siempre quedarse con la unión de ambos conjuntos
