@@ -2580,6 +2580,7 @@ const FB_CFG = {
 
 let db = null;
 let _fbLoaded = false;
+let _fbSaving = false; // guard contra re-entrada en fbSave
 
 function loadFirebase(){
   return new Promise((resolve, reject) => {
@@ -2635,6 +2636,8 @@ function setSyncStatus(status){
 }
 
 async function fbSave(){
+  if(_fbSaving){ console.warn('fbSave: ya en progreso, ignorando llamada duplicada'); return; }
+  _fbSaving = true;
   try {
     setSyncStatus('syncing');
     await loadFirebase();
@@ -2648,12 +2651,18 @@ async function fbSave(){
       if(snap.exists){
         const cloudPeds = snap.data().peds || [];
         if(peds.length < cloudPeds.length){
-          console.warn(`fbSave bloqueado: local(${peds.length}) < nube(${cloudPeds.length}). Posible pérdida de datos.`);
-          // No mostrar "Sin conexión" — sí hay conexión, solo hay un conflicto de datos
-          // Forzar fbLoad para traer los pedidos que faltan localmente
-          toast('⚠ Hay pedidos nuevos en la nube. Descargando...');
-          await fbLoad();
-          return;
+          console.warn(`fbSave: fusionando — local(${peds.length}) < nube(${cloudPeds.length})`);
+          // Fusionar: traer pedidos de la nube que no existen localmente (por ID)
+          const localIds = new Set(peds.map(p => p.id));
+          const faltantes = cloudPeds.filter(p => !localIds.has(p.id));
+          if(faltantes.length > 0){
+            peds = [...peds, ...faltantes].sort((a,b) => b.id - a.id);
+            nextId = Math.max(...peds.map(p => p.id), 0) + 1;
+            save();
+            renderAll();
+            toast(`✓ ${faltantes.length} pedido(s) recuperado(s) de la nube`);
+          }
+          // Continúa y guarda normalmente (ya no bloquea)
         }
       }
     } catch(checkErr){ /* si falla la verificación, continuar normal */ }
@@ -2661,6 +2670,7 @@ async function fbSave(){
     await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
   } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e.message || e.code || e); }
+  finally { _fbSaving = false; }
 }
 
 async function fbLoad(){
