@@ -904,7 +904,10 @@ function renderPedidos(){
           </select>`;
         })()}
         <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
-        ${(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado')?`<button class="btn btn-sm" style="background:var(--gold);color:#111;border-color:var(--gold)" onclick="generarEtiqueta(${p.id})" title="Generar etiqueta">🏷</button>`:''}
+        ${(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado')?`
+          <button class="btn btn-sm" style="background:var(--gold);color:#111;border-color:var(--gold);font-size:11px" onclick="generarEtiquetaFrontal(${p.id})" title="Etiqueta frontal">Frontal</button>
+          <button class="btn btn-sm" style="background:#3a3a2a;color:var(--gold);border-color:var(--gold);font-size:11px" onclick="generarEtiqueta(${p.id})" title="Etiqueta trasera">Detrás</button>
+        `:''}
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
       ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
@@ -2875,6 +2878,140 @@ function descargarEtiqueta(){
     a.download='etiqueta_instinto.png';
     a.click();
   }, 500);
+}
+
+/* ═══════════════════════════════════════════════
+   ETIQUETA FRONTAL — INSTINTO
+   Portrait 30×50mm a 300dpi = 354×590px
+   ═══════════════════════════════════════════════ */
+function generarEtiquetaFrontal(id){
+  const p = peds.find(x=>x.id===id);
+  if(!p) return;
+
+  const fragancia = (p.fragancia||'').toUpperCase();
+  const disenador = (p.disenador||'').toUpperCase();
+  const linea     = p.linea || lineaDesdeId(p.codigo||'') || 'Caballero';
+
+  // Subtítulo bajo INSTINTO según línea
+  const subtitulo = { Caballero:'ELIXIR', Dama:'ELIXIR', Unisex:'ELIXIR', Nicho:'NICHO' }[linea] || 'ELIXIR';
+
+  // Dimensiones portrait 30×50mm a 300dpi
+  const PW = 354, PH = 590;
+
+  // ── OVERLAY ──────────────────────────────────────────────────────────
+  const overlay = document.createElement('div');
+  overlay.id = 'etiqueta-overlay-frontal';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:14px;overflow-y:auto;';
+
+  overlay.innerHTML = `
+    <div style="color:#F0C040;font-size:13px;font-weight:600;text-align:center">🏷 Etiqueta Frontal — ${p.fragancia||''}</div>
+    <div style="width:${PW}px;height:${PH}px;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 6px 32px rgba(0,0,0,0.6);flex-shrink:0;">
+      <canvas id="etiqueta-frontal-canvas" width="${PW}" height="${PH}" style="display:block;width:${PW}px;height:${PH}px;"></canvas>
+    </div>
+    <div style="display:flex;gap:10px;width:100%;max-width:${PW}px">
+      <button onclick="descargarEtiquetaFrontal()" style="flex:1;padding:10px;border-radius:8px;background:#D4A017;color:#111;border:none;font-size:13px;font-weight:700;cursor:pointer;">⬇ Descargar PNG</button>
+      <button onclick="document.getElementById('etiqueta-overlay-frontal').remove()" style="flex:1;padding:10px;border-radius:8px;background:#2a2a2a;color:#eee;border:1px solid #444;font-size:13px;cursor:pointer;">✕ Cerrar</button>
+    </div>
+    <div style="color:#888;font-size:11px;text-align:center">Etiqueta frontal 30×50mm para NIIMBOT</div>
+  `;
+
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e=>{ if(e.target===overlay) overlay.remove(); });
+
+  setTimeout(()=>{
+    const canvas = document.getElementById('etiqueta-frontal-canvas');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W=PW, H=PH;
+    const cx = W/2; // centro horizontal
+
+    // ── FONDO ────────────────────────────────────────────────────────
+    // Fondo ligeramente gris como en el ejemplo (#F4F4F4 aprox)
+    ctx.fillStyle = '#F2F2F2';
+    ctx.fillRect(0,0,W,H);
+
+    // Tarjeta blanca con bordes redondeados (inset)
+    const margin = 18;
+    const rr = 22; // radio esquinas
+    roundRect(ctx, margin, margin, W-margin*2, H-margin*2, rr);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fill();
+
+    // ── INSTINTO ─────────────────────────────────────────────────────
+    // Letras grandes muy espaciadas
+    ctx.fillStyle = '#111111';
+    ctx.font = 'bold 46px Cinzel, "Times New Roman", Georgia, serif';
+    ctx.textAlign = 'center';
+    ctx.letterSpacing = '8px';
+    ctx.fillText('INSTINTO', cx, 116);
+
+    // ── SUBTÍTULO (ELIXIR) ───────────────────────────────────────────
+    ctx.font = '13px Cinzel, "Times New Roman", Georgia, serif';
+    ctx.fillStyle = '#222222';
+    ctx.letterSpacing = '4px';
+    ctx.fillText(subtitulo, cx, 148);
+
+    // ── SEPARADOR FINO ───────────────────────────────────────────────
+    // (igual que el ejemplo: solo espacio, sin línea visible)
+
+    // ── INSPIRADO EN ─────────────────────────────────────────────────
+    ctx.font = '10px Cinzel, "Times New Roman", Georgia, serif';
+    ctx.fillStyle = '#555555';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('INSPIRADO EN:', cx, 310);
+
+    // ── NOMBRE PERFUME + DISEÑADOR ───────────────────────────────────
+    // Combinar en una sola cadena si hay diseñador
+    const nombreCompleto = disenador ? `${fragancia} \u2014 ${disenador}` : fragancia;
+
+    ctx.fillStyle = '#111111';
+    ctx.letterSpacing = '1px';
+
+    // Auto-size y wrap
+    let fsize = 22;
+    ctx.font = `bold ${fsize}px Cinzel, "Times New Roman", serif`;
+    let flines = wrapTextCanvas(ctx, nombreCompleto, W - margin*2 - 30);
+    if(flines.length >= 2){ fsize=19; ctx.font=`bold ${fsize}px Cinzel,"Times New Roman",serif`; flines=wrapTextCanvas(ctx,nombreCompleto,W-margin*2-30); }
+    if(flines.length >= 3){ fsize=16; ctx.font=`bold ${fsize}px Cinzel,"Times New Roman",serif`; flines=wrapTextCanvas(ctx,nombreCompleto,W-margin*2-30); }
+
+    const lineH = fsize + 10;
+    const totalH = flines.length * lineH;
+    let nameY = 340;
+    flines.forEach((ln, i)=>{ ctx.fillText(ln, cx, nameY + i*lineH); });
+
+    // ── 60 ML ────────────────────────────────────────────────────────
+    ctx.font = '13px Cinzel, "Times New Roman", Georgia, serif';
+    ctx.fillStyle = '#333333';
+    ctx.letterSpacing = '3px';
+    ctx.fillText('60 ML', cx, H - margin - 38);
+
+  }, 60);
+}
+
+// Dibuja un rectángulo redondeado (path)
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.lineTo(x+w-r, y);
+  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+  ctx.lineTo(x+w, y+h-r);
+  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+  ctx.lineTo(x+r, y+h);
+  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
+  ctx.lineTo(x, y+r);
+  ctx.quadraticCurveTo(x, y, x+r, y);
+  ctx.closePath();
+}
+
+function descargarEtiquetaFrontal(){
+  const canvas = document.getElementById('etiqueta-frontal-canvas');
+  if(!canvas){ toast('No hay etiqueta frontal'); return; }
+  setTimeout(()=>{
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'etiqueta_frontal_instinto.png';
+    a.click();
+  }, 200);
 }
 
 </script>
