@@ -2327,8 +2327,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.2 Etiquetas Ultra Nítidas</div>
-<script>window.INSTINTO_APP_VERSION = 'v2.2 Etiquetas Ultra Nítidas'; console.log('Instinto Fragancias - v2.2 Etiquetas Ultra Nítidas');</script>
+  <div class="app-version-badge">v2.2.1 Etiquetas Ultra Nítidas FIX</div>
 </body></html>`;
 }
 
@@ -2757,7 +2756,7 @@ window.addEventListener('load', async () => {
    Objetivo: que al imprimir en NIIMBOT no se pierdan textos pequeños.
    ═══════════════════════════════════════════════ */
 
-const INSTINTO_LABEL_VERSION = 'v2.2 Etiquetas Ultra Nítidas';
+const INSTINTO_LABEL_VERSION = 'v2.2.1 Etiquetas Ultra Nítidas FIX';
 
 /* ─── UTILIDADES COMPARTIDAS ─────────────────── */
 function setupLabelCanvas(canvas){
@@ -3118,11 +3117,13 @@ function descargarEtiqueta(){
   setTimeout(()=>{
     const a=document.createElement('a');
     a.href=cv.toDataURL('image/png');
-    a.download='instinto_etiqueta_reverso_v22.png';
+    a.download='instinto_etiqueta_reverso_v221_fix.png';
     a.click();
   },700);
 }
 
 </script>
+<div class="app-version-badge">v2.2.1 Etiquetas Ultra Nítidas FIX</div>
+<script>window.INSTINTO_APP_VERSION = "v2.2.1 Etiquetas Ultra Nítidas FIX"; console.log("Instinto Fragancias - v2.2.1 Etiquetas Ultra Nítidas FIX");</script>
 </body>
 </html>
