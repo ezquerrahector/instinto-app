@@ -1,4 +1,4 @@
-const CACHE = 'instinto-v3';
+const CACHE = 'instinto-v4-etiquetas-niimbot';
 const ASSETS = ['/', '/index.html', '/manifest.json'];
 
 self.addEventListener('install', e => {

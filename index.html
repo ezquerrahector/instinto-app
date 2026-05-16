@@ -2727,7 +2727,9 @@ function roundRectPath(ctx, x, y, w, h, r){
 }
 
 function wrapTextCanvas(ctx, text, maxW){
-  const words = text.split(' ');
+  const clean = String(text || '').replace(/\s+/g,' ').trim();
+  if(!clean) return [''];
+  const words = clean.split(' ');
   const lines = []; let cur = '';
   for(const w of words){
     const t = cur ? cur+' '+w : w;
@@ -2735,19 +2737,60 @@ function wrapTextCanvas(ctx, text, maxW){
     else cur = t;
   }
   if(cur) lines.push(cur);
-  return lines.length ? lines : [text];
+  return lines.length ? lines : [clean];
+}
+
+function drawSpaced(ctx, text, cx, y, spacing){
+  const savedAlign = ctx.textAlign;
+  ctx.textAlign = 'left';
+  text = String(text || '');
+  let totalW = 0;
+  for(let i=0;i<text.length;i++){
+    totalW += ctx.measureText(text[i]).width + (i<text.length-1?spacing:0);
+  }
+  let x = cx - totalW/2;
+  for(let i=0;i<text.length;i++){
+    ctx.fillText(text[i], x, y);
+    x += ctx.measureText(text[i]).width + spacing;
+  }
+  ctx.textAlign = savedAlign;
+}
+
+function drawFitSpaced(ctx, text, cx, y, maxW, startSize, minSize, weight='400', family='Cinzel,"Times New Roman",serif', spacingRatio=.16){
+  let size = startSize;
+  let spacing = size * spacingRatio;
+  while(size > minSize){
+    ctx.font = `${weight} ${size}px ${family}`;
+    spacing = size * spacingRatio;
+    let totalW = 0;
+    for(const ch of text) totalW += ctx.measureText(ch).width + spacing;
+    if(totalW <= maxW) break;
+    size -= 1;
+  }
+  ctx.font = `${weight} ${size}px ${family}`;
+  drawSpaced(ctx, text, cx, y, spacing);
+  return size;
+}
+
+function drawCenteredLines(ctx, lines, cx, firstBaseline, lineHeight){
+  ctx.textAlign = 'center';
+  lines.forEach((ln,i)=>ctx.fillText(ln, cx, firstBaseline + i*lineHeight));
+}
+
+function labelNombre(p){
+  const fragancia = (p.fragancia || '').toUpperCase().trim();
+  const disenador = (p.disenador || '').toUpperCase().trim();
+  return disenador ? `${fragancia} — ${disenador}` : fragancia;
 }
 
 function abrirModalEtiqueta(id, tipo){
   const p = peds.find(x=>x.id===id); if(!p) return;
   const ovId   = 'etq-overlay-'+tipo;
   const cvId   = 'etq-canvas-'+tipo;
-  const titulo = tipo==='frontal' ? '🏷 Etiqueta Frontal' : '🏷 Etiqueta Detrás';
+  const titulo = tipo==='frontal' ? '🏷 Etiqueta Frontal' : '🏷 Etiqueta Reverso';
   const descFn = tipo==='frontal' ? 'descargarEtiquetaFrontal()' : 'descargarEtiqueta()';
-  // 30×50mm portrait a 300dpi
-  const PW=354, PH=590;
+  const PW=354, PH=590; // 30×50mm aprox. a 300dpi
 
-  // Quitar overlay previo si existe
   const prev = document.getElementById(ovId);
   if(prev) prev.remove();
 
@@ -2757,13 +2800,13 @@ function abrirModalEtiqueta(id, tipo){
   ov.innerHTML = `
     <div style="color:#F0C040;font-size:13px;font-weight:600">${titulo} — ${p.fragancia||''}</div>
     <canvas id="${cvId}" width="${PW}" height="${PH}"
-      style="display:block;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.7);flex-shrink:0;
-             width:min(${PW}px,88vw);height:auto;"></canvas>
+      style="display:block;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,0.7);flex-shrink:0;
+             width:min(${PW}px,88vw);height:auto;background:#fff;"></canvas>
     <div style="display:flex;gap:10px;width:100%;max-width:${PW}px">
       <button onclick="${descFn}" style="flex:1;padding:10px;border-radius:8px;background:#D4A017;color:#111;border:none;font-size:13px;font-weight:700;cursor:pointer;">⬇ Descargar PNG</button>
       <button onclick="document.getElementById('${ovId}').remove()" style="flex:1;padding:10px;border-radius:8px;background:#2a2a2a;color:#eee;border:1px solid #444;font-size:13px;cursor:pointer;">✕ Cerrar</button>
     </div>
-    <div style="color:#888;font-size:11px">30×50mm para NIIMBOT</div>
+    <div style="color:#888;font-size:11px">Formato 30×50mm vertical para NIIMBOT</div>
   `;
   document.body.appendChild(ov);
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
@@ -2776,165 +2819,129 @@ function abrirModalEtiqueta(id, tipo){
   }, 60);
 }
 
-/* ─── ETIQUETA FRONTAL ───────────────────────── */
+/* ─── ETIQUETA FRONTAL / FRENTE ─────────────────────────
+   Diseño alineado al layout hecho en NIIMBOT:
+   - limpio, sin líneas divisorias
+   - marca arriba con mucho aire
+   - inspiración centrada
+   - 60 ML abajo
+*/
 function generarEtiquetaFrontal(id){ abrirModalEtiqueta(id,'frontal'); }
 
 function dibujarFrontal(canvas, p){
-  const SCALE=2;
+  const SCALE=3;
   const ctx=canvas.getContext('2d');
   canvas.width=354*SCALE; canvas.height=590*SCALE;
   canvas.style.width='354px'; canvas.style.height='590px';
-  ctx.scale(SCALE,SCALE);
+  ctx.setTransform(SCALE,0,0,SCALE,0,0);
 
   const W=354, H=590, cx=W/2;
-  const fragancia=(p.fragancia||'').toUpperCase();
-  const disenador=(p.disenador||'').toUpperCase();
+  const nombreCompleto = labelNombre(p);
   const linea=p.linea||lineaDesdeId(p.codigo||'')||'Caballero';
   const sub=linea==='Nicho'?'NICHO':'ELIXIR';
 
-  // Fondo blanco puro — sin borde
   ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#111111';
+  ctx.textBaseline='alphabetic';
 
-  const usableW=W-40;
+  const marginX = 26;
+  const usableW = W - marginX*2;
 
-  // ── INSTINTO — weight normal (400), muy espaciado, igual al diseño original
-  let iSz=54;
-  ctx.font=`400 ${iSz}px Cinzel,"Times New Roman",serif`;
-  while(iSz>20){
-    let tw=0, sp=iSz*0.14;
-    for(const ch of 'INSTINTO') tw+=ctx.measureText(ch).width+sp;
-    if(tw<=usableW) break;
-    iSz--; ctx.font=`400 ${iSz}px Cinzel,"Times New Roman",serif`;
+  // Marca
+  drawFitSpaced(ctx,'INSTINTO',cx,88,usableW,41,28,'400','Cinzel,"Times New Roman",serif',.20);
+
+  // Submarca
+  ctx.fillStyle='#111111';
+  ctx.font='400 15px Cinzel,"Times New Roman",serif';
+  drawSpaced(ctx,sub,cx,122,1.6);
+
+  // Bloque central
+  ctx.font='400 14px Cinzel,"Times New Roman",serif';
+  drawSpaced(ctx,'INSPIRADO EN:',cx,296,3.2);
+
+  let fSz=21;
+  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  let lines=wrapTextCanvas(ctx,nombreCompleto,usableW-8);
+  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW-8)) && fSz>14){
+    fSz-=1; ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+    lines=wrapTextCanvas(ctx,nombreCompleto,usableW-8);
   }
-  ctx.fillStyle='#000000';
-  const instY=32+iSz;
-  drawSpaced(ctx,'INSTINTO',cx,instY,iSz*0.14);
+  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  const lineH=fSz+8;
+  const firstY = 335 - ((lines.length-1)*lineH/2);
+  drawCenteredLines(ctx,lines,cx,firstY,lineH);
 
-  // ── ELIXIR — weight normal, espaciado
-  ctx.font=`400 16px Cinzel,"Times New Roman",serif`;
-  ctx.fillStyle='#000000';
-  drawSpaced(ctx,sub,cx,instY+26,4);
-
-  // ── Línea sólida separadora (2px)
-  ctx.fillStyle='#000000';
-  ctx.fillRect(20,instY+42,W-40,2);
-
-  // ── Bloque central: INSPIRADO EN + nombre, centrado verticalmente
-  const nombreCompleto=disenador?`${fragancia} — ${disenador}`:fragancia;
-  let fSz=22;
-  ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;
-  let flines=wrapTextCanvas(ctx,nombreCompleto,usableW);
-  if(flines.length>=2){fSz=19;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-  if(flines.length>=3){fSz=16;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-
-  const lhF=fSz+10;
-  const inspLabelH=18;
-  const blockH=inspLabelH+12+flines.length*lhF;
-  const zoneTop=instY+58;
-  const zoneBot=H-62;
-  const blockY=zoneTop+(zoneBot-zoneTop-blockH)/2;
-
-  // INSPIRADO EN: — weight normal pero suficientemente grande
-  ctx.fillStyle='#000000';
-  ctx.font=`400 14px Cinzel,"Times New Roman",serif`;
-  drawSpaced(ctx,'INSPIRADO EN:',cx,blockY+inspLabelH,2.5);
-
-  // Nombre — bold para que destaque y se vea en térmica
-  ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;
-  ctx.textAlign='center';
-  flines.forEach((ln,i)=>ctx.fillText(ln,cx,blockY+inspLabelH+12+fSz+i*lhF));
-
-  // ── Línea sólida antes del 60ML
-  ctx.fillStyle='#000000';
-  ctx.fillRect(20,H-52,W-40,2);
-
-  // ── 60 ML — peso normal, bien visible
-  ctx.font=`400 16px Cinzel,"Times New Roman",serif`;
-  drawSpaced(ctx,'60 ML',cx,H-24,3);
-}
-// Dibuja texto con letter-spacing manual
-function drawSpaced(ctx, text, cx, y, spacing){
-  const saved = ctx.textAlign;
-  ctx.textAlign = 'left';
-  // Medir ancho total con spacing
-  let totalW = 0;
-  for(let i=0;i<text.length;i++){
-    totalW += ctx.measureText(text[i]).width + (i<text.length-1?spacing:0);
-  }
-  let x = cx - totalW/2;
-  for(let i=0;i<text.length;i++){
-    ctx.fillText(text[i], x, y);
-    x += ctx.measureText(text[i]).width + spacing;
-  }
-  ctx.textAlign = saved;
+  // Capacidad
+  ctx.font='400 17px Cinzel,"Times New Roman",serif';
+  drawSpaced(ctx,'60 ML',cx,535,1.8);
 }
 
+/* ─── DESCARGA FRONTAL ───────────────────────── */
 function descargarEtiquetaFrontal(){
   const cv = document.getElementById('etq-canvas-frontal');
   if(!cv){ toast('Sin etiqueta'); return; }
   setTimeout(()=>{
     const a=document.createElement('a');
     a.href=cv.toDataURL('image/png');
-    a.download='instinto_frontal.png';
+    a.download='instinto_etiqueta_frente.png';
     a.click();
   },200);
 }
 
-/* ─── ETIQUETA DETRÁS ────────────────────────── */
+/* ─── ETIQUETA REVERSO / DETRÁS ─────────────────────────
+   Diseño alineado al layout hecho en NIIMBOT:
+   - marca arriba
+   - QR visible
+   - inspiración + nombre
+   - fecha de producción
+   - código de barras y teléfono
+   - sin líneas divisorias para verse más premium
+*/
 function generarEtiqueta(id){ abrirModalEtiqueta(id,'detras'); }
 
 function dibujarDetras(canvas, p){
-  const SCALE=2;
+  const SCALE=3;
   const ctx=canvas.getContext('2d');
   canvas.width=354*SCALE; canvas.height=590*SCALE;
   canvas.style.width='354px'; canvas.style.height='590px';
-  ctx.scale(SCALE,SCALE);
+  ctx.setTransform(SCALE,0,0,SCALE,0,0);
 
   const W=354, H=590, cx=W/2;
-  const fragancia=(p.fragancia||'').toUpperCase();
-  const disenador=(p.disenador||'').toUpperCase();
-  const codigo=(p.codigo&&p.codigo!=='OTRO')?p.codigo:(p.fragancia||'INST').substring(0,8).toUpperCase().replace(/\s/g,'');
+  const nombreCompleto = labelNombre(p);
+  const codigo=(p.codigo&&p.codigo!=='OTRO')?p.codigo:(p.fragancia||'INST').substring(0,12).toUpperCase().replace(/\s/g,'');
   const urlQR='https://instintofragancias.com';
   const tel='81 20 28 21 20';
   const ahora=new Date();
-  const fecha=ahora.toLocaleDateString('es-MX',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const hora=ahora.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  const yyyy=ahora.getFullYear();
+  const mm=String(ahora.getMonth()+1).padStart(2,'0');
+  const dd=String(ahora.getDate()).padStart(2,'0');
+  const hh=String(ahora.getHours()).padStart(2,'0');
+  const mi=String(ahora.getMinutes()).padStart(2,'0');
+  const producido=`Producido: ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
 
-  // Fondo blanco — sin borde
   ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#111111';
+  ctx.textBaseline='alphabetic';
 
-  const inner=20;
-  const usableW=W-inner*2;
+  const marginX=22;
+  const usableW=W-marginX*2;
 
-  // ── INSTINTO — weight normal igual que frontal
-  let iSz=44;
-  ctx.font=`400 ${iSz}px Cinzel,"Times New Roman",serif`;
-  while(iSz>16){
-    let tw=0,sp=iSz*0.14;
-    for(const ch of 'INSTINTO') tw+=ctx.measureText(ch).width+sp;
-    if(tw<=usableW) break;
-    iSz--; ctx.font=`400 ${iSz}px Cinzel,"Times New Roman",serif`;
-  }
-  ctx.fillStyle='#000000';
-  const instY=24+iSz;
-  drawSpaced(ctx,'INSTINTO',cx,instY,iSz*0.14);
+  // Marca
+  drawFitSpaced(ctx,'INSTINTO',cx,72,usableW,42,27,'400','Cinzel,"Times New Roman",serif',.18);
 
-  // Línea 2px bajo INSTINTO
-  ctx.fillStyle='#000000';
-  ctx.fillRect(inner,instY+12,usableW,2);
-
-  // ── QR — tamaño moderado, bien centrado
-  const qrSize=120;
+  // QR
+  const qrSize=132;
   const qrX=cx-qrSize/2;
-  const qrY=instY+22;
+  const qrY=101;
 
   const qrDiv=document.createElement('div');
-  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:240px;height:240px;';
+  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:264px;height:264px;background:#fff;';
   document.body.appendChild(qrDiv);
   let qrDone=false;
   try{
-    new QRCode(qrDiv,{text:urlQR,width:240,height:240,colorDark:'#000000',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+    new QRCode(qrDiv,{text:urlQR,width:264,height:264,colorDark:'#000000',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
   }catch(e){}
+
   function tryDrawQR(n){
     if(qrDone) return;
     const q=qrDiv.querySelector('canvas')||qrDiv.querySelector('img');
@@ -2945,83 +2952,69 @@ function dibujarDetras(canvas, p){
         q.onload=()=>{if(!qrDone){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();}};
       }catch(e){}
     }
-    if(n<25) setTimeout(()=>tryDrawQR(n+1),90);
+    if(n<25) setTimeout(()=>tryDrawQR(n+1),70);
     else qrDiv.remove();
   }
-  setTimeout(()=>tryDrawQR(0),80);
+  setTimeout(()=>tryDrawQR(0),60);
 
-  // Línea 2px tras QR
-  const sep1=qrY+qrSize+12;
-  ctx.fillStyle='#000000'; ctx.fillRect(inner,sep1,usableW,2);
+  // Inspiración
+  ctx.font='400 14px Cinzel,"Times New Roman",serif';
+  drawSpaced(ctx,'INSPIRACIÓN:',cx,277,1.2);
 
-  // ── INSPIRACIÓN — centrado, weight normal grande
-  ctx.fillStyle='#000000';
-  ctx.font=`400 13px Cinzel,"Times New Roman",serif`;
+  // Nombre
+  let fSz=22;
+  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  let lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
+  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW)) && fSz>14){
+    fSz-=1; ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+    lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
+  }
+  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  const lineH=fSz+8;
+  const firstY=321 - ((lines.length-1)*lineH/2);
+  drawCenteredLines(ctx,lines,cx,firstY,lineH);
+
+  // Fecha producción
+  ctx.font='400 14px Arial, sans-serif';
   ctx.textAlign='center';
-  drawSpaced(ctx,'INSPIRACION:',cx,sep1+20,2.5);
+  ctx.fillText(producido,cx,386);
 
-  // ── Nombre perfume — bold para impresión
-  const nombreCompleto=disenador?`${fragancia} — ${disenador}`:fragancia;
-  let fSz=17;
-  ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;
-  let flines=wrapTextCanvas(ctx,nombreCompleto,usableW);
-  if(flines.length>=2){fSz=15;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-  if(flines.length>=3){fSz=13;ctx.font=`bold ${fSz}px Cinzel,"Times New Roman",serif`;flines=wrapTextCanvas(ctx,nombreCompleto,usableW);}
-  ctx.textAlign='center';
-  const lhD=fSz+8;
-  const nameY=sep1+36;
-  flines.forEach((ln,i)=>ctx.fillText(ln,cx,nameY+i*lhD));
-  const afterName=nameY+flines.length*lhD;
-
-  // Línea 2px
-  const sep2=afterName+10;
-  ctx.fillStyle='#000000'; ctx.fillRect(inner,sep2,usableW,2);
-
-  // Fecha — bold 12px mínimo para térmica
-  ctx.font='bold 12px Arial,sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText(fecha+'   '+hora,cx,sep2+18);
-
-  // ── Código de barras — altura MODERADA: 25% de la etiqueta
-  const telReserve=32;
-  const bcMaxH=Math.round(H*0.22);   // máx 22% del alto total
-  const bcY=sep2+30;
-  const bcH=Math.min(bcMaxH, H-8-telReserve-bcY);
-  const bcW=Math.round(usableW*0.90);
+  // Código de barras
+  const bcW=Math.round(usableW*.98);
+  const bcH=96;
   const bcX=(W-bcW)/2;
+  const bcY=405;
 
   const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
   svgEl.setAttribute('width',bcW); svgEl.setAttribute('height',bcH);
   document.body.appendChild(svgEl);
   try{
-    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.2,height:bcH-2,displayValue:false,margin:0,lineColor:'#000000'});
+    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.1,height:bcH,displayValue:false,margin:0,lineColor:'#000000',background:'#FFFFFF'});
     const sd=new XMLSerializer().serializeToString(svgEl);
     const blob=new Blob([sd],{type:'image/svg+xml;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const img=new Image();
     img.onload=()=>{
-      ctx.drawImage(img,bcX,bcY,bcW,bcH-2);
+      ctx.drawImage(img,bcX,bcY,bcW,bcH);
       URL.revokeObjectURL(url); svgEl.remove();
-      // Línea 2px antes de PEDIDOS
-      const telLineY=H-8-telReserve+4;
-      ctx.fillStyle='#000000'; ctx.fillRect(inner,telLineY,usableW,2);
-      // PEDIDOS
-      ctx.font='bold 13px Arial,sans-serif';
-      ctx.textAlign='center';
-      drawSpaced(ctx,'PEDIDOS  '+tel,cx,H-10,1.5);
+
+      ctx.fillStyle='#111111';
+      ctx.font='700 14px Cinzel,"Times New Roman",serif';
+      drawSpaced(ctx,'PEDIDOS  '+tel,cx,535,1.0);
     };
     img.src=url;
   }catch(e){svgEl.remove();}
 }
 
+/* ─── DESCARGA REVERSO ───────────────────────── */
 function descargarEtiqueta(){
   const cv=document.getElementById('etq-canvas-detras');
   if(!cv){toast('Sin etiqueta');return;}
   setTimeout(()=>{
     const a=document.createElement('a');
     a.href=cv.toDataURL('image/png');
-    a.download='instinto_detras.png';
+    a.download='instinto_etiqueta_reverso.png';
     a.click();
   },500);
 }
