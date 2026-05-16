@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.4</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.5</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.4</div>
+  <div class="app-version-badge">v2.5</div>
 </body></html>`;
 }
 
@@ -2667,7 +2667,7 @@ async function fbSave(skipMerge=false){
         }
         // Siempre continúa y guarda — limpia entradas basura y sube versión fusionada
       }
-    } catch(checkErr){ console.warn('fbSave check error (non-fatal):', checkErr.message || checkErr); }
+    } catch(checkErr){ if(checkErr !== 'skip') console.warn('fbSave check error (non-fatal):', checkErr.message || checkErr); }
 
     await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
