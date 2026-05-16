@@ -2757,6 +2757,30 @@ const _localSave = save;
 const saveAndSync = () => { _localSave(); fbSave(); };
 
 // Botón de sync manual en Config
+// Diagnóstico temporal: mostrar pedidos de Firebase vs local
+async function diagnosticoFirebase(){
+  try {
+    await loadFirebase();
+    const snap = await db.collection('instinto').doc('datos').get();
+    if(!snap.exists){ toast('Firebase vacío'); return; }
+    const cloudPeds = snap.data().peds || [];
+    const localIds = new Set(peds.map(p => Number(p.id)));
+    const cloudValidos = cloudPeds.filter(p => p && p.id != null && !isNaN(Number(p.id)));
+    const cloudBasura  = cloudPeds.filter(p => !p || p.id == null || isNaN(Number(p.id)));
+    const faltantes    = cloudValidos.filter(p => !localIds.has(Number(p.id)));
+    console.table({ 
+      'Total Firebase': cloudPeds.length, 
+      'Válidos': cloudValidos.length, 
+      'Basura (sin ID)': cloudBasura.length, 
+      'Faltantes en local': faltantes.length 
+    });
+    if(cloudBasura.length > 0) console.warn('Entradas basura:', JSON.stringify(cloudBasura));
+    if(faltantes.length > 0) console.warn('Pedidos faltantes en local:', faltantes.map(p => ({id:p.id, cliente:p.cliente, fragancia:p.fragancia})));
+    alert(`Firebase: ${cloudPeds.length} total | ${cloudValidos.length} válidos | ${cloudBasura.length} basura | ${faltantes.length} faltantes en local.
+Ver consola para detalles.`);
+  } catch(e){ console.error(e); toast('Error: ' + e.message); }
+}
+
 function addSyncButtons(){
   const el = document.getElementById('s-export');
   if(!el || document.getElementById('sync-btn')) return;
@@ -2766,6 +2790,7 @@ function addSyncButtons(){
     <p style="font-size:12px;color:var(--text2);margin-bottom:10px">Los datos se sincronizan automáticamente. Usa estos botones si cambias de dispositivo.</p>
     <div class="btns">
       <button id="sync-btn" class="btn btn-gold" onclick="fbLoad()">☁ Descargar desde la nube</button>
+      <button class="btn" onclick="diagnosticoFirebase()" style="font-size:11px">🔍 Diagnóstico Firebase</button>
       <button class="btn btn-blue" onclick="fbSave()">↑ Subir a la nube ahora</button>
     </div>`;
   el.prepend(wrap);
