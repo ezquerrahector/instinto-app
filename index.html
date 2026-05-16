@@ -2664,8 +2664,10 @@ async function fbSave(){
         const cloudPeds = snap.data().peds || [];
         if(peds.length < cloudPeds.length){
           console.warn(`fbSave bloqueado: local(${peds.length}) < nube(${cloudPeds.length}). Posible pérdida de datos.`);
-          setSyncStatus('err');
-          toast('⚠ Guardado bloqueado: hay más pedidos en la nube. Recarga la página y verifica.');
+          // No mostrar "Sin conexión" — sí hay conexión, solo hay un conflicto de datos
+          // Forzar fbLoad para traer los pedidos que faltan localmente
+          toast('⚠ Hay pedidos nuevos en la nube. Descargando...');
+          await fbLoad();
           return;
         }
       }
