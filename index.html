@@ -493,7 +493,7 @@ function quitarFilaProveedor(cod){
   const pedParaStock=peds.find(p=>p.codigo===cod&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'));
   if(pedParaStock){
     peds=peds.filter(p=>p.id!==pedParaStock.id);
-    save(); fbSave();
+    save(); fbSave(true);
   }
   // Quitar fila del DOM
   const row=document.getElementById(`prov-row-${cod}`);
@@ -1127,7 +1127,7 @@ function crearPedidoResurtido(id){
 
 function eliminarPed(id){
   if(!confirm('¿Eliminar este pedido?'))return;
-  peds=peds.filter(x=>x.id!==id);save();fbSave();renderAll();toast('Pedido eliminado');
+  peds=peds.filter(x=>x.id!==id);save();fbSave(true);renderAll();toast('Pedido eliminado');
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────
@@ -2635,7 +2635,7 @@ function setSyncStatus(status){
   }
 }
 
-async function fbSave(){
+async function fbSave(skipMerge=false){
   if(_fbSaving){ console.warn('fbSave: ya en progreso, ignorando llamada duplicada'); return; }
   _fbSaving = true;
   try {
@@ -2644,9 +2644,9 @@ async function fbSave(){
     const ref = db.collection('instinto').doc('datos');
 
     // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
-    // Antes de sobreescribir Firebase, verificar que no estamos subiendo
+    // skipMerge=true cuando la operación es una eliminación intencional
     // Protección anti-borrado: fusionar IDs que estén en nube pero no en local
-    try {
+    try { if(skipMerge) throw 'skip';
       const snap = await ref.get();
       if(snap.exists){
         const cloudPeds = snap.data().peds || [];
