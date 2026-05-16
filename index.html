@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.9</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.0</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.9</div>
+  <div class="app-version-badge">v3.0</div>
 </body></html>`;
 }
 
@@ -2947,9 +2947,8 @@ function dibujarFrontal(canvas, p){
   const usableW = W - 16;
 
   // ── DISTRIBUCIÓN ARMÓNICA (H=590) ──
-  // Logo baseline ~115, ELIXIR ~158, zona central ~340-400, línea ~490, 60ML ~538
-
-  drawBrand(ctx,cx,115,usableW,52);
+  // cx-3 compensa el desplazamiento óptico del tracking en INSTINTO
+  drawBrand(ctx,cx-3,115,usableW,52);
 
   drawTextSharp(ctx, sub, cx, 158, {
     font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
@@ -3030,11 +3029,11 @@ function dibujarDetras(canvas, p){
   const usableW=W-16;
 
   // ── DISTRIBUCIÓN ARMÓNICA REVERSO (H=590) ──
-  drawBrand(ctx,cx,68,usableW,48);
+  drawBrand(ctx,cx,108,usableW,48);
 
   const qrSize=130;
   const qrX=cx-qrSize/2;
-  const qrY=90;
+  const qrY=130;
 
   const qrDiv=document.createElement('div');
   qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:396px;height:396px;background:#fff;';
@@ -3064,7 +3063,7 @@ function dibujarDetras(canvas, p){
   setTimeout(()=>tryDrawQR(0),60);
 
   // Inspiración + nombre con mayor fuerza óptica
-  drawTextSharp(ctx,'INSPIRACIÓN:',cx,240,{
+  drawTextSharp(ctx,'INSPIRACIÓN:',cx,280,{
     font:'400 13px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.0,
     stroke:.30,
@@ -3079,14 +3078,14 @@ function dibujarDetras(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
   }
   const lineH=fSz+7;
-  const firstY=268 - ((lines.length-1)*lineH/2);
+  const firstY=308 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.30,
     color:'#000'
   });
 
-  drawTextSharp(ctx,producido,cx,322,{
+  drawTextSharp(ctx,producido,cx,362,{
     font:'500 13px Arial, sans-serif',
     stroke:.16,
     color:'#000'
@@ -3095,7 +3094,7 @@ function dibujarDetras(canvas, p){
   const bcW=Math.round(usableW*.98);
   const bcH=88;
   const bcX=(W-bcW)/2;
-  const bcY=344;
+  const bcY=384;
 
   const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
@@ -3113,13 +3112,13 @@ function dibujarDetras(canvas, p){
       URL.revokeObjectURL(url); svgEl.remove();
 
       // Teléfono MUY legible: ya no va tan abajo ni tan pequeño.
-      drawTextSharp(ctx,'PEDIDOS',cx,458,{
+      drawTextSharp(ctx,'PEDIDOS',cx,498,{
         font:'700 13px Arial, sans-serif',
         tracking:1.1,
         stroke:.16,
         color:'#000'
       });
-      drawTextSharp(ctx,tel,cx,492,{
+      drawTextSharp(ctx,tel,cx,532,{
         font:'800 22px Arial, sans-serif',
         tracking:1.0,
         stroke:.22,
@@ -3129,8 +3128,8 @@ function dibujarDetras(canvas, p){
     img.src=url;
   }catch(e){
     svgEl.remove();
-    drawTextSharp(ctx,'PEDIDOS',cx,458,{font:'700 13px Arial, sans-serif',tracking:1.1,stroke:.16,color:'#000'});
-    drawTextSharp(ctx,tel,cx,492,{font:'800 22px Arial, sans-serif',tracking:1.0,stroke:.22,color:'#000'});
+    drawTextSharp(ctx,'PEDIDOS',cx,498,{font:'700 13px Arial, sans-serif',tracking:1.1,stroke:.16,color:'#000'});
+    drawTextSharp(ctx,tel,cx,532,{font:'800 22px Arial, sans-serif',tracking:1.0,stroke:.22,color:'#000'});
   }
 }
 
