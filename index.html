@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.6</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.7</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.6</div>
+  <div class="app-version-badge">v2.7</div>
 </body></html>`;
 }
 
@@ -2684,56 +2684,20 @@ async function fbLoad(){
     if(snap.exists){
       const data = snap.data();
 
-      // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
-      // Solo reemplazamos peds desde Firebase si Firebase tiene MÁS o IGUAL
-      // cantidad de pedidos que lo que ya hay en memoria (localStorage).
-      // Esto evita que una carga tardía o un doc vacío borre pedidos nuevos.
-      // Filtrar entradas válidas (con id numérico) antes de cualquier comparación
+      // Firebase es la fuente de verdad — siempre reemplazar local con lo que hay en la nube
       const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
-      const localPeds    = peds;
-
-      // Fusionar por IDs: siempre quedarse con la unión de ambos conjuntos
-      const localIds = new Set(localPeds.map(p => Number(p.id)));
-      const cloudIds = new Set(firebasePeds.map(p => Number(p.id)));
-
-      // IDs que están en Firebase pero no en local
-      const faltantesEnLocal = firebasePeds.filter(p => p && p.id != null && !localIds.has(Number(p.id)));
-      // IDs que están en local pero no en Firebase
-      const faltantesEnNube  = localPeds.filter(p => p && p.id != null && !cloudIds.has(Number(p.id)));
-
-      if(faltantesEnLocal.length > 0 || faltantesEnNube.length > 0){
-        // Hay diferencias → fusionar ambos lados
-        console.warn(`fbLoad: fusionando — ${faltantesEnLocal.length} en nube sin local, ${faltantesEnNube.length} en local sin nube`);
-        const fusionado = [...localPeds, ...faltantesEnLocal].sort((a,b) => Number(b.id) - Number(a.id));
-        if(data.cfg) cfg = data.cfg;
-        if(data.cat) cat = data.cat;
-        peds = fusionado;
-        nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
-        if(data.materiales) materiales = data.materiales;
-        if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
-        save();
-        localStorage.setItem('if_mat', JSON.stringify(materiales));
-        renderAll(); loadCfg(); renderMateriales();
-        setSyncStatus('ok');
-        toast(`✓ Sincronizado (${faltantesEnLocal.length > 0 ? faltantesEnLocal.length + ' recuperado(s) de nube' : faltantesEnNube.length + ' subido(s) a nube'})`);
-        setTimeout(verificarStockAlCargar, 800);
-        // Subir la versión fusionada a Firebase
-        await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
-      } else {
-        // Ambos lados tienen los mismos IDs → usar Firebase (más reciente)
-        if(data.cfg) cfg = data.cfg;
-        if(data.cat) cat = data.cat;
-        peds = firebasePeds;
-        nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
-        if(data.materiales) materiales = data.materiales;
-        if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
-        save();
-        localStorage.setItem('if_mat', JSON.stringify(materiales));
-        renderAll(); loadCfg(); renderMateriales();
-        setSyncStatus('ok');
-        toast('Datos sincronizados desde la nube ✓');
-        setTimeout(verificarStockAlCargar, 800);
-      }
+      if(data.cfg) cfg = data.cfg;
+      if(data.cat) cat = data.cat;
+      peds = firebasePeds;
+      nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
+      if(data.materiales) materiales = data.materiales;
+      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+      save();
+      localStorage.setItem('if_mat', JSON.stringify(materiales));
+      renderAll(); loadCfg(); renderMateriales();
+      setSyncStatus('ok');
+      toast('✓ Sincronizado');
+      setTimeout(verificarStockAlCargar, 800);
     } else {
       // Primera vez — Firebase vacío
       // ⚠ Solo subir si ya tenemos pedidos locales; no borrar con vacío
