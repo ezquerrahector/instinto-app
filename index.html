@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.7</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v2.8</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -2312,7 +2312,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.7</div>
+  <div class="app-version-badge">v2.8</div>
 </body></html>`;
 }
 
@@ -2946,19 +2946,19 @@ function dibujarFrontal(canvas, p){
   const sub=linea==='Nicho'?'NICHO':'ELIXIR';
   const usableW = W - 16;
 
-  // Marca: más grande y con tracking real, no dependiente de espacios manuales.
-  drawBrand(ctx,cx,82,usableW,52);
+  // Marca: bajada -20px para reducir aire superior
+  drawBrand(ctx,cx,62,usableW,52);
 
-  // Submarca más visible, pero pequeña y elegante.
-  drawTextSharp(ctx, sub, cx, 130, {
+  // Submarca
+  drawTextSharp(ctx, sub, cx, 110, {
     font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.1,
     stroke:.28,
     color:'#000'
   });
 
-  // Bloque central: subimos tamaño y grosor óptico para que no se pierda.
-  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 295, {
+  // Bloque central
+  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 268, {
     font:'400 15px Cinzel, Georgia, "Times New Roman", serif',
     tracking:2.2,
     stroke:.34,
@@ -2973,21 +2973,21 @@ function dibujarFrontal(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW-10);
   }
   const lineH=fSz+9;
-  const firstY = 335 - ((lines.length-1)*lineH/2);
+  const firstY = 308 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.34,
     color:'#000'
   });
 
-  // Línea inferior como referencia visual premium y capacidad más legible.
+  // Línea divisora
   ctx.save();
   ctx.strokeStyle='#000';
   ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(62,472); ctx.lineTo(W-62,472); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(62,440); ctx.lineTo(W-62,440); ctx.stroke();
   ctx.restore();
 
-  drawTextSharp(ctx,'60 ML',cx,518,{
+  drawTextSharp(ctx,'60 ML',cx,488,{
     font:'400 20px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.6,
     stroke:.32,
@@ -3030,13 +3030,13 @@ function dibujarDetras(canvas, p){
   const producido=`Producido: ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
   const usableW=W-16;
 
-  // Marca
-  drawBrand(ctx,cx,68,usableW,48);
+  // Marca — bajada para reducir aire superior
+  drawBrand(ctx,cx,50,usableW,48);
 
-  // QR más grande y limpio
+  // QR
   const qrSize=132;
   const qrX=cx-qrSize/2;
-  const qrY=98;
+  const qrY=78;
 
   const qrDiv=document.createElement('div');
   qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:396px;height:396px;background:#fff;';
@@ -3066,7 +3066,7 @@ function dibujarDetras(canvas, p){
   setTimeout(()=>tryDrawQR(0),60);
 
   // Inspiración + nombre con mayor fuerza óptica
-  drawTextSharp(ctx,'INSPIRACIÓN:',cx,244,{
+  drawTextSharp(ctx,'INSPIRACIÓN:',cx,222,{
     font:'400 13px Cinzel, Georgia, "Times New Roman", serif',
     tracking:1.0,
     stroke:.30,
@@ -3081,24 +3081,24 @@ function dibujarDetras(canvas, p){
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
   }
   const lineH=fSz+7;
-  const firstY=273 - ((lines.length-1)*lineH/2);
+  const firstY=250 - ((lines.length-1)*lineH/2);
   drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
     font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
     stroke:.30,
     color:'#000'
   });
 
-  drawTextSharp(ctx,producido,cx,334,{
+  drawTextSharp(ctx,producido,cx,310,{
     font:'500 13px Arial, sans-serif',
     stroke:.16,
     color:'#000'
   });
 
-  // Código de barras ancho y alto suficiente, pero deja espacio real al teléfono.
+  // Código de barras
   const bcW=Math.round(usableW*.98);
   const bcH=92;
   const bcX=(W-bcW)/2;
-  const bcY=360;
+  const bcY=334;
 
   const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
@@ -3116,13 +3116,13 @@ function dibujarDetras(canvas, p){
       URL.revokeObjectURL(url); svgEl.remove();
 
       // Teléfono MUY legible: ya no va tan abajo ni tan pequeño.
-      drawTextSharp(ctx,'PEDIDOS',cx,491,{
+      drawTextSharp(ctx,'PEDIDOS',cx,462,{
         font:'700 13px Arial, sans-serif',
         tracking:1.1,
         stroke:.16,
         color:'#000'
       });
-      drawTextSharp(ctx,tel,cx,523,{
+      drawTextSharp(ctx,tel,cx,494,{
         font:'800 22px Arial, sans-serif',
         tracking:1.0,
         stroke:.22,
@@ -3132,8 +3132,8 @@ function dibujarDetras(canvas, p){
     img.src=url;
   }catch(e){
     svgEl.remove();
-    drawTextSharp(ctx,'PEDIDOS',cx,491,{font:'700 13px Arial, sans-serif',tracking:1.1,stroke:.16,color:'#000'});
-    drawTextSharp(ctx,tel,cx,523,{font:'800 22px Arial, sans-serif',tracking:1.0,stroke:.22,color:'#000'});
+    drawTextSharp(ctx,'PEDIDOS',cx,462,{font:'700 13px Arial, sans-serif',tracking:1.1,stroke:.16,color:'#000'});
+    drawTextSharp(ctx,tel,cx,494,{font:'800 22px Arial, sans-serif',tracking:1.0,stroke:.22,color:'#000'});
   }
 }
 
