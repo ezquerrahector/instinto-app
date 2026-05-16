@@ -2327,8 +2327,8 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v2.1 Etiquetas NIIMBOT</div>
-<script>window.INSTINTO_APP_VERSION = 'v2.1 Etiquetas NIIMBOT'; console.log('Instinto Fragancias - v2.1 Etiquetas NIIMBOT');</script>
+  <div class="app-version-badge">v2.2 Etiquetas Ultra Nítidas</div>
+<script>window.INSTINTO_APP_VERSION = 'v2.2 Etiquetas Ultra Nítidas'; console.log('Instinto Fragancias - v2.2 Etiquetas Ultra Nítidas');</script>
 </body></html>`;
 }
 
@@ -2752,11 +2752,32 @@ window.addEventListener('load', async () => {
 });
 
 /* ═══════════════════════════════════════════════
-   ETIQUETAS INSTINTO — Portrait 30×50mm
-   354 × 590 px @ 300dpi
+   ETIQUETAS INSTINTO — v2.2 ULTRA NÍTIDA
+   Formato vertical 30×50mm | Exportación PNG alta definición
+   Objetivo: que al imprimir en NIIMBOT no se pierdan textos pequeños.
    ═══════════════════════════════════════════════ */
 
+const INSTINTO_LABEL_VERSION = 'v2.2 Etiquetas Ultra Nítidas';
+
 /* ─── UTILIDADES COMPARTIDAS ─────────────────── */
+function setupLabelCanvas(canvas){
+  const SCALE = 4; // más resolución que 300dpi para texto térmico más nítido
+  const W = 354, H = 590;
+  const ctx = canvas.getContext('2d', { alpha:false });
+  canvas.width = W * SCALE;
+  canvas.height = H * SCALE;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(SCALE,0,0,SCALE,0,0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0,0,W,H);
+  ctx.textBaseline = 'alphabetic';
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+  return {ctx,W,H,cx:W/2};
+}
+
 function roundRectPath(ctx, x, y, w, h, r){
   ctx.beginPath();
   ctx.moveTo(x+r,y);
@@ -2781,41 +2802,64 @@ function wrapTextCanvas(ctx, text, maxW){
   return lines.length ? lines : [clean];
 }
 
-function drawSpaced(ctx, text, cx, y, spacing){
-  const savedAlign = ctx.textAlign;
-  ctx.textAlign = 'left';
+function drawTextSharp(ctx, text, x, y, opts={}){
+  const {
+    align='center',
+    font='400 16px Georgia, "Times New Roman", serif',
+    color='#000000',
+    stroke=0.28,
+    tracking=0
+  } = opts;
+  ctx.save();
+  ctx.font = font;
+  ctx.textAlign = align;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = stroke;
+  ctx.globalAlpha = 1;
+
   text = String(text || '');
-  let totalW = 0;
-  for(let i=0;i<text.length;i++){
-    totalW += ctx.measureText(text[i]).width + (i<text.length-1?spacing:0);
-  }
-  let x = cx - totalW/2;
-  for(let i=0;i<text.length;i++){
-    ctx.fillText(text[i], x, y);
-    x += ctx.measureText(text[i]).width + spacing;
-  }
-  ctx.textAlign = savedAlign;
-}
-
-function drawFitSpaced(ctx, text, cx, y, maxW, startSize, minSize, weight='400', family='Cinzel,"Times New Roman",serif', spacingRatio=.16){
-  let size = startSize;
-  let spacing = size * spacingRatio;
-  while(size > minSize){
-    ctx.font = `${weight} ${size}px ${family}`;
-    spacing = size * spacingRatio;
+  if(tracking && align === 'center'){
     let totalW = 0;
-    for(const ch of text) totalW += ctx.measureText(ch).width + spacing;
-    if(totalW <= maxW) break;
-    size -= 1;
+    for(let i=0;i<text.length;i++) totalW += ctx.measureText(text[i]).width + (i<text.length-1?tracking:0);
+    let xx = x - totalW/2;
+    ctx.textAlign = 'left';
+    for(let i=0;i<text.length;i++){
+      const ch = text[i];
+      if(stroke>0) ctx.strokeText(ch, xx, y);
+      ctx.fillText(ch, xx, y);
+      xx += ctx.measureText(ch).width + tracking;
+    }
+  }else{
+    if(stroke>0) ctx.strokeText(text, x, y);
+    ctx.fillText(text, x, y);
   }
-  ctx.font = `${weight} ${size}px ${family}`;
-  drawSpaced(ctx, text, cx, y, spacing);
-  return size;
+  ctx.restore();
 }
 
-function drawCenteredLines(ctx, lines, cx, firstBaseline, lineHeight){
-  ctx.textAlign = 'center';
-  lines.forEach((ln,i)=>ctx.fillText(ln, cx, firstBaseline + i*lineHeight));
+function drawBrand(ctx, cx, y, maxW, startSize=38){
+  // Se dibuja sin espacios en el texto y con tracking controlado para llenar el ancho.
+  const text = 'INSTINTO';
+  let size = startSize;
+  let tracking = 12;
+  while(size >= 28){
+    ctx.font = `400 ${size}px Cinzel, Georgia, "Times New Roman", serif`;
+    let w = 0;
+    for(let i=0;i<text.length;i++) w += ctx.measureText(text[i]).width + (i<text.length-1?tracking:0);
+    if(w <= maxW) break;
+    tracking -= .5;
+    if(tracking < 6){ tracking = 12; size -= 1; }
+  }
+  drawTextSharp(ctx, text, cx, y, {
+    font:`400 ${size}px Cinzel, Georgia, "Times New Roman", serif`,
+    tracking,
+    stroke:.42,
+    color:'#000'
+  });
+}
+
+function drawCenteredLinesSharp(ctx, lines, cx, firstBaseline, lineHeight, opts={}){
+  lines.forEach((ln,i)=>drawTextSharp(ctx, ln, cx, firstBaseline + i*lineHeight, opts));
 }
 
 function labelNombre(p){
@@ -2830,7 +2874,7 @@ function abrirModalEtiqueta(id, tipo){
   const cvId   = 'etq-canvas-'+tipo;
   const titulo = tipo==='frontal' ? '🏷 Etiqueta Frontal' : '🏷 Etiqueta Reverso';
   const descFn = tipo==='frontal' ? 'descargarEtiquetaFrontal()' : 'descargarEtiqueta()';
-  const PW=354, PH=590; // 30×50mm aprox. a 300dpi
+  const PW=354, PH=590;
 
   const prev = document.getElementById(ovId);
   if(prev) prev.remove();
@@ -2839,82 +2883,90 @@ function abrirModalEtiqueta(id, tipo){
   ov.id = ovId;
   ov.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:12px;overflow-y:auto;';
   ov.innerHTML = `
-    <div style="color:#F0C040;font-size:13px;font-weight:600">${titulo} — ${p.fragancia||''}</div>
+    <div style="color:#F0C040;font-size:13px;font-weight:700">${titulo} — ${p.fragancia||''} · ${INSTINTO_LABEL_VERSION}</div>
     <canvas id="${cvId}" width="${PW}" height="${PH}"
       style="display:block;border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,0.7);flex-shrink:0;
              width:min(${PW}px,88vw);height:auto;background:#fff;"></canvas>
     <div style="display:flex;gap:10px;width:100%;max-width:${PW}px">
-      <button onclick="${descFn}" style="flex:1;padding:10px;border-radius:8px;background:#D4A017;color:#111;border:none;font-size:13px;font-weight:700;cursor:pointer;">⬇ Descargar PNG</button>
+      <button onclick="${descFn}" style="flex:1;padding:10px;border-radius:8px;background:#D4A017;color:#111;border:none;font-size:13px;font-weight:800;cursor:pointer;">⬇ Descargar PNG</button>
       <button onclick="document.getElementById('${ovId}').remove()" style="flex:1;padding:10px;border-radius:8px;background:#2a2a2a;color:#eee;border:1px solid #444;font-size:13px;cursor:pointer;">✕ Cerrar</button>
     </div>
-    <div style="color:#222;font-size:11px">Formato 30×50mm vertical para NIIMBOT</div>
+    <div style="color:#ccc;font-size:11px;text-align:center">30×50mm vertical · exportación 4x · texto reforzado para impresión térmica</div>
   `;
   document.body.appendChild(ov);
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
 
-  setTimeout(()=>{
+  setTimeout(async ()=>{
+    try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
     const cv = document.getElementById(cvId);
     if(!cv) return;
     if(tipo==='frontal') dibujarFrontal(cv, p);
     else dibujarDetras(cv, p);
-  }, 60);
+  }, 80);
 }
 
 /* ─── ETIQUETA FRONTAL / FRENTE ─────────────────────────
-   Diseño alineado al layout hecho en NIIMBOT:
-   - limpio, sin líneas divisorias
-   - marca arriba con mucho aire
-   - inspiración centrada
-   - 60 ML abajo
+   Ajustes v2.2:
+   - Marca más amplia, nítida y centrada.
+   - Textos centrales más grandes y reforzados con micro-trazo.
+   - Menos texto pequeño: prioridad a lectura en frasco.
 */
 function generarEtiquetaFrontal(id){ abrirModalEtiqueta(id,'frontal'); }
 
 function dibujarFrontal(canvas, p){
-  const SCALE=3;
-  const ctx=canvas.getContext('2d');
-  canvas.width=354*SCALE; canvas.height=590*SCALE;
-  canvas.style.width='354px'; canvas.style.height='590px';
-  ctx.setTransform(SCALE,0,0,SCALE,0,0);
-
-  const W=354, H=590, cx=W/2;
+  const {ctx,W,H,cx} = setupLabelCanvas(canvas);
   const nombreCompleto = labelNombre(p);
   const linea=p.linea||lineaDesdeId(p.codigo||'')||'Caballero';
   const sub=linea==='Nicho'?'NICHO':'ELIXIR';
+  const usableW = W - 36;
 
-  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#111111';
-  ctx.textBaseline='alphabetic';
+  // Marca: más grande y con tracking real, no dependiente de espacios manuales.
+  drawBrand(ctx,cx,82,usableW,39);
 
-  const marginX = 26;
-  const usableW = W - marginX*2;
+  // Submarca más visible, pero pequeña y elegante.
+  drawTextSharp(ctx, sub, cx, 116, {
+    font:'400 14px Cinzel, Georgia, "Times New Roman", serif',
+    tracking:1.1,
+    stroke:.28,
+    color:'#000'
+  });
 
-  // Marca
-  drawFitSpaced(ctx,'I N S T I N T O',cx,88,usableW,41,28,'400','Cinzel,"Times New Roman",serif',.20);
+  // Bloque central: subimos tamaño y grosor óptico para que no se pierda.
+  drawTextSharp(ctx, 'INSPIRADO EN:', cx, 286, {
+    font:'400 15px Cinzel, Georgia, "Times New Roman", serif',
+    tracking:2.2,
+    stroke:.34,
+    color:'#000'
+  });
 
-  // Submarca
-  ctx.fillStyle='#111111';
-  ctx.font='400 15px Cinzel,"Times New Roman",serif';
-  drawSpaced(ctx,sub,cx,122,1.6);
-
-  // Bloque central
-  ctx.font='400 14px Cinzel,"Times New Roman",serif';
-  drawSpaced(ctx,'INSPIRADO EN:',cx,296,3.2);
-
-  let fSz=21;
-  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
-  let lines=wrapTextCanvas(ctx,nombreCompleto,usableW-8);
-  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW-8)) && fSz>14){
-    fSz-=1; ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
-    lines=wrapTextCanvas(ctx,nombreCompleto,usableW-8);
+  let fSz=20;
+  ctx.font=`600 ${fSz}px Georgia, "Times New Roman", serif`;
+  let lines=wrapTextCanvas(ctx,nombreCompleto,usableW-10);
+  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW-10)) && fSz>15){
+    fSz-=1; ctx.font=`600 ${fSz}px Georgia, "Times New Roman", serif`;
+    lines=wrapTextCanvas(ctx,nombreCompleto,usableW-10);
   }
-  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
-  const lineH=fSz+8;
-  const firstY = 335 - ((lines.length-1)*lineH/2);
-  drawCenteredLines(ctx,lines,cx,firstY,lineH);
+  const lineH=fSz+9;
+  const firstY = 326 - ((lines.length-1)*lineH/2);
+  drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
+    font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
+    stroke:.34,
+    color:'#000'
+  });
 
-  // Capacidad
-  ctx.font='400 17px Cinzel,"Times New Roman",serif';
-  drawSpaced(ctx,'60 ML',cx,535,1.8);
+  // Línea inferior como referencia visual premium y capacidad más legible.
+  ctx.save();
+  ctx.strokeStyle='#000';
+  ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(62,472); ctx.lineTo(W-62,472); ctx.stroke();
+  ctx.restore();
+
+  drawTextSharp(ctx,'60 ML',cx,518,{
+    font:'400 20px Cinzel, Georgia, "Times New Roman", serif',
+    tracking:1.6,
+    stroke:.32,
+    color:'#000'
+  });
 }
 
 /* ─── DESCARGA FRONTAL ───────────────────────── */
@@ -2924,30 +2976,21 @@ function descargarEtiquetaFrontal(){
   setTimeout(()=>{
     const a=document.createElement('a');
     a.href=cv.toDataURL('image/png');
-    a.download='instinto_etiqueta_frente.png';
+    a.download='instinto_etiqueta_frente_v22.png';
     a.click();
-  },200);
+  },250);
 }
 
 /* ─── ETIQUETA REVERSO / DETRÁS ─────────────────────────
-   Diseño alineado al layout hecho en NIIMBOT:
-   - marca arriba
-   - QR visible
-   - inspiración + nombre
-   - fecha de producción
-   - código de barras y teléfono
-   - sin líneas divisorias para verse más premium
+   Ajustes v2.2:
+   - Teléfono PEDIDOS mucho más grande y negro.
+   - Barcode más bajo y legible.
+   - QR y nombre con mayor contraste.
 */
 function generarEtiqueta(id){ abrirModalEtiqueta(id,'detras'); }
 
 function dibujarDetras(canvas, p){
-  const SCALE=3;
-  const ctx=canvas.getContext('2d');
-  canvas.width=354*SCALE; canvas.height=590*SCALE;
-  canvas.style.width='354px'; canvas.style.height='590px';
-  ctx.setTransform(SCALE,0,0,SCALE,0,0);
-
-  const W=354, H=590, cx=W/2;
+  const {ctx,W,H,cx} = setupLabelCanvas(canvas);
   const nombreCompleto = labelNombre(p);
   const codigo=(p.codigo&&p.codigo!=='OTRO')?p.codigo:(p.fragancia||'INST').substring(0,12).toUpperCase().replace(/\s/g,'');
   const urlQR='https://instintofragancias.com';
@@ -2959,28 +3002,22 @@ function dibujarDetras(canvas, p){
   const hh=String(ahora.getHours()).padStart(2,'0');
   const mi=String(ahora.getMinutes()).padStart(2,'0');
   const producido=`Producido: ${yyyy}-${mm}-${dd} ${hh}:${mi}`;
-
-  ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H);
-  ctx.fillStyle='#111111';
-  ctx.textBaseline='alphabetic';
-
-  const marginX=22;
-  const usableW=W-marginX*2;
+  const usableW=W-42;
 
   // Marca
-  drawFitSpaced(ctx,'I N S T I N T O',cx,72,usableW,42,27,'400','Cinzel,"Times New Roman",serif',.18);
+  drawBrand(ctx,cx,62,usableW,34);
 
-  // QR
+  // QR más grande y limpio
   const qrSize=132;
   const qrX=cx-qrSize/2;
-  const qrY=101;
+  const qrY=82;
 
   const qrDiv=document.createElement('div');
-  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:264px;height:264px;background:#fff;';
+  qrDiv.style.cssText='position:fixed;left:-9999px;top:-9999px;width:396px;height:396px;background:#fff;';
   document.body.appendChild(qrDiv);
   let qrDone=false;
   try{
-    new QRCode(qrDiv,{text:urlQR,width:264,height:264,colorDark:'#000000',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
+    new QRCode(qrDiv,{text:urlQR,width:396,height:396,colorDark:'#000000',colorLight:'#FFFFFF',correctLevel:QRCode.CorrectLevel.M});
   }catch(e){}
 
   function tryDrawQR(n){
@@ -2988,64 +3025,90 @@ function dibujarDetras(canvas, p){
     const q=qrDiv.querySelector('canvas')||qrDiv.querySelector('img');
     if(q){
       try{
-        if(q.tagName==='CANVAS'){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();return;}
+        if(q.tagName==='CANVAS'){
+          ctx.imageSmoothingEnabled=false;
+          ctx.drawImage(q,qrX,qrY,qrSize,qrSize);
+          qrDone=true; qrDiv.remove(); return;
+        }
         if(q.complete&&q.naturalWidth>0){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();return;}
         q.onload=()=>{if(!qrDone){ctx.drawImage(q,qrX,qrY,qrSize,qrSize);qrDone=true;qrDiv.remove();}};
       }catch(e){}
     }
-    if(n<25) setTimeout(()=>tryDrawQR(n+1),70);
+    if(n<25) setTimeout(()=>tryDrawQR(n+1),60);
     else qrDiv.remove();
   }
   setTimeout(()=>tryDrawQR(0),60);
 
-  // Inspiración
-  ctx.font='400 14px Cinzel,"Times New Roman",serif';
-  drawSpaced(ctx,'INSPIRACIÓN:',cx,277,1.2);
+  // Inspiración + nombre con mayor fuerza óptica
+  drawTextSharp(ctx,'INSPIRACIÓN:',cx,244,{
+    font:'400 13px Cinzel, Georgia, "Times New Roman", serif',
+    tracking:1.0,
+    stroke:.30,
+    color:'#000'
+  });
 
-  // Nombre
-  let fSz=22;
-  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  let fSz=16;
+  ctx.font=`600 ${fSz}px Georgia, "Times New Roman", serif`;
   let lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
-  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW)) && fSz>14){
-    fSz-=1; ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
+  while((lines.length>2 || lines.some(l=>ctx.measureText(l).width>usableW)) && fSz>12){
+    fSz-=1; ctx.font=`600 ${fSz}px Georgia, "Times New Roman", serif`;
     lines=wrapTextCanvas(ctx,nombreCompleto,usableW);
   }
-  ctx.font=`400 ${fSz}px Cinzel,"Times New Roman",serif`;
-  const lineH=fSz+8;
-  const firstY=321 - ((lines.length-1)*lineH/2);
-  drawCenteredLines(ctx,lines,cx,firstY,lineH);
+  const lineH=fSz+7;
+  const firstY=273 - ((lines.length-1)*lineH/2);
+  drawCenteredLinesSharp(ctx,lines,cx,firstY,lineH,{
+    font:`600 ${fSz}px Georgia, "Times New Roman", serif`,
+    stroke:.30,
+    color:'#000'
+  });
 
-  // Fecha producción
-  ctx.font='400 14px Arial, sans-serif';
-  ctx.textAlign='center';
-  ctx.fillText(producido,cx,386);
+  drawTextSharp(ctx,producido,cx,334,{
+    font:'500 13px Arial, sans-serif',
+    stroke:.16,
+    color:'#000'
+  });
 
-  // Código de barras
+  // Código de barras ancho y alto suficiente, pero deja espacio real al teléfono.
   const bcW=Math.round(usableW*.98);
-  const bcH=96;
+  const bcH=92;
   const bcX=(W-bcW)/2;
-  const bcY=405;
+  const bcY=360;
 
   const svgEl=document.createElementNS('http://www.w3.org/2000/svg','svg');
   svgEl.style.cssText='position:absolute;left:-9999px;top:-9999px;';
   svgEl.setAttribute('width',bcW); svgEl.setAttribute('height',bcH);
   document.body.appendChild(svgEl);
   try{
-    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.1,height:bcH,displayValue:false,margin:0,lineColor:'#000000',background:'#FFFFFF'});
+    JsBarcode(svgEl,codigo,{format:'CODE128',width:2.35,height:bcH,displayValue:false,margin:0,lineColor:'#000000',background:'#FFFFFF'});
     const sd=new XMLSerializer().serializeToString(svgEl);
     const blob=new Blob([sd],{type:'image/svg+xml;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const img=new Image();
     img.onload=()=>{
+      ctx.imageSmoothingEnabled=false;
       ctx.drawImage(img,bcX,bcY,bcW,bcH);
       URL.revokeObjectURL(url); svgEl.remove();
 
-      ctx.fillStyle='#111111';
-      ctx.font='700 14px Cinzel,"Times New Roman",serif';
-      drawSpaced(ctx,'PEDIDOS  '+tel,cx,535,1.0);
+      // Teléfono MUY legible: ya no va tan abajo ni tan pequeño.
+      drawTextSharp(ctx,'PEDIDOS',cx,491,{
+        font:'700 13px Arial, sans-serif',
+        tracking:1.1,
+        stroke:.16,
+        color:'#000'
+      });
+      drawTextSharp(ctx,tel,cx,523,{
+        font:'800 22px Arial, sans-serif',
+        tracking:1.0,
+        stroke:.22,
+        color:'#000'
+      });
     };
     img.src=url;
-  }catch(e){svgEl.remove();}
+  }catch(e){
+    svgEl.remove();
+    drawTextSharp(ctx,'PEDIDOS',cx,491,{font:'700 13px Arial, sans-serif',tracking:1.1,stroke:.16,color:'#000'});
+    drawTextSharp(ctx,tel,cx,523,{font:'800 22px Arial, sans-serif',tracking:1.0,stroke:.22,color:'#000'});
+  }
 }
 
 /* ─── DESCARGA REVERSO ───────────────────────── */
@@ -3055,9 +3118,9 @@ function descargarEtiqueta(){
   setTimeout(()=>{
     const a=document.createElement('a');
     a.href=cv.toDataURL('image/png');
-    a.download='instinto_etiqueta_reverso.png';
+    a.download='instinto_etiqueta_reverso_v22.png';
     a.click();
-  },500);
+  },700);
 }
 
 </script>
