@@ -155,7 +155,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.3</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.4</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -928,10 +928,8 @@ function renderPedidos(){
           </select>`;
         })()}
         <button class="btn btn-sm btn-blue" onclick="openModal('pedido',${p.id})">✏</button>
-        ${(p.estatus==='Elaborado'||p.estatus==='Entregado'||p.estatus==='Cobrado')?`
-          <button class="btn btn-sm" style="background:var(--gold);color:#111;border-color:var(--gold);font-size:11px" onclick="generarEtiquetaFrontal(${p.id})" title="Etiqueta frontal">Frontal</button>
-          <button class="btn btn-sm" style="background:#3a3a2a;color:var(--gold);border-color:var(--gold);font-size:11px" onclick="generarEtiqueta(${p.id})" title="Etiqueta trasera">Detrás</button>
-        `:''}
+        <button class="btn btn-sm" style="background:var(--gold);color:#111;border-color:var(--gold);font-size:11px" onclick="generarEtiquetaFrontal(${p.id})" title="Etiqueta frontal">Frontal</button>
+        <button class="btn btn-sm" style="background:#3a3a2a;color:var(--gold);border-color:var(--gold);font-size:11px" onclick="generarEtiqueta(${p.id})" title="Etiqueta trasera">Detrás</button>
         <button class="btn btn-sm btn-danger" onclick="eliminarPed(${p.id})">✕</button>
       </div>
       ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
@@ -2312,7 +2310,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.3</div>
+  <div class="app-version-badge">v3.4</div>
 </body></html>`;
 }
 
@@ -2771,8 +2769,44 @@ function addSyncButtons(){
 }
 
 // Al arrancar: siempre esperar Firebase antes de renderizar
+// Suscripción en tiempo real — escucha cambios de Firebase mientras la app está abierta
+let _unsubscribe = null;
+async function iniciarSyncTiempoReal(){
+  try {
+    await loadFirebase();
+    const ref = db.collection('instinto').doc('datos');
+    // Cancelar suscripción anterior si existía
+    if(_unsubscribe) _unsubscribe();
+    setSyncStatus('syncing');
+    _unsubscribe = ref.onSnapshot(snap => {
+      if(!snap.exists) return;
+      const data = snap.data();
+      const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
+      if(data.cfg) cfg = data.cfg;
+      if(data.cat) cat = data.cat;
+      peds = firebasePeds;
+      nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
+      if(data.materiales) materiales = data.materiales;
+      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+      save();
+      localStorage.setItem('if_mat', JSON.stringify(materiales));
+      renderAll(); loadCfg(); renderMateriales();
+      setSyncStatus('ok');
+      setTimeout(verificarStockAlCargar, 800);
+    }, err => {
+      console.warn('onSnapshot error:', err.message || err);
+      setSyncStatus('err');
+    });
+  } catch(e) {
+    console.warn('iniciarSyncTiempoReal error:', e.message || e);
+    setSyncStatus('err');
+    // Fallback: carga única
+    await fbLoad();
+  }
+}
+
 window.addEventListener('load', async () => {
-  await fbLoad(); // fbLoad ya llama renderAll + loadCfg + renderMateriales internamente
+  await iniciarSyncTiempoReal(); // sync en tiempo real
   addSyncButtons();
 });
 
