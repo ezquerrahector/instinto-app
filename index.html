@@ -143,6 +143,23 @@ nav::-webkit-scrollbar{display:none}
 
 
 
+
+/* === v3.5 Stock inteligente / filtros de resurtido === */
+.smart-filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.smart-filters select,.smart-filters input{font-size:12px;padding:7px 9px;border-radius:8px;border:1px solid var(--border);background:var(--bg2);color:var(--text)}
+.smart-filters input{flex:1;min-width:220px;background:var(--bg3)}
+.smart-hint{font-size:11px;color:var(--text2);line-height:1.35;margin:-4px 0 10px}
+.card.stock-low-30{border-color:rgba(240,192,64,.78)!important;background:linear-gradient(135deg,rgba(240,192,64,.18),rgba(240,192,64,.055)),var(--bg2)!important;box-shadow:0 0 0 1px rgba(240,192,64,.18) inset}
+.card.stock-low-30 .inv-stock{color:var(--amber)!important}
+.frag-meta-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.frag-pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:3px 7px;border-radius:999px;border:1px solid var(--border);background:var(--bg4);color:var(--text2);white-space:nowrap}
+.frag-pill.warn{border-color:rgba(240,192,64,.55);background:rgba(240,192,64,.14);color:var(--amber)}
+.frag-pill.good{border-color:rgba(76,175,125,.45);background:rgba(76,175,125,.12);color:var(--green)}
+.frag-pill.blue{border-color:rgba(91,155,213,.45);background:rgba(91,155,213,.12);color:#5B9BD5}
+.frag-pill.hot{border-color:rgba(255,107,107,.45);background:rgba(255,107,107,.12);color:var(--red)}
+.resurtido-alert{font-size:11px;color:var(--amber);font-weight:700;margin-top:6px;line-height:1.35}
+@media(max-width:700px){.smart-filters{display:grid;grid-template-columns:1fr 1fr}.smart-filters input{grid-column:1/-1;min-width:0}.smart-filters select{width:100%}}
+
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -155,7 +172,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.4</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.5 stock inteligente</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -212,21 +229,45 @@ nav::-webkit-scrollbar{display:none}
 <div id="inventario" class="section">
   <div class="section-head">
     <span class="section-title">Stock de esencias</span>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <select onchange="filterInvLinea(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-        <option value="">Todas las líneas</option>
-        <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
-      </select>
-      <select onchange="filterInvStock(this.value)" style="font-size:12px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--bg2);color:var(--text)">
-        <option value="">Todo el inventario</option>
-        <option value="con">Con stock</option>
-        <option value="sin">Sin stock</option>
-      </select>
-    </div>
   </div>
-  <div class="search-bar" style="margin-bottom:12px">
-    <input type="search" placeholder="Buscar fragancia, diseñador o código..." oninput="filterInvTxt(this.value)" style="width:100%"/>
+  <div class="smart-filters">
+    <input type="search" placeholder="Buscar fragancia, diseñador, código o base..." oninput="filterInvTxt(this.value)"/>
+    <select onchange="filterInvLinea(this.value)">
+      <option value="">Todas las líneas</option>
+      <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
+    </select>
+    <select onchange="filterInvStock(this.value)">
+      <option value="">Todo el inventario</option>
+      <option value="con">Con stock</option>
+      <option value="sin">Sin stock</option>
+      <option value="low30">30g o menos</option>
+      <option value="less30">Menos de 30g</option>
+      <option value="low60">60g o menos</option>
+    </select>
+    <select onchange="filterInvProv(this.value)">
+      <option value="">Proveedor: todos</option>
+      <option value="pedido">Ya solicitado al proveedor</option>
+      <option value="noPedido">No solicitado al proveedor</option>
+      <option value="comprado">Comprado proveedor</option>
+      <option value="pendiente">Pedido pendiente proveedor</option>
+    </select>
+    <select onchange="filterInvDemand(this.value)">
+      <option value="">Pedidos históricos: todos</option>
+      <option value="gt0">Con al menos 1 pedido</option>
+      <option value="gt1">Más de 1 pedido</option>
+      <option value="eq0">Sin pedidos históricos</option>
+    </select>
+    <select onchange="sortInv(this.value)">
+      <option value="smart">Orden inteligente</option>
+      <option value="stockDesc">Mayor stock primero</option>
+      <option value="stockAsc">Menor stock primero</option>
+      <option value="pedidosDesc">Más pedidos primero</option>
+      <option value="pedidosAsc">Menos pedidos primero</option>
+      <option value="needProvider">Oportunidad de resurtido</option>
+      <option value="az">Nombre A-Z</option>
+    </select>
   </div>
+  <div class="smart-hint">Tip: usa “Oportunidad de resurtido” para ver arriba fragancias pedidas por clientes, con 60g o menos y que todavía no están solicitadas al proveedor.</div>
   <div id="inv-list"></div>
 </div>
 
@@ -273,13 +314,43 @@ nav::-webkit-scrollbar{display:none}
     <span class="section-title">Catálogo de fragancias</span>
     <button class="btn btn-gold btn-sm" onclick="openModal('fragancia')">+ Fragancia</button>
   </div>
-  <div class="search-bar">
-    <input type="search" placeholder="Buscar fragancia o marca..." oninput="filterCat(this.value)"/>
+  <div class="smart-filters">
+    <input type="search" placeholder="Buscar fragancia, marca, código o base..." oninput="filterCat(this.value)"/>
     <select onchange="filterCatLinea(this.value)">
-      <option value="">Todas</option>
+      <option value="">Todas las líneas</option>
       <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
     </select>
+    <select onchange="filterCatStock(this.value)">
+      <option value="">Stock: todos</option>
+      <option value="con">Con stock</option>
+      <option value="sin">Sin stock</option>
+      <option value="low30">30g o menos</option>
+      <option value="less30">Menos de 30g</option>
+      <option value="low60">60g o menos</option>
+    </select>
+    <select onchange="filterCatProv(this.value)">
+      <option value="">Proveedor: todos</option>
+      <option value="pedido">Ya solicitado al proveedor</option>
+      <option value="noPedido">No solicitado al proveedor</option>
+      <option value="comprado">Comprado proveedor</option>
+      <option value="pendiente">Pedido pendiente proveedor</option>
+    </select>
+    <select onchange="filterCatDemand(this.value)">
+      <option value="">Pedidos históricos: todos</option>
+      <option value="gt0">Con al menos 1 pedido</option>
+      <option value="gt1">Más de 1 pedido</option>
+      <option value="eq0">Sin pedidos históricos</option>
+    </select>
+    <select onchange="sortCat(this.value)">
+      <option value="az">Nombre A-Z</option>
+      <option value="stockDesc">Mayor stock primero</option>
+      <option value="stockAsc">Menor stock primero</option>
+      <option value="pedidosDesc">Más pedidos primero</option>
+      <option value="pedidosAsc">Menos pedidos primero</option>
+      <option value="needProvider">Oportunidad de resurtido</option>
+    </select>
   </div>
+  <div class="smart-hint">También en catálogo puedes detectar fragancias solicitadas por clientes, bajas de stock y todavía no pedidas al proveedor.</div>
   <div id="cat-list"></div>
 </div>
 
@@ -1129,46 +1200,98 @@ function eliminarPed(id){
 }
 
 // ── INVENTARIO ────────────────────────────────────────────────────────────
-let _invLin='', _invTxt='', _invStock='';
+let _invLin='', _invTxt='', _invStock='', _invProv='', _invDemand='', _invSort='smart';
 function filterInvLinea(v){_invLin=v;renderInv();}
-function filterInvTxt(v){_invTxt=v.toLowerCase();renderInv();}
+function filterInvTxt(v){_invTxt=(v||'').toLowerCase();renderInv();}
 function filterInvStock(v){_invStock=v;renderInv();}
-function renderInv(){
-  let list=cat.map(r=>{
-    const rest=Math.max(0,parseFloat(r.stockGramos)||0);
-    return {...r,_rest:rest,_ini:rest,_usado:0};
-  });
+function filterInvProv(v){_invProv=v;renderInv();}
+function filterInvDemand(v){_invDemand=v;renderInv();}
+function sortInv(v){_invSort=v||'smart';renderInv();}
 
-  // Filtrar
+function fragStats(r){
+  const cod=(r.id||'').trim();
+  const ref=norm(r.referencia||'');
+  const rest=Math.max(0,parseFloat(r.stockGramos)||0);
+  const pedidosCliente=peds.filter(p=>{
+    if(p.cliente==='Para stock') return false;
+    const pcod=(p.codigo||'').trim();
+    return (cod&&pcod===cod)||(!pcod&&norm(p.fragancia||'')===ref);
+  });
+  const pedidosHist=pedidosCliente.length;
+  const usado=Math.round(pedidosHist*(parseFloat(cfg.gesencia)||30));
+  const prov=peds.filter(p=>((p.codigo||'').trim()===cod)&&p.cliente==='Para stock');
+  const provActivo=prov.some(p=>p.estatus==='Pedido'||p.estatus==='Comprado proveedor');
+  const provComprado=prov.some(p=>p.estatus==='Comprado proveedor');
+  const provPendiente=prov.some(p=>p.estatus==='Pedido');
+  const oportunidad=pedidosHist>0 && rest<=60 && !provActivo;
+  return {rest,pedidosHist,usado,provActivo,provComprado,provPendiente,oportunidad};
+}
+function passStockFilter(st,val){
+  return !val||(val==='con'&&st.rest>0)||(val==='sin'&&st.rest===0)||(val==='low30'&&st.rest<=30)||(val==='less30'&&st.rest<30)||(val==='low60'&&st.rest<=60);
+}
+function passProvFilter(st,val){
+  return !val||(val==='pedido'&&st.provActivo)||(val==='noPedido'&&!st.provActivo)||(val==='comprado'&&st.provComprado)||(val==='pendiente'&&st.provPendiente);
+}
+function passDemandFilter(st,val){
+  return !val||(val==='gt0'&&st.pedidosHist>0)||(val==='gt1'&&st.pedidosHist>1)||(val==='eq0'&&st.pedidosHist===0);
+}
+function sortFragList(list,mode){
+  const smartScore=r=>{
+    const st=r._stats;
+    if(st.oportunidad) return 0;
+    if(st.rest<=30) return 1;
+    if(st.provActivo) return 2;
+    return 3;
+  };
+  list.sort((a,b)=>{
+    if(mode==='stockDesc') return b._stats.rest-a._stats.rest||a.referencia.localeCompare(b.referencia);
+    if(mode==='stockAsc') return a._stats.rest-b._stats.rest||b._stats.pedidosHist-a._stats.pedidosHist||a.referencia.localeCompare(b.referencia);
+    if(mode==='pedidosDesc') return b._stats.pedidosHist-a._stats.pedidosHist||a._stats.rest-b._stats.rest||a.referencia.localeCompare(b.referencia);
+    if(mode==='pedidosAsc') return a._stats.pedidosHist-b._stats.pedidosHist||a.referencia.localeCompare(b.referencia);
+    if(mode==='needProvider') return Number(!a._stats.oportunidad)-Number(!b._stats.oportunidad)||b._stats.pedidosHist-a._stats.pedidosHist||a._stats.rest-b._stats.rest||a.referencia.localeCompare(b.referencia);
+    if(mode==='az') return a.referencia.localeCompare(b.referencia);
+    return smartScore(a)-smartScore(b)||b._stats.pedidosHist-a._stats.pedidosHist||a._stats.rest-b._stats.rest||a.referencia.localeCompare(b.referencia);
+  });
+  return list;
+}
+function renderFragPills(st){
+  return `<div class="frag-meta-row">
+    <span class="frag-pill ${st.pedidosHist>1?'hot':st.pedidosHist>0?'blue':''}">🧾 ${st.pedidosHist} pedido${st.pedidosHist!==1?'s':''} histórico${st.pedidosHist!==1?'s':''}</span>
+    ${st.rest<=30?`<span class="frag-pill warn">⚠ 30g o menos</span>`:''}
+    ${st.rest>30&&st.rest<=60?`<span class="frag-pill warn">⚠ 60g o menos</span>`:''}
+    ${st.provActivo?`<span class="frag-pill good">📦 Ya solicitado al proveedor</span>`:`<span class="frag-pill">Sin pedido proveedor</span>`}
+  </div>`;
+}
+function renderInv(){
+  let list=cat.map(r=>({...r,_stats:fragStats(r)}));
+
   list=list.filter(r=>{
     const matchLin=!_invLin||r.linea===_invLin;
     const matchTxt=!_invTxt||norm(r.referencia).includes(norm(_invTxt))||norm(r.disenador).includes(norm(_invTxt))||norm(r.id).includes(norm(_invTxt))||norm(r.base).includes(norm(_invTxt));
-    const matchStock=!_invStock||(_invStock==='con'&&r._rest>0)||(_invStock==='sin'&&r._rest===0);
-    return matchLin&&matchTxt&&matchStock;
+    return matchLin&&matchTxt&&passStockFilter(r._stats,_invStock)&&passProvFilter(r._stats,_invProv)&&passDemandFilter(r._stats,_invDemand);
   });
 
-  // Ordenar: con stock primero, luego stock bajo, luego sin stock
-  list.sort((a,b)=>{
-    const score=r=>r._rest>=cfg.gesencia?0:r._rest>0?1:2;
-    return score(a)-score(b)||a.referencia.localeCompare(b.referencia);
-  });
+  sortFragList(list,_invSort);
 
   document.getElementById('inv-list').innerHTML=list.map(r=>{
-    const ini=r._ini, usado=r._usado, rest=r._rest;
+    const st=r._stats, rest=st.rest, usado=st.usado;
+    const ini=rest+usado;
     const pct=ini>0?Math.min(100,Math.round(rest/ini*100)):0;
-    const cls=rest===0?'out':rest<cfg.gesencia?'low':'ok';
-    return `<div class="card">
+    const cls=rest===0?'out':rest<=30?'low':'ok';
+    return `<div class="card ${rest<=30?'stock-low-30':''}">
       <div class="card-top">
         <div style="flex:1;min-width:0">
           <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
           <div class="card-sub">${r.disenador} · ${r.id} · ${bLin(r.linea)}</div>
-          <div class="card-sub" style="margin-top:2px">Inicial ${ini}g · Usado ${usado}g · ${Math.round(usado/cfg.gesencia)} perfume${Math.round(usado/cfg.gesencia)!==1?'s':''}</div>
+          <div class="card-sub" style="margin-top:2px">Disponible ${rest}g · Pedido por clientes ${st.pedidosHist} vez${st.pedidosHist!==1?'es':''} · Consumo estimado ${usado}g</div>
+          ${renderFragPills(st)}
+          ${st.oportunidad?`<div class="resurtido-alert">Oportunidad: se ha pedido por clientes, tiene ${rest}g y aún no está solicitado al proveedor.</div>`:''}
           <div class="inv-bar-wrap"><div class="inv-bar ${cls}" style="width:${pct}%"></div></div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
           <div class="inv-stock ${cls}" style="margin-left:12px">${rest}g</div>
           <button class="btn btn-sm btn-blue" onclick="openModal('stock','${r.id}')">✏ Stock</button>
-          ${peds.some(p=>p.codigo===r.id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'))
+          ${st.provActivo
             ? `<span style="font-size:11px;color:var(--text2);background:var(--bg4);padding:2px 7px;border-radius:4px">En pedido</span>`
             : `<button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>`}
         </div>
@@ -1178,36 +1301,47 @@ function renderInv(){
 }
 
 // ── CATÁLOGO ──────────────────────────────────────────────────────────────
-let _catTxt='',_catLin='';
-function filterCat(v){_catTxt=v.toLowerCase();renderCat();}
+let _catTxt='',_catLin='',_catStock='',_catProv='',_catDemand='',_catSort='az';
+function filterCat(v){_catTxt=(v||'').toLowerCase();renderCat();}
 function filterCatLinea(v){_catLin=v;renderCat();}
+function filterCatStock(v){_catStock=v;renderCat();}
+function filterCatProv(v){_catProv=v;renderCat();}
+function filterCatDemand(v){_catDemand=v;renderCat();}
+function sortCat(v){_catSort=v||'az';renderCat();}
 function renderCat(){
-  const list=cat.filter(r=>{
+  let list=cat.map(r=>({...r,_stats:fragStats(r)})).filter(r=>{
     const m=!_catTxt||norm(r.referencia).includes(norm(_catTxt))||norm(r.disenador).includes(norm(_catTxt))||norm(r.base).includes(norm(_catTxt))||norm(r.id).includes(norm(_catTxt));
-    return m&&(!_catLin||r.linea===_catLin);
+    return m&&(!_catLin||r.linea===_catLin)&&passStockFilter(r._stats,_catStock)&&passProvFilter(r._stats,_catProv)&&passDemandFilter(r._stats,_catDemand);
   });
+  sortFragList(list,_catSort);
   const cp=ce=>costoProd(ce);
-  document.getElementById('cat-list').innerHTML=list.map(r=>`
-    <div class="card">
+  document.getElementById('cat-list').innerHTML=list.map(r=>{
+    const st=r._stats;
+    return `<div class="card ${st.rest<=30?'stock-low-30':''}">
       <div class="card-top">
         <div style="flex:1;min-width:0">
           <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
           <div class="card-sub">${r.disenador} · ${r.id}</div>
           ${r.base?`<div class="card-sub" style="font-style:italic;margin-top:2px">${r.base}</div>`:''}
+          <div class="card-sub" style="margin-top:3px">Stock ${st.rest}g · Pedidos históricos ${st.pedidosHist}</div>
+          ${renderFragPills(st)}
+          ${st.oportunidad?`<div class="resurtido-alert">Oportunidad de resurtido: baja existencia, con demanda y sin pedido al proveedor.</div>`:''}
         </div>
         <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
           ${bLin(r.linea)}
+          <span class="inv-stock ${st.rest===0?'out':st.rest<=30?'low':'ok'}">${st.rest}g</span>
           <span class="ganancia-pill">${fmt(cfg.pventa-cp(r.costoEsencia))}</span>
         </div>
       </div>
       <div class="card-actions">
         <button class="btn btn-sm btn-blue" onclick="openModal('fragancia','${r.id}')">✏ Editar</button>
-        ${peds.some(p=>p.codigo===r.id&&p.cliente==='Para stock'&&(p.estatus==='Pedido'||p.estatus==='Comprado proveedor'))
+        ${st.provActivo
           ? `<span style="padding:5px 10px;border-radius:var(--radius-sm);background:var(--bg4);color:var(--text2);font-size:12px">En pedido</span>`
           : `<button class="btn btn-sm btn-gold" onclick="pedirParaStock('${r.id}')">📦 Pedir</button>`}
         <button class="btn btn-sm btn-danger" onclick="eliminarFrag('${r.id}')">✕ Eliminar</button>
       </div>
-    </div>`).join('')||'<div class="empty">Sin fragancias.</div>';
+    </div>`;
+  }).join('')||'<div class="empty">Sin fragancias con ese filtro.</div>';
 }
 
 function pedirPorNombre(fragancia, disenador, linea){
@@ -2310,7 +2444,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.4</div>
+  <div class="app-version-badge">v3.5 stock inteligente</div>
 </body></html>`;
 }
 
