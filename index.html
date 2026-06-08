@@ -1051,7 +1051,7 @@ function cambiarEst(id,est){
 
   save();fbSave();renderAll();toast('Estatus actualizado ✓');
   window._provStockDirty=true;
-  if(est!==estAnterior) enviarNotificacion(`🔄 Estatus: ${estAnterior} → ${est}`, p);
+  // No se envía correo por cambios de estatus; sólo al crear pedidos nuevos.
 
   // Verificar si la fragancia se quedó sin stock
   if(ahoraElaborado){
@@ -1614,7 +1614,39 @@ function mRecalc(){
   if(el) el.value=fmt(costoProd(ce));
 }
 
-function savePed(){
+
+async function guardarYVerificarPedido(pedido, intentos=3){
+  // Evita que el usuario tenga que capturar dos veces: guarda y confirma leyendo Firebase.
+  // Verifica por uid y por id para pedidos anteriores que no tenían uid.
+  for(let intento=1; intento<=intentos; intento++){
+    try{
+      setSyncStatus('syncing');
+      const ok = await fbSave();
+      await loadFirebase();
+      const ref = db.collection('instinto').doc('datos');
+      const snap = await ref.get();
+      const cloudPeds = snap.exists ? (snap.data().peds || []) : [];
+      const existe = cloudPeds.some(x =>
+        x && (
+          (pedido.uid && x.uid === pedido.uid) ||
+          (Number(x.id) === Number(pedido.id) && (x.cliente||'') === (pedido.cliente||'') && (x.fragancia||'') === (pedido.fragancia||''))
+        )
+      );
+      if(ok && existe){
+        setSyncStatus('ok');
+        return true;
+      }
+      console.warn(`Pedido #${pedido.id} no confirmado en Firebase. Reintento ${intento}/${intentos}`);
+    }catch(e){
+      console.warn(`Error verificando pedido #${pedido.id}. Reintento ${intento}/${intentos}:`, e.message || e);
+    }
+    await new Promise(r=>setTimeout(r, 900 * intento));
+  }
+  setSyncStatus('err');
+  return false;
+}
+
+async function savePed(){
   const fragVal=document.getElementById('f-frag-val')?.value||'';
   const esOtra=fragVal==='__otra__'||fragVal==='';
   const fragTxt=document.getElementById('f-frag-search')?.value.trim()||'';
@@ -1628,6 +1660,15 @@ function savePed(){
   if(!cliente){toast('⚠ El nombre del cliente es obligatorio');return;}
   if(!fragTxt&&!esOtra){toast('⚠ Selecciona una fragancia');return;}
   if(!linea){toast('⚠ Selecciona la línea del perfume');return;}
+
+  if(window._guardandoPedido){
+    toast('⏳ El pedido se está guardando. Espera la confirmación antes de volver a tocar el botón.');
+    return;
+  }
+  window._guardandoPedido = true;
+  let pedidoNuevoGuardado = null;
+
+  try {
 
   if(_modalId){
     const p=peds.find(x=>x.id===_modalId); if(!p)return;
@@ -1644,8 +1685,12 @@ function savePed(){
     toast(`Pedido #${p.id} actualizado ✓`);
   } else {
     const nuevoPedidoId=nextId;
-    peds.push({
+    const pedidoUid='PED-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+    const nuevoPedido={
       id:nextId++,
+      uid:pedidoUid,
+      creadoEn:new Date().toISOString(),
+      emailNuevoEnviado:false,
       fecha:document.getElementById('f-fecha').value||new Date().toISOString().slice(0,10),
       cliente:cliente||'Sin nombre',
       codigo,fragancia:fragNombre,disenador:dis,
@@ -1656,11 +1701,29 @@ function savePed(){
       precio:parseFloat(document.getElementById('f-precio').value)||cfg.pventa,
       costoEsencia:parseFloat(document.getElementById('f-cesencia').value)||2.80,
       notas:document.getElementById('f-notas').value,
-    });
-    toast(`✓ Pedido #${nuevoPedidoId} registrado`);
-    enviarNotificacion(`🆕 Nuevo pedido #${nuevoPedidoId}`, peds[peds.length-1]);
+    };
+    peds.push(nuevoPedido);
+    pedidoNuevoGuardado=nuevoPedido;
+    toast(`⏳ Guardando pedido #${nuevoPedidoId}...`);
   }
-  save();fbSave(); closeModal(); renderAll();
+  save(); closeModal(); renderAll();
+
+  if(pedidoNuevoGuardado){
+    const confirmado = await guardarYVerificarPedido(pedidoNuevoGuardado);
+    if(confirmado){
+      toast(`✓ Pedido #${pedidoNuevoGuardado.id} registrado y confirmado en la nube`);
+      if(!pedidoNuevoGuardado.emailNuevoEnviado){
+        await enviarNotificacion(`🆕 Nuevo pedido #${pedidoNuevoGuardado.id}`, pedidoNuevoGuardado);
+        pedidoNuevoGuardado.emailNuevoEnviado=true;
+        save();
+        await fbSave();
+      }
+    }else{
+      toast(`⚠ Pedido #${pedidoNuevoGuardado.id} quedó guardado localmente, pero no pude confirmarlo en la nube. No lo captures otra vez; toca Reintentar sincronización.`, 8000);
+    }
+  }else{
+    await fbSave();
+  }
 
   // Verificar stock DESPUÉS de cerrar el modal del pedido
   if(codigo && codigo!=='OTRO'){
@@ -1672,6 +1735,10 @@ function savePed(){
         if(!yaHayPedidoStock) setTimeout(()=>proponerResurtido(fragCat),400);
       }
     }
+  }
+
+  } finally {
+    window._guardandoPedido = false;
   }
 }
 
@@ -2768,7 +2835,7 @@ function setSyncStatus(status){
 }
 
 async function fbSave(skipMerge=false){
-  if(_fbSaving){ console.warn('fbSave: ya en progreso, ignorando llamada duplicada'); return; }
+  if(_fbSaving){ console.warn('fbSave: ya en progreso, ignorando llamada duplicada'); return false; }
   _fbSaving = true;
   try {
     setSyncStatus('syncing');
@@ -2803,7 +2870,8 @@ async function fbSave(skipMerge=false){
 
     await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
     setSyncStatus('ok');
-  } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e.message || e.code || e); }
+    return true;
+  } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e.message || e.code || e); return false; }
   finally { _fbSaving = false; }
 }
 
@@ -2913,6 +2981,8 @@ async function iniciarSyncTiempoReal(){
     if(_unsubscribe) _unsubscribe();
     setSyncStatus('syncing');
     _unsubscribe = ref.onSnapshot(snap => {
+      // Si estamos guardando, no permitimos que el listener reemplace el pedido recién capturado.
+      if(_fbSaving){ console.warn('onSnapshot ignorado temporalmente porque hay guardado en curso'); return; }
       if(!snap.exists) return;
       const data = snap.data();
       const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
