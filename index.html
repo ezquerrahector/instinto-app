@@ -114,7 +114,8 @@ nav::-webkit-scrollbar{display:none}
 .prov-table tr:nth-child(even) td{background:var(--bg3)}
 .prov-table .cod{font-family:monospace;color:var(--gold);font-weight:600}
 .prov-alert{background:rgba(224,85,85,0.1);border:1px solid var(--red);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;font-size:13px;color:var(--red)}
-.prov-ok{background:rgba(76,175,125,0.1);border:1px solid var(--green);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--green)};bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:8px 18px;font-size:13px;font-weight:500;z-index:999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:nowrap}
+.prov-ok{background:rgba(76,175,125,0.1);border:1px solid var(--green);border-radius:var(--radius);padding:12px 14px;font-size:13px;color:var(--green)}
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A1A;color:var(--gold);border:1px solid var(--gold3);border-radius:20px;padding:10px 18px;font-size:13px;font-weight:600;z-index:99999;opacity:0;transition:all 0.25s;pointer-events:none;white-space:normal;max-width:min(92vw,680px);text-align:center;box-shadow:0 8px 28px rgba(0,0,0,.22)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 .tab-settings{display:flex;gap:8px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:10px;overflow-x:auto}
@@ -172,7 +173,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.5 stock inteligente</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.8 nube + export pedidos</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -202,7 +203,8 @@ nav::-webkit-scrollbar{display:none}
       <option value="fecha">Más reciente</option>
       <option value="stock">Con stock primero</option>
       <option value="nombre">Nombre A-Z</option>
-      <option value="numero">Núm. pedido</option>
+      <option value="numero">Núm. pedido mayor-menor</option>
+      <option value="numero_asc">Núm. pedido menor-mayor</option>
       <option value="fragancia">Fragancia A-Z</option>
     </select>
   </div>
@@ -222,6 +224,10 @@ nav::-webkit-scrollbar{display:none}
     <button class="chip" onclick="toggleChip(this,'tipo','stock')">Para stock</button>
   </div>
   <div id="pedidos-count" style="font-size:12px;color:var(--text2);margin-bottom:8px"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+    <button class="btn btn-sm" onclick="copiarPedidosFiltrados()">📋 Copiar pedidos del filtro</button>
+    <button class="btn btn-sm" onclick="descargarPedidosFiltrados()">⬇ Descargar pedidos del filtro</button>
+  </div>
   <div id="pedidos-list"></div>
 </div>
 
@@ -879,29 +885,38 @@ function toggleChip(btn, grupo, valor){
   renderPedidos();
 }
 
-function renderPedidos(){
-  // Calcular stock ANTES de ordenar
+function calcularStockPedidos(){
   const stockDisp={};
-  cat.forEach(r=>{
-    stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0);
-  });
+  cat.forEach(r=>{ stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0); });
   const stockUsadoPorPedido={};
   const stockTemporal={...stockDisp};
   [...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock')
-    .sort((a,b)=>a.id-b.id)
+    .sort((a,b)=>Number(a.id)-Number(b.id))
     .forEach(p=>{
       if(stockTemporal[p.codigo]===undefined) return;
       if(stockTemporal[p.codigo]>=cfg.gesencia){
-        stockUsadoPorPedido[p.id]='ok'; stockTemporal[p.codigo]-=cfg.gesencia;
-      } else { stockUsadoPorPedido[p.id]='sin'; }
+        stockUsadoPorPedido[p.id]='ok';
+        stockTemporal[p.codigo]-=cfg.gesencia;
+      }else{
+        stockUsadoPorPedido[p.id]='sin';
+      }
     });
+  return stockUsadoPorPedido;
+}
 
+function pedidoTime(p){
+  const f = p.creadoEn || p.fecha || '';
+  const t = Date.parse(f);
+  return isNaN(t) ? 0 : t;
+}
+
+function getPedidosFiltrados(){
+  const stockUsadoPorPedido=calcularStockPedidos();
   let list=peds.filter(p=>{
     const m=!_fTxt||norm(p.cliente).includes(norm(_fTxt))||norm(p.fragancia).includes(norm(_fTxt))||norm(p.disenador).includes(norm(_fTxt))||norm(p.codigo).includes(norm(_fTxt))||String(p.id)===_fTxt.replace('#','').trim();
     const est=!_fEst||p.estatus===_fEst;
     const stock=!_fStock||(()=>{
       if(p.cliente==='Para stock'){
-        // Para stock: revisar si la fragancia ya tiene stock real
         const fragCat=cat.find(x=>x.id===p.codigo);
         const tieneStock=(parseFloat(fragCat?.stockGramos)||0)>=cfg.gesencia;
         return (_fStock==='ok'&&tieneStock)||(_fStock==='sin'&&!tieneStock);
@@ -912,16 +927,20 @@ function renderPedidos(){
     return m&&est&&stock&&tipo;
   });
 
-  // Ordenar
-  if(_fOrden==='nombre') list=[...list].sort((a,b)=>a.cliente.localeCompare(b.cliente));
-  else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>a.fragancia.localeCompare(b.fragancia));
-  else if(_fOrden==='numero') list=[...list].sort((a,b)=>b.id-a.id);
+  if(_fOrden==='nombre') list=[...list].sort((a,b)=>(a.cliente||'').localeCompare(b.cliente||''));
+  else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>(a.fragancia||'').localeCompare(b.fragancia||''));
+  else if(_fOrden==='numero') list=[...list].sort((a,b)=>Number(b.id)-Number(a.id));
+  else if(_fOrden==='numero_asc') list=[...list].sort((a,b)=>Number(a.id)-Number(b.id));
   else if(_fOrden==='stock') list=[...list].sort((a,b)=>{
     const sc=p=>stockUsadoPorPedido[p.id]==='ok'?0:stockUsadoPorPedido[p.id]==='sin'?1:2;
-    return sc(a)-sc(b);
+    return sc(a)-sc(b) || Number(b.id)-Number(a.id);
   });
-  else list=[...list].reverse();
+  else list=[...list].sort((a,b)=>pedidoTime(b)-pedidoTime(a) || Number(b.id)-Number(a.id));
+  return {list, stockUsadoPorPedido};
+}
 
+function renderPedidos(){
+  const {list, stockUsadoPorPedido}=getPedidosFiltrados();
   // Contador
   const countEl=document.getElementById('pedidos-count');
   if(countEl) countEl.textContent=list.length===0?'Sin resultados':`${list.length} pedido${list.length!==1?'s':''}${_fTxt||_fEst?' encontrados':''}`;
@@ -1008,6 +1027,49 @@ function renderPedidos(){
       ${p.notas?`<div style="margin-top:8px;font-size:11px;color:var(--text2);border-top:1px solid var(--border);padding-top:8px">${p.notas}</div>`:''}
     </div>`;
   }).join('');
+}
+
+
+function formatoPedidosFiltrados(){
+  const {list, stockUsadoPorPedido}=getPedidosFiltrados();
+  if(!list.length) return '';
+  const encabezado=`Pedidos del filtro (${list.length}) — Instinto Fragancias`;
+  const lineas=list.map(p=>{
+    const stockTxt = p.cliente==='Para stock'
+      ? 'Pedido para stock/proveedor'
+      : (stockUsadoPorPedido[p.id]==='ok' ? 'Con stock' : stockUsadoPorPedido[p.id]==='sin' ? 'Sin stock' : 'Stock no calculado');
+    const promesa = p.fechaPromesa ? ` | Entrega: ${p.fechaPromesa}` : '';
+    const notas = p.notas ? ` | Notas: ${p.notas}` : '';
+    const precio = p.cliente==='Para stock' ? '' : ` | ${fmt(ganancia(p))}`;
+    return `#${p.id} | ${p.cliente} | ${p.fragancia}${p.disenador?' - '+p.disenador:''} | ${p.codigo||'Sin código'} | ${p.estatus} | ${stockTxt}${promesa}${precio}${notas}`;
+  });
+  return [encabezado, ...lineas].join('\n');
+}
+
+function copiarPedidosFiltrados(){
+  const txt=formatoPedidosFiltrados();
+  if(!txt){ toast('⚠ No hay pedidos para copiar con este filtro'); return; }
+  if(navigator.clipboard){
+    navigator.clipboard.writeText(txt).then(()=>toast('📋 Pedidos del filtro copiados para WhatsApp')).catch(()=>copiarTextoFallback(txt));
+  }else copiarTextoFallback(txt);
+}
+
+function copiarTextoFallback(txt){
+  const ta=document.createElement('textarea');
+  ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
+  toast('📋 Pedidos copiados');
+}
+
+function descargarPedidosFiltrados(){
+  const txt=formatoPedidosFiltrados();
+  if(!txt){ toast('⚠ No hay pedidos para descargar con este filtro'); return; }
+  const blob=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const fecha=new Date().toISOString().slice(0,10);
+  a.download=`pedidos_instinto_${fecha}.txt`;
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  toast('⬇ Archivo de pedidos descargado');
 }
 
 function cambiarEst(id,est){
@@ -1638,8 +1700,10 @@ async function guardarYVerificarPedido(pedido, intentos=3){
         setSyncStatus('ok');
         return true;
       }
+      if(intento<intentos){toast(`⏳ No se confirmó en Firebase. Intentando por ${intento+1}ª vez...`, 4000);}
       console.warn(`Pedido #${pedido.id} no confirmado en Firebase. Reintento ${intento}/${intentos}`);
     }catch(e){
+      if(intento<intentos){toast(`⏳ Error de red o Firebase. Intentando por ${intento+1}ª vez...`, 4000);}
       console.warn(`Error verificando pedido #${pedido.id}. Reintento ${intento}/${intentos}:`, e.message || e);
     }
     await new Promise(r=>setTimeout(r, 900 * intento));
@@ -1671,11 +1735,14 @@ async function guardarYVerificarPedidoActualizado(pedido, intentos=3){
           setSyncStatus('ok');
           return true;
         }
+        if(intento<intentos){toast(`⏳ Aún no se reflejan los cambios en Firebase. Intentando por ${intento+1}ª vez...`, 4000);}
         console.warn(`Pedido #${pedido.id} encontrado en Firebase, pero los campos aún no coinciden. Reintento ${intento}/${intentos}`, {local:pedido, nube:cloudPedido});
       }else{
+        if(intento<intentos){toast(`⏳ No encuentro el pedido actualizado en Firebase. Intentando por ${intento+1}ª vez...`, 4000);}
         console.warn(`Pedido #${pedido.id} no encontrado en Firebase. Reintento ${intento}/${intentos}`);
       }
     }catch(e){
+      if(intento<intentos){toast(`⏳ Error de red o Firebase al actualizar. Intentando por ${intento+1}ª vez...`, 4000);}
       console.warn(`Error verificando actualización del pedido #${pedido.id}. Reintento ${intento}/${intentos}:`, e.message || e);
     }
     await new Promise(r=>setTimeout(r, 900 * intento));
@@ -1759,14 +1826,14 @@ async function savePed(){
         await fbSave();
       }
     }else{
-      toast(`⚠ Pedido #${pedidoNuevoGuardado.id} quedó guardado localmente, pero no pude confirmarlo en la nube. No lo captures otra vez; toca Reintentar sincronización.`, 8000);
+      toast(`⚠ Pedido #${pedidoNuevoGuardado.id} quedó guardado localmente, pero después de 3 intentos no pude confirmarlo en Firebase. No lo captures otra vez. Revisa tu red y toca Reintentar sincronización.`, 8000);
     }
   }else if(pedidoActualizadoGuardado){
     const confirmadoUpdate = await guardarYVerificarPedidoActualizado(pedidoActualizadoGuardado);
     if(confirmadoUpdate){
       toast(`✓ Cambios del pedido #${pedidoActualizadoGuardado.id} guardados y confirmados en la nube`, 5000);
     }else{
-      toast(`⚠ Cambios del pedido #${pedidoActualizadoGuardado.id} guardados localmente, pero no pude confirmarlos en la nube. No vuelvas a capturarlos; toca Reintentar sincronización.`, 8000);
+      toast(`⚠ Cambios del pedido #${pedidoActualizadoGuardado.id} guardados localmente, pero después de 3 intentos no pude confirmarlos en Firebase. Revisa tu red y toca Reintentar sincronización.`, 8000);
     }
   }else{
     await fbSave();
@@ -2558,7 +2625,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.5 stock inteligente</div>
+  <div class="app-version-badge">v3.8 nube + export pedidos</div>
 </body></html>`;
 }
 
