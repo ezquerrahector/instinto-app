@@ -534,10 +534,12 @@ const LIN_CLS = {'Caballero':'b-c','Dama':'b-d','Unisex':'b-u','Nicho':'b-n'};
 const bEst = e => `<span class="badge ${EST_CLS[e]||''}">${e}</span>`;
 const bLin = l => `<span class="badge ${LIN_CLS[l]||''}">${l}</span>`;
 
-function toast(msg){
+function toast(msg, duracion=3000){
   const t=document.getElementById('toast');
+  if(!t){ console.log(msg); return; }
+  if(window._toastTimer) clearTimeout(window._toastTimer);
   t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2400);
+  window._toastTimer=setTimeout(()=>t.classList.remove('show'), duracion);
 }
 
 function copiarTexto(txt){
@@ -1646,6 +1648,42 @@ async function guardarYVerificarPedido(pedido, intentos=3){
   return false;
 }
 
+
+async function guardarYVerificarPedidoActualizado(pedido, intentos=3){
+  // Guarda cambios de un pedido existente y confirma leyendo Firebase.
+  // Verifica campos clave para que cambios como fecha de entrega o fragancia sí queden en nube.
+  const camposClave = ['id','uid','fecha','cliente','codigo','fragancia','disenador','linea','estatus','canal','fechaPromesa','precio','costoEsencia','notas'];
+  const normaliza = v => String(v == null ? '' : v).trim();
+
+  for(let intento=1; intento<=intentos; intento++){
+    try{
+      setSyncStatus('syncing');
+      const ok = await fbSave();
+      await loadFirebase();
+      const ref = db.collection('instinto').doc('datos');
+      const snap = await ref.get();
+      const cloudPeds = snap.exists ? (snap.data().peds || []) : [];
+      const cloudPedido = cloudPeds.find(x => x && Number(x.id) === Number(pedido.id));
+
+      if(ok && cloudPedido){
+        const coincide = camposClave.every(c => normaliza(cloudPedido[c]) === normaliza(pedido[c]));
+        if(coincide){
+          setSyncStatus('ok');
+          return true;
+        }
+        console.warn(`Pedido #${pedido.id} encontrado en Firebase, pero los campos aún no coinciden. Reintento ${intento}/${intentos}`, {local:pedido, nube:cloudPedido});
+      }else{
+        console.warn(`Pedido #${pedido.id} no encontrado en Firebase. Reintento ${intento}/${intentos}`);
+      }
+    }catch(e){
+      console.warn(`Error verificando actualización del pedido #${pedido.id}. Reintento ${intento}/${intentos}:`, e.message || e);
+    }
+    await new Promise(r=>setTimeout(r, 900 * intento));
+  }
+  setSyncStatus('err');
+  return false;
+}
+
 async function savePed(){
   const fragVal=document.getElementById('f-frag-val')?.value||'';
   const esOtra=fragVal==='__otra__'||fragVal==='';
@@ -1667,6 +1705,7 @@ async function savePed(){
   }
   window._guardandoPedido = true;
   let pedidoNuevoGuardado = null;
+  let pedidoActualizadoGuardado = null;
 
   try {
 
@@ -1682,7 +1721,8 @@ async function savePed(){
     p.precio=parseFloat(document.getElementById('f-precio').value)||cfg.pventa;
     p.costoEsencia=parseFloat(document.getElementById('f-cesencia').value)||2.80;
     p.notas=document.getElementById('f-notas').value;
-    toast(`Pedido #${p.id} actualizado ✓`);
+    pedidoActualizadoGuardado={...p};
+    toast(`⏳ Guardando cambios del pedido #${p.id}...`);
   } else {
     const nuevoPedidoId=nextId;
     const pedidoUid='PED-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
@@ -1720,6 +1760,13 @@ async function savePed(){
       }
     }else{
       toast(`⚠ Pedido #${pedidoNuevoGuardado.id} quedó guardado localmente, pero no pude confirmarlo en la nube. No lo captures otra vez; toca Reintentar sincronización.`, 8000);
+    }
+  }else if(pedidoActualizadoGuardado){
+    const confirmadoUpdate = await guardarYVerificarPedidoActualizado(pedidoActualizadoGuardado);
+    if(confirmadoUpdate){
+      toast(`✓ Cambios del pedido #${pedidoActualizadoGuardado.id} guardados y confirmados en la nube`, 5000);
+    }else{
+      toast(`⚠ Cambios del pedido #${pedidoActualizadoGuardado.id} guardados localmente, pero no pude confirmarlos en la nube. No vuelvas a capturarlos; toca Reintentar sincronización.`, 8000);
     }
   }else{
     await fbSave();
