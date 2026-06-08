@@ -173,7 +173,7 @@ nav::-webkit-scrollbar{display:none}
     <div class="logo-icon">IF</div>
     <div>
       <div class="logo-text">Instinto Fragancias</div>
-      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.8 nube + export pedidos</span></div>
+      <div class="logo-sub">Sistema de pedidos <span style="opacity:.4;font-size:9px;margin-left:4px">v3.9 orden corregido</span></div>
     </div>
   </div>
   <button class="btn-nuevo" onclick="openModal('pedido')">+ Pedido</button>
@@ -891,7 +891,7 @@ function calcularStockPedidos(){
   const stockUsadoPorPedido={};
   const stockTemporal={...stockDisp};
   [...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock')
-    .sort((a,b)=>Number(a.id)-Number(b.id))
+    .sort((a,b)=>pedidoNumero(a)-pedidoNumero(b))
     .forEach(p=>{
       if(stockTemporal[p.codigo]===undefined) return;
       if(stockTemporal[p.codigo]>=cfg.gesencia){
@@ -905,9 +905,34 @@ function calcularStockPedidos(){
 }
 
 function pedidoTime(p){
-  const f = p.creadoEn || p.fecha || '';
-  const t = Date.parse(f);
-  return isNaN(t) ? 0 : t;
+  // Orden robusto para fechas mexicanas: dd/mm/yy, dd/mm/yyyy o yyyy-mm-dd.
+  // Date.parse interpreta 10/03/26 como formato americano en algunos navegadores,
+  // por eso antes aparecían pedidos antiguos como si fueran recientes.
+  const raw = String(p.creadoEn || p.fecha || '').trim();
+  if(!raw) return pedidoNumero(p);
+
+  let m = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(m){
+    const y=Number(m[1]), mo=Number(m[2])-1, d=Number(m[3]);
+    const t=new Date(y,mo,d).getTime();
+    return isNaN(t) ? pedidoNumero(p) : t;
+  }
+
+  m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(m){
+    const d=Number(m[1]), mo=Number(m[2])-1;
+    let y=Number(m[3]);
+    if(y<100) y += 2000;
+    const t=new Date(y,mo,d).getTime();
+    return isNaN(t) ? pedidoNumero(p) : t;
+  }
+
+  const t = Date.parse(raw);
+  return isNaN(t) ? pedidoNumero(p) : t;
+}
+function pedidoNumero(p){
+  const n = Number(String(p?.id ?? '').replace(/\D/g,''));
+  return Number.isFinite(n) ? n : 0;
 }
 
 function getPedidosFiltrados(){
@@ -929,13 +954,13 @@ function getPedidosFiltrados(){
 
   if(_fOrden==='nombre') list=[...list].sort((a,b)=>(a.cliente||'').localeCompare(b.cliente||''));
   else if(_fOrden==='fragancia') list=[...list].sort((a,b)=>(a.fragancia||'').localeCompare(b.fragancia||''));
-  else if(_fOrden==='numero') list=[...list].sort((a,b)=>Number(b.id)-Number(a.id));
-  else if(_fOrden==='numero_asc') list=[...list].sort((a,b)=>Number(a.id)-Number(b.id));
+  else if(_fOrden==='numero') list=[...list].sort((a,b)=>pedidoNumero(b)-pedidoNumero(a));
+  else if(_fOrden==='numero_asc') list=[...list].sort((a,b)=>pedidoNumero(a)-pedidoNumero(b));
   else if(_fOrden==='stock') list=[...list].sort((a,b)=>{
     const sc=p=>stockUsadoPorPedido[p.id]==='ok'?0:stockUsadoPorPedido[p.id]==='sin'?1:2;
-    return sc(a)-sc(b) || Number(b.id)-Number(a.id);
+    return sc(a)-sc(b) || pedidoNumero(b)-pedidoNumero(a);
   });
-  else list=[...list].sort((a,b)=>pedidoTime(b)-pedidoTime(a) || Number(b.id)-Number(a.id));
+  else list=[...list].sort((a,b)=>pedidoTime(b)-pedidoTime(a) || pedidoNumero(b)-pedidoNumero(a));
   return {list, stockUsadoPorPedido};
 }
 
@@ -2625,7 +2650,7 @@ function buildReporteHTML(conStock){
     <tbody>${rows}</tbody>
   </table>
   <div class="footer">No todo se ve, otras cosas se sienten</div>
-  <div class="app-version-badge">v3.8 nube + export pedidos</div>
+  <div class="app-version-badge">v3.9 orden corregido</div>
 </body></html>`;
 }
 
