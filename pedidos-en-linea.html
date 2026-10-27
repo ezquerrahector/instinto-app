@@ -5,11 +5,15 @@
 <style>
 :root{--ink:#1d1c18;--gold:#bd9b4c;--cream:#f7f5f0;--line:#ddd8ce}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:14px Jost,Arial,sans-serif}header{padding:22px clamp(16px,5vw,70px);background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}header h1{font:20px Cinzel,serif;letter-spacing:.15em;margin:0}header small{color:#817b70}main{max-width:1250px;margin:auto;padding:35px 18px}.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}h2{font:25px Cinzel,serif;font-weight:400}button{padding:10px 15px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:white;font:12px Jost,sans-serif;letter-spacing:.04em}button:disabled{opacity:.5}button.outline{background:#fff;color:var(--ink)}.note{border-left:3px solid var(--gold);background:#f0eadb;padding:13px 16px;line-height:1.55}.panel{background:white;border:1px solid var(--line);margin-top:20px;overflow:auto}.table{width:100%;border-collapse:collapse;text-align:left;min-width:740px}td,th{border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:top}th{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#746e65;background:#faf9f6}tr:last-child td{border-bottom:0}.pill{font-size:11px;background:#f1e9d6;padding:5px 8px;white-space:nowrap}.muted{color:#8c8579;font-size:12px}.error{color:#9e322b}.hidden{display:none}.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#status{margin:12px 0;min-height:18px}details{max-width:320px}details summary{cursor:pointer;color:#7d6133}details p{margin:5px 0;font-size:12px}#uid{font:12px monospace;word-break:break-all}a{color:#755622}
 </style></head><body>
-<header><div><h1>INSTINTO</h1><small>Fragancias · Pedidos de tienda en línea · V9</small></div><div class="tools"><button id="login">Acceder con Google</button><button id="logout" class="outline hidden">Cerrar sesión</button></div></header>
+<header><div><h1>INSTINTO</h1><small>Fragancias · Pedidos de tienda en línea · V10</small></div><div class="tools"><button id="login">Acceder con Google</button><button id="logout" class="outline hidden">Cerrar sesión</button></div></header>
 <main><div class="bar"><h2>Pedidos recibidos por internet</h2><button id="refresh" class="outline" disabled>Actualizar</button></div>
 <p class="note"><strong>Panel de solo lectura.</strong> Los pedidos de prueba son independientes de los pedidos administrativos actuales. No se modifica ni descuenta <code>stockGramos</code>. Un pedido de prueba no es una venta pagada.</p>
 <p id="status" role="status">Inicia sesión con la cuenta administradora autorizada.</p>
 <div class="panel"><table class="table"><thead><tr><th>Folio / fecha</th><th>Cliente</th><th>Artículos</th><th>Subtotal</th><th>Estado</th><th>Datos de entrega</th></tr></thead><tbody id="orders"><tr><td colspan="6">Inicia sesión para ver los pedidos.</td></tr></tbody></table></div>
+<section class="panel" style="padding:16px;margin-top:24px" id="webSales"><div class="bar"><h2 style="font-size:20px">Ventas Web pagadas · V10</h2><button id="webRefresh" class="outline" disabled>Actualizar ventas</button></div>
+<p class="muted">Compras confirmadas por Mercado Pago (API/webhook). Cada frasco ya es un pedido administrativo con folio Web compartido y esencia descontada una sola vez. Generar guía compra una guía real en Skydropx con cargo a tus créditos.</p>
+<p id="webStatus" role="status">Inicia sesión para ver las ventas.</p><div id="webAlerts"></div>
+<table class="table"><thead><tr><th>Folio / fecha</th><th>Cliente y entrega</th><th>Frascos</th><th>Total</th><th>Estado</th><th>Envío</th><th>Acciones</th></tr></thead><tbody id="webRows"></tbody></table></section>
 <section class="panel" style="padding:16px;margin-top:24px"><div class="bar"><h2 style="font-size:20px">Diagnóstico de inventario · V9</h2><button id="auditBtn" class="outline" disabled>Revisar disponibilidad</button></div><p class="muted">Consulta solo lectura. No reserva, libera ni descuenta gramos. No permite ventas.</p><p id="auditStatus" role="status">Inicia sesión para consultar el diagnóstico.</p><div id="auditResult"></div></section>
 <p class="muted">Esta vista usa Firebase Authentication y una API protegida. No escribe sobre el inventario ni incorpora pedidos en <code>instinto/datos</code>.</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -53,4 +57,52 @@ async function auditInventory(){
 $('auditBtn').addEventListener('click',auditInventory);
 $('logout').addEventListener('click',()=>auth.signOut());$('refresh').addEventListener('click',load);
 auth.onAuthStateChanged(user=>{if(user&&!InstintoAccess.authorized(user)){status('Esta cuenta no está autorizada.',true);return;}$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;$('auditBtn').disabled=!user;if(user)load();else{draw([]);$('auditResult').replaceChildren();$('auditStatus').textContent='Inicia sesión para consultar el diagnóstico.';status('Inicia sesión con la cuenta administradora autorizada.')}});
+</script>
+<script>
+'use strict';
+// INSTINTO V10 — ventas Web: identidad SIEMPRE por token verificado en servidor (webAdmin).
+(function(){
+const WEB='https://us-central1-instinto-fragancias.cloudfunctions.net/webAdmin';
+const $=id=>document.getElementById(id);
+const el=(tag,txt,cls)=>{const e=document.createElement(tag);if(txt!=null)e.textContent=String(txt);if(cls)e.className=cls;return e};
+const money=c=>(Number(c||0)/100).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
+const when=ms=>ms?new Date(ms).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}):'—';
+const ops=new Map();const opFor=k=>{if(!ops.has(k))ops.set(k,crypto.randomUUID().replace(/-/g,''));return ops.get(k)};
+const MSG={labels_disabled:'La generación de guías aún no está habilitada.',labels_not_configured:'Falta configuración verificada de guías.',
+ cost_difference:'El costo actual de la guía es mayor al cobrado al cliente.',shipment_uncertain_check_provider:'Respuesta incierta: revisa en Skydropx si se generó la guía antes de reintentar.',
+ purchase_not_shippable:'El pedido no está pagado o requiere revisión.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
+ forbidden:'Cuenta no autorizada.',invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',reason_required:'Escribe el motivo.'};
+async function call(path,body){const u=firebase.auth().currentUser;if(!u)throw Error('Inicia sesión');
+ const r=await fetch(WEB+path,{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+await u.getIdToken(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
+ const d=await r.json().catch(()=>({}));if(!r.ok){const e=Error(MSG[d.error]||d.error||('Error '+r.status));Object.assign(e,d);throw e}return d}
+function stateLabel(p){return {awaiting_payment:'Esperando pago',paid:'Pagado',expired:'Reserva vencida',cancelled:'Cancelado'}[p.state]||p.state}
+async function load(){$('webRefresh').disabled=true;$('webStatus').textContent='Consultando ventas…';
+ try{const d=await call('/overview');drawAlerts(d.alerts);drawRows(d.purchases);$('webStatus').textContent=d.purchases.length+' compra(s) Web. '+d.alerts.length+' alerta(s) abiertas.';}
+ catch(e){$('webStatus').textContent=e.message;$('webStatus').className='error'}finally{$('webRefresh').disabled=false}}
+function drawAlerts(alerts){const box=$('webAlerts');box.replaceChildren();for(const a of alerts){const n=el('div',null,'note');n.style.margin='8px 0';
+ n.append(el('strong',a.type+' '),el('span',(a.purchaseId?('Folio '+a.purchaseId.slice(1,9).toUpperCase()+' · '):'')+(a.reason||a.status||'')+' · '+when(a.lastAt)+' (x'+(a.count||1)+') '));
+ const b=el('button','Marcar atendida','outline');b.onclick=async()=>{const note=prompt('Nota de atención (opcional):')||'';try{await call('/alert/resolve',{key:a.key,note});load()}catch(e){alert(e.message)}};n.append(b);box.append(n)}}
+function drawRows(list){const body=$('webRows');body.replaceChildren();if(!list.length){const r=body.insertRow();const c=r.insertCell();c.colSpan=7;c.textContent='Sin compras Web todavía.';return}
+ for(const p of list){const r=body.insertRow();let c=r.insertCell();c.append(el('strong',p.id.slice(1,9).toUpperCase()),el('div',when(p.paidAt||p.createdAt),'muted'),el('div',p.liveMode?'REAL':'PRUEBA','pill'));
+  c=r.insertCell();const a=p.address||{};c.append(el('strong',[a.firstName,a.lastName].join(' ')),el('div',a.phone+' · '+a.email,'muted'),el('div',[a.street,a.colony,a.city,a.state,a.postal].join(', '),'muted'));if(a.references)c.append(el('div','Ref: '+a.references,'muted'));
+  c=r.insertCell();for(const i of p.items)c.append(el('div',i.qty+' × '+i.brand+' · '+i.name+' · '+i.size+' ml'+(i.gift?' · Regalo: '+(i.giftText||''):'')));c.append(el('div','Pedidos admin #'+(p.adminOrderIds||[]).join(', #'),'muted'));
+  c=r.insertCell();c.append(el('strong',money(p.totalCents)),el('div','Envío '+money(p.shippingCents)+' · '+(p.shippingChoice?.carrier||'')+' '+(p.shippingChoice?.service||''),'muted'));
+  c=r.insertCell();c.append(el('span',stateLabel(p),'pill'));if(p.reviewRequired)c.append(el('div','Revisión: '+p.reviewReason,'error'));if(p.refund)c.append(el('div','Reembolso '+p.refund.status,'muted'));
+  c=r.insertCell();const s=p.shipment;if(s?.state==='label_ready'){c.append(el('div',s.carrier+' · '+s.trackingNumber));for(const k of s.packages||[]){if(k.labelUrl){const l=el('a','Descargar guía');l.href=k.labelUrl;l.target='_blank';l.rel='noopener';c.append(l,el('br'))}}c.append(el('div',s.trackingStatus||'Guía creada','muted'))}else c.append(el('div',s?s.state+(s.error?' · '+s.error:''):'Sin guía','muted'));
+  c=r.insertCell();
+  if(p.state==='paid'&&!p.reviewRequired&&s?.state!=='label_ready'){const b=el('button','Generar guía');b.onclick=()=>label(p,false,b);c.append(b)}
+  if(s?.state==='label_ready'){const b=el('button','Cancelar guía','outline');b.onclick=async()=>{const reason=prompt('Motivo de cancelación de la guía:');if(!reason)return;b.disabled=true;try{await call('/label/cancel',{purchaseId:p.id,operationId:opFor('lc'+p.id),reason});load()}catch(e){alert(e.message)}finally{b.disabled=false}};c.append(b)}
+  if(p.state==='paid'){const b=el('button','Cancelar pedido','outline');b.style.marginTop='6px';b.onclick=()=>cancel(p,b);c.append(b)}
+ }}
+async function label(p,accept,b){if(!accept&&!confirm('Se comprará una guía REAL en Skydropx para '+p.items.reduce((n,i)=>n+i.qty,0)+' caja(s). ¿Continuar?'))return;
+ b.disabled=true;try{const d=await call('/label',{purchaseId:p.id,operationId:opFor('l'+p.id),acceptCostDifference:accept});if(d.outcome==='processing')alert('Skydropx está generando la guía. Actualiza en un minuto.');load()}
+ catch(e){if(e.error==='cost_difference'&&confirm('Cobrado al cliente '+money(e.paidCents)+', costo actual '+money(e.currentCents)+'. ¿Generar de todos modos?')){ops.delete('l'+p.id);return label(p,true,b)}alert(e.message)}finally{b.disabled=false}}
+async function cancel(p,b){const reason=prompt('Motivo de la cancelación (queda registrado):');if(!reason)return;
+ const refund=confirm('¿Reembolsar el TOTAL al cliente por Mercado Pago ('+money(p.totalCents)+')?\nAceptar = reembolsar · Cancelar = no reembolsar');
+ const restock=confirm('¿Reponer al inventario la esencia de los frascos que AÚN NO se elaboran?\n(Los materiales nunca se reponen automáticamente.)');
+ if(!confirm('Confirma: cancelar folio '+p.id.slice(1,9).toUpperCase()+(refund?' con reembolso total':' sin reembolso')+(restock?' y reponiendo esencia no usada':'')+'.'))return;
+ b.disabled=true;try{const d=await call('/cancel',{purchaseId:p.id,operationId:opFor('c'+p.id),refund:refund?'full':'none',restockEssence:restock,reason});alert('Pedido cancelado. Esencia repuesta: '+JSON.stringify(d.restocked||{}));load()}catch(e){alert(e.message)}finally{b.disabled=false}}
+$('webRefresh').addEventListener('click',load);
+firebase.auth().onAuthStateChanged(u=>{const ok=u&&InstintoAccess.authorized(u);$('webRefresh').disabled=!ok;if(ok)load();else{$('webRows').replaceChildren();$('webAlerts').replaceChildren()}});
+})();
 </script></body></html>
