@@ -70,11 +70,11 @@ const when=ms=>ms?new Date(ms).toLocaleString('es-MX',{dateStyle:'medium',timeSt
 const ops=new Map();const opFor=k=>{if(!ops.has(k))ops.set(k,crypto.randomUUID().replace(/-/g,''));return ops.get(k)};
 const MSG={labels_disabled:'La generación de guías aún no está habilitada.',labels_not_configured:'Falta configuración verificada de guías.',
  cost_difference:'El costo actual de la guía es mayor al cobrado al cliente.',shipment_uncertain_check_provider:'Respuesta incierta: revisa en Skydropx si se generó la guía antes de reintentar.',
- purchase_not_shippable:'El pedido no está pagado o requiere revisión.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
+ purchase_not_shippable:'El pedido no está pagado o requiere revisión.',label_provider_rejected:'Skydropx rechazó la guía',shipment_in_progress:'Hay una generación de guía en curso; espera 10 minutos o actualiza.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
  forbidden:'Cuenta no autorizada.',invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',reason_required:'Escribe el motivo.'};
 async function call(path,body){const u=firebase.auth().currentUser;if(!u)throw Error('Inicia sesión');
  const r=await fetch(WEB+path,{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+await u.getIdToken(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
- const d=await r.json().catch(()=>({}));if(!r.ok){const e=Error(MSG[d.error]||d.error||('Error '+r.status));Object.assign(e,d);throw e}return d}
+ const d=await r.json().catch(()=>({}));if(!r.ok){const e=Error((MSG[d.error]||d.error||('Error '+r.status))+(d.detail?': '+d.detail:''));Object.assign(e,d);throw e}return d}
 function stateLabel(p){return {awaiting_payment:'Esperando pago',paid:'Pagado',expired:'Reserva vencida',cancelled:'Cancelado'}[p.state]||p.state}
 async function load(){$('webRefresh').disabled=true;$('webStatus').textContent='Consultando ventas…';
  try{const d=await call('/overview');drawAlerts(d.alerts);drawRows(d.purchases);$('webStatus').textContent=d.purchases.length+' compra(s) Web. '+d.alerts.length+' alerta(s) abiertas.';}
@@ -88,7 +88,7 @@ function drawRows(list){const body=$('webRows');body.replaceChildren();if(!list.
   c=r.insertCell();for(const i of p.items)c.append(el('div',i.qty+' × '+i.brand+' · '+i.name+' · '+i.size+' ml'+(i.gift?' · Regalo: '+(i.giftText||''):'')));c.append(el('div','Pedidos admin #'+(p.adminOrderIds||[]).join(', #'),'muted'));
   c=r.insertCell();c.append(el('strong',money(p.totalCents)),el('div','Envío '+money(p.shippingCents)+' · '+(p.shippingChoice?.carrier||'')+' '+(p.shippingChoice?.service||''),'muted'));
   c=r.insertCell();c.append(el('span',stateLabel(p),'pill'));if(p.reviewRequired)c.append(el('div','Revisión: '+p.reviewReason,'error'));if(p.refund)c.append(el('div','Reembolso '+p.refund.status,'muted'));
-  c=r.insertCell();const s=p.shipment;if(s?.state==='label_ready'){c.append(el('div',s.carrier+' · '+s.trackingNumber));for(const k of s.packages||[]){if(k.labelUrl){const l=el('a','Descargar guía');l.href=k.labelUrl;l.target='_blank';l.rel='noopener';c.append(l,el('br'))}}c.append(el('div',s.trackingStatus||'Guía creada','muted'))}else c.append(el('div',s?s.state+(s.error?' · '+s.error:''):'Sin guía','muted'));
+  c=r.insertCell();const s=p.shipment;if(s?.state==='label_ready'){c.append(el('div',s.carrier+' · '+s.trackingNumber));for(const k of s.packages||[]){if(k.labelUrl){const l=el('a','Descargar guía');l.href=k.labelUrl;l.target='_blank';l.rel='noopener';c.append(l,el('br'))}}c.append(el('div',s.trackingStatus||'Guía creada','muted'))}else{c.append(el('div',s?s.state+(s.error?' · '+s.error:''):'Sin guía','muted'));if(s?.providerDetail)c.append(el('div','Skydropx: '+s.providerDetail,'error'))}
   c=r.insertCell();
   if(p.state==='paid'&&!p.reviewRequired&&s?.state!=='label_ready'){const b=el('button','Generar guía');b.onclick=()=>label(p,false,b);c.append(b)}
   if(s?.state==='label_ready'){const b=el('button','Cancelar guía','outline');b.onclick=async()=>{const reason=prompt('Motivo de cancelación de la guía:');if(!reason)return;b.disabled=true;try{await call('/label/cancel',{purchaseId:p.id,operationId:opFor('lc'+p.id),reason});load()}catch(e){alert(e.message)}finally{b.disabled=false}};c.append(b)}

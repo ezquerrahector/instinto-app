@@ -48,8 +48,9 @@ async function overview({db, identity}) {
 
 function partyTo(address) {
   const name = `${address.firstName} ${address.lastName}`.trim();
-  return {street1: `${address.street}, ${address.colony}`.slice(0, 200), name, company: name, phone: address.phone,
-    email: address.email, reference: address.references || address.colony};
+  // La colonia ya viaja en la cotización (area_level3); varias paqueterías limitan street1 a ~45 caracteres.
+  return {street1: String(address.street).slice(0, 45), name: name.slice(0, 60), company: name.slice(0, 60), phone: String(address.phone).replace(/\D/g, '').slice(-10),
+    email: address.email, reference: [address.references, 'Col. ' + address.colony].filter(Boolean).join(' · ').slice(0, 100)};
 }
 
 async function createLabel({db, shipping, identity, body, now = Date.now()}) {
@@ -65,7 +66,10 @@ async function createLabel({db, shipping, identity, body, now = Date.now()}) {
     if (!p) throw err(404, 'not_found');
     if (p.state !== 'paid' || p.reviewRequired === true) throw err(409, 'purchase_not_shippable');
     if (p.shipment?.state === 'label_ready') return {done: p.shipment};
-    if (p.shipment && p.shipment.operationId !== operationId && ['creating', 'processing', 'uncertain'].includes(p.shipment.state))
+    // Un intento "creating" sin id de envío por más de 10 min no llegó a crear guía (la creación es
+    // síncrona dentro de la misma petición); se permite reintentar. "processing"/"uncertain" nunca.
+    const staleCreating = p.shipment?.state === 'creating' && !p.shipment.id && now - (p.shipment.startedAt || 0) > 10 * 60000;
+    if (p.shipment && p.shipment.operationId !== operationId && !staleCreating && ['creating', 'processing', 'uncertain'].includes(p.shipment.state))
       throw err(409, 'shipment_in_progress');
     if (p.shipment?.state === 'uncertain') throw err(409, 'shipment_uncertain_check_provider');
     tx.update(ref, {shipment: {...(p.shipment || {}), state: p.shipment?.id ? 'processing' : 'creating', operationId, actor, startedAt: p.shipment?.startedAt || now}});
@@ -127,7 +131,12 @@ async function createLabel({db, shipping, identity, body, now = Date.now()}) {
       await alert(db, 'label_' + purchaseId, {type: 'label_uncertain', purchaseId, reason: 'Revisar en Skydropx si se generó la guía antes de reintentar.'}, now);
       throw err(503, 'shipment_uncertain_check_provider');
     }
-    if (!e.status) { await ref.update({'shipment.state': shipmentId ? 'processing' : 'failed', 'shipment.error': e.message}); throw err(502, e.message); }
+    // Cualquier fallo determinista deja el envío en "failed" con el motivo del proveedor y permite reintentar.
+    if (e.message !== 'cost_difference') await ref.update({'shipment.state': shipmentId ? 'processing' : 'failed', 'shipment.error': e.message,
+      'shipment.providerStatus': e.status || null, 'shipment.providerDetail': e.detail || null, 'shipment.failedAt': now});
+    if (!shipmentId) await alert(db, 'label_' + purchaseId, {type: 'label_failed', purchaseId, reason: (e.detail || e.message).slice(0, 300)}, now);
+    if (e.message === 'shipping_provider_error') throw err(502, 'label_provider_rejected', {detail: e.detail || null});
+    if (!e.status) throw err(502, e.message);
     throw e;
   }
 }

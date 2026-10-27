@@ -60,3 +60,12 @@ test('invalid input never contacts provider; GET cannot escape the quotation pat
  let calls=0;const client=createShippingClient({credentials:creds,fetchImpl:async()=>{calls++;}});
  await assert.rejects(client.getQuote('../shipments'));await assert.rejects(client.createQuote(a,a,[]));assert.equal(calls,0);
 });
+test('provider validation errors keep the provider message for operators',async()=>{
+ const {createShippingClient}=require('../payments/shipping');
+ let n=0;
+ const client=createShippingClient({credentials:async()=>({client_id:'a',client_secret:'b'}),fetchImpl:async()=>{n++;
+   if(n===1)return {ok:true,json:async()=>({access_token:'t',expires_in:7200})};
+   return {ok:false,status:422,text:async()=>'{"errors":{"address_to":["street1 is too long"]}}'};}});
+ await assert.rejects(client.createShipment({rateId:'r1',originTemplateId:'tpl',from:{street1:'a',name:'b',phone:'1',email:'e@x.com'},to:{street1:'a',name:'b',phone:'1',email:'e@x.com'},packages:[{consignmentNote:'53131620',packageType:'4G'}]}),
+   e=>e.status===422&&/street1 is too long/.test(e.detail));
+});

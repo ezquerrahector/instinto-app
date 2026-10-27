@@ -61,7 +61,10 @@ function createShippingClient({credentials,fetchImpl=fetch,now=Date.now}) {
     try {response=await fetchImpl(BASE+path,{...options,redirect:'error',signal:AbortSignal.timeout(10000)});}
     catch {throw Error('shipping_network_error');}
     if(!response.ok) {
-      const e=Error('shipping_provider_error');e.status=response.status;throw e;
+      const e=Error('shipping_provider_error');e.status=response.status;
+      // Mensaje de validación del proveedor (sin credenciales): necesario para atender excepciones.
+      try{e.detail=(await response.text()).replace(/\s+/g,' ').slice(0,600);}catch{}
+      throw e;
     }
     try {return await response.json();}catch {throw Error('invalid_provider_response');}
   }

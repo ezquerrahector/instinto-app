@@ -220,3 +220,32 @@ test('checkout stays closed when any private gate or verified mapping is missing
   }
   assert.equal((await db.doc('instinto/datos').get()).data().cat[0].stockGramos, 90);
 });
+
+test('a rejected label keeps the provider message, creates no shipment and can be retried safely', async () => {
+  let fail = true;
+  const s = fakeShipping({async createShipment(args) { this.calls.push(['ship', args]);
+    if (fail) { const e = Error('shipping_provider_error'); e.status = 422; e.detail = '{"errors":["street1 too long"]}'; throw e; }
+    return {id: 'shp2', packages: []}; }});
+  const mp = fakeMp();
+  const {res} = await buy(s, mp);
+  await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});
+  await assert.rejects(actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'f'.repeat(20)}, now: T0 + 120000}),
+    e => e.message === 'label_provider_rejected' && /street1/.test(e.detail));
+  const p = (await db.doc('instinto_web_purchases/' + res.purchaseId).get()).data();
+  assert.equal(p.shipment.state, 'failed'); assert.equal(p.shipment.providerStatus, 422);
+  assert.ok((await db.doc('instinto_alerts/label_' + res.purchaseId).get()).exists);
+  fail = false;
+  const ok = await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'g'.repeat(20)}, now: T0 + 130000});
+  assert.equal(ok.outcome, 'label_ready');
+  assert.ok(s.calls.filter(c => c[0] === 'ship').every(c => c[1].to.street1.length <= 45));
+});
+
+test('a stale "creating" label without shipment id can be retried; a recent one cannot', async () => {
+  const s = fakeShipping(), mp = fakeMp();
+  const {res} = await buy(s, mp);
+  await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});
+  await db.doc('instinto_web_purchases/' + res.purchaseId).update({shipment: {state: 'creating', operationId: 'op_' + 'o'.repeat(20), startedAt: T0 + 100000}});
+  await assert.rejects(actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'n'.repeat(20)}, now: T0 + 200000}), {message: 'shipment_in_progress'});
+  const r = await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'p'.repeat(20)}, now: T0 + 100000 + 11 * 60000});
+  assert.equal(r.outcome, 'label_ready');
+});
