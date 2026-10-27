@@ -49,7 +49,7 @@ cálculo previo de 100 ml (50 g esencia, 5.83 g feromonas, 8.33 g fijador y 35.8
 perfumol) y se incorporó como módulo verificable, sin activarlo contra inventario.
 Falta mapear los envases de 100 ml y etiquetas reales antes de incorporar pedidos.
 
-Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 28
+Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 36
 pruebas locales de lógica/UI. No se probaron permisos desplegados, checkout sandbox,
 cotización de Skydropx ni aceptación con colaboradores.
 
@@ -61,10 +61,15 @@ cotización de Skydropx ni aceptación con colaboradores.
    El proveedor de enlace por correo sigue pendiente de activación/publicación.
 2. Webempresa y Skydropx accesibles por las sesiones abiertas. Carpeta de tienda
    confirmada: public_html/instintofragancias.com. No se modificaron archivos vivos.
-3. Skydropx: plantilla Instinto 7×7×20 cm, 1 kg. Lista de direcciones de origen
-   vacía; cotizador sin origen. API sin aplicaciones/credenciales conectadas.
-   Falta dirección real de origen, política de empaquetado de múltiples frascos y
-   creación segura de credenciales limitadas para cotización.
+3. Skydropx: plantilla Instinto 7×7×20 cm, 1 kg. Credencial autorizada y creada
+   como INSTINTO V10 Cotizaciones, permiso general default, sin Orders.create,
+   vigente hasta 26/04/2027. Client ID y Secret guardados exclusivamente en
+   Secret Manager, secreto INSTINTO_SKYDROPX_CREDENTIALS, versión 1 habilitada.
+   No se concedieron nuevos permisos IAM ni se desplegaron funciones.
+   Dirección de origen proporcionada por el propietario y preparada en Skydropx;
+   pendiente de guardar por teléfono, correo de contacto y referencia obligatorios.
+   No guardar domicilio particular ni credenciales en este repositorio público.
+   Falta confirmar empaquetado real de uno y múltiples frascos.
 4. Verificar fuente/configuración desplegada y establecer un medio autorizado
    de despliegue Firebase. Ver una sesión Console no acredita acceso CLI.
 
@@ -72,6 +77,24 @@ cotización de Skydropx ni aceptación con colaboradores.
 
 - https://firebase.google.com/docs/firestore/manage-data/transactions
 - https://www.mercadopago.com.mx/developers/es/docs/checkout-pro-preferences/additional-content/notifications/webhooks
+- https://app.skydropx.com/es-MX/api-docs.json
+
+## Cotización preparada, todavía no conectada a checkout
+
+`payments/shipping.js` implementa el contrato público OAuth client_credentials,
+POST /api/v1/quotations y GET /api/v1/quotations/{id}. Token en memoria con
+renovación, tiempos límite y sin seguir redirecciones. No registra secretos ni
+respuestas crudas. Conserva pendiente/completada, filtra tarifas fallidas, monedas
+distintas de MXN, importes inválidos y orígenes pendientes de verificación.
+Ocho pruebas nuevas usan respuestas de API simuladas; no son cotizaciones reales.
+
+El adaptador NO está exportado como función pública. Antes de conectarlo:
+validar identidad/cesta, tomar medidas desde configuración privada validada,
+limitar peticiones, persistir cotización y su vínculo con cesta/destino, aplicar
+caducidad y cotejar el rate elegido en servidor. Nunca aceptar el costo ni las
+dimensiones que envíe el navegador como autoridad. La compra de guías y solicitud
+de recolección no forman parte de este módulo. No se garantiza recolección para
+un CP hasta comprobar la tarifa y condiciones de la paquetería.
 
 Validación local: `npm test`. Los casos cubren conflictos con escritor antiguo,
 stock cambiado por otro escritor, cola, desconexión, reinicio, persistencia fallida,
