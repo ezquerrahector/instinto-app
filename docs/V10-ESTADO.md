@@ -66,8 +66,8 @@ cotización de Skydropx ni aceptación con colaboradores.
    vigente hasta 26/04/2027. Client ID y Secret guardados exclusivamente en
    Secret Manager, secreto INSTINTO_SKYDROPX_CREDENTIALS, versión 1 habilitada.
    No se concedieron nuevos permisos IAM ni se desplegaron funciones.
-   Dirección de origen proporcionada por el propietario y preparada en Skydropx;
-   pendiente de guardar por teléfono, correo de contacto y referencia obligatorios.
+   Dirección de origen completada con los datos autorizados y guardada en Skydropx
+   como INSTINTO Origen, marcada Predeterminada. Incluye contacto y referencia.
    No guardar domicilio particular ni credenciales en este repositorio público.
    Falta confirmar empaquetado real de uno y múltiples frascos.
 4. Verificar fuente/configuración desplegada y establecer un medio autorizado
