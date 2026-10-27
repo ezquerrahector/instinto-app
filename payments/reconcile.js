@@ -7,7 +7,10 @@ function toCents(value) {
 function validatePayment(payment,purchase,config) {
   if(!/^\d{1,30}$/.test(String(payment.id))||!purchase||purchase.schemaVersion!==10)throw Error('unknown_purchase');
   if(!config.collectorId||String(payment.collector_id)!==String(config.collectorId))throw Error('collector_mismatch');
-  if(typeof config.liveMode!=='boolean'||payment.live_mode!==config.liveMode)throw Error('payment_environment_mismatch');
+  // paymentLiveMode: valor de live_mode que reporta MP para el vendedor configurado. Las cuentas de
+  // prueba de MP reportan live_mode=true; el aislamiento lo garantiza collectorId (vendedor de prueba ≠ real).
+  const expectedLive=typeof config.paymentLiveMode==='boolean'?config.paymentLiveMode:config.liveMode;
+  if(typeof expectedLive!=='boolean'||payment.live_mode!==expectedLive)throw Error('payment_environment_mismatch');
   if(payment.external_reference!==purchase.id||payment.metadata?.instinto_purchase!==purchase.id||
      !purchase.binding||payment.metadata?.instinto_binding!==purchase.binding)throw Error('purchase_binding_mismatch');
   if(payment.currency_id!=='MXN'||toCents(payment.transaction_amount)!==purchase.totalCents)throw Error('payment_total_mismatch');

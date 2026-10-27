@@ -38,3 +38,11 @@ test('Mercado Pago transport rejects untrusted checkout destinations and does no
  const bad=createMercadoPagoClient({accessToken:async()=>'fake',fetchImpl:async()=>({ok:true,json:async()=>({id:'pref1',external_reference:'purchase_1',init_point:'https://evil.example/pay'})})});
  await assert.rejects(bad.createPreference(make(),options),{message:'mp_checkout_url_invalid'});
 });
+test('MP test-user payments (live_mode=true) validate only against the configured test seller',()=>{
+ const {validatePayment}=require('../payments/reconcile');
+ const purchase={schemaVersion:10,id:'p1',binding:'b'.repeat(40),totalCents:72250};
+ const pay={id:'1',collector_id:3315715461,live_mode:true,external_reference:'p1',metadata:{instinto_purchase:'p1',instinto_binding:'b'.repeat(40)},currency_id:'MXN',transaction_amount:722.5,date_last_updated:'2026-10-27T18:53:00Z'};
+ assert.doesNotThrow(()=>validatePayment(pay,purchase,{collectorId:3315715461,liveMode:false,paymentLiveMode:true}));
+ assert.throws(()=>validatePayment(pay,purchase,{collectorId:3315715461,liveMode:false}),/payment_environment_mismatch/);
+ assert.throws(()=>validatePayment({...pay,collector_id:71623902},purchase,{collectorId:3315715461,liveMode:false,paymentLiveMode:true}),/collector_mismatch/);
+});

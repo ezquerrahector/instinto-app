@@ -30,7 +30,9 @@ if (!tpl) throw Error('No existe la plantilla predeterminada "INSTINTO Origen" e
 const pack = line => ({verified: true, bottle: line === 'Dama' ? 'env_cristal' : 'env_mate', atomizer: 'atomizador', label: null});
 const runtime = {
   checkoutEnabled: on('checkout'), reconciliationEnabled: on('conciliacion'), compatibleWritesValidated: on('escrituras-validadas'),
-  liveMode: modo === 'live', collectorId: me.id, enabledSizes: [60], pricesCents: {60: 31000},
+  liveMode: modo === 'live', collectorId: me.id,
+  // MP reporta live_mode=true también para pagos entre cuentas de prueba (verificado 27/10/2026, pago 185338674611).
+  paymentLiveMode: modo === 'live' ? true : (me.tags || []).includes('test_user'), enabledSizes: [60], pricesCents: {60: 31000},
   // Receta confirmada por el propietario 27/10/2026 (= cfg de la administración).
   recipes: {60: {verified: true, essence: 30, fijador: 6, feromonas: 3.5, perfumol: 21.5, source: 'owner_2026-10-27_admin_cfg'}},
   // Envase por línea confirmado 27/10/2026; etiqueta sin control de inventario.
