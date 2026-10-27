@@ -15,7 +15,7 @@ No se activaron cobros, no se tocaron inventarios productivos y no se cerraron r
 | Cotización | Adaptador de API probado con respuestas controladas, importes en centavos y protección ante errores; pendiente consulta real y enlace a tienda. |
 | Mercado Pago | Firma y consulta de pago; constructor de preferencia con precios de servidor. Falta desplegar/configurar la integración final. |
 | Conciliación | Transacciones probadas para descuento único de esencia, pedidos ligados por folio y tareas de notificación persistidas. No habilitadas. |
-| Elaboración | Método de servidor usa receta por presentación y no vuelve a descontar esencia. Pendiente conexión con la interfaz. |
+| Elaboración | Método de servidor usa receta por presentación y no vuelve a descontar esencia. Conectado a la interfaz en la rama candidata mediante `webOrderStatus`; pendiente despliegue y aceptación. |
 | Reversión | Procedimiento documentado para código y compensaciones de datos; aún no se hizo respaldo/restauración de producción. |
 
 ## Todos los puntos pendientes antes de abrir cobros
@@ -33,7 +33,7 @@ No se activaron cobros, no se tocaron inventarios productivos y no se cerraron r
    lectura/escritura pública y probar cliente antiguo, revocado y concurrente.
    Las reglas de transición actuales NO son las reglas finales de pagos.
 5. **Materiales reales.** Mapear envases de 100 ml y etiquetas a IDs del inventario
-   real; validar receta de producción y conectar `production.js` al cambio de estado.
+   real; validar receta de producción y desplegar/probar la conexión de `production.js` al cambio de estado.
    No usar el envase de 60 ml como sustituto silencioso del de 100 ml.
 6. **Embalaje y paquetería.** Validar la caja provisional para ambos frascos y las
    condiciones del transportista para perfumes. Comprobar cotizaciones reales,

@@ -10,6 +10,10 @@ const signingKey = defineSecret('INSTINTO_MP_WEBHOOK_SECRET');
 const REGION = 'us-central1';
 const {validSignature} = require('./signature');
 const {reconcilePayment} = require('./reconcile');
+const {createAdminStatusHandler}=require('./admin-api');
+exports.webOrderStatus=onRequest({region:REGION,timeoutSeconds:30,memory:'256MiB',maxInstances:3,
+  invoker:'public'},createAdminStatusHandler({db:admin.firestore(),
+    verifyIdToken:(value,checkRevoked)=>admin.auth().verifyIdToken(value,checkRevoked)}));
 const scalar = s => typeof s === 'string' ? s : '';
 exports.mpWebhook = onRequest({region:REGION, timeoutSeconds:45, memory:'256MiB', maxInstances:3,
   secrets:[token,signingKey], invoker:'public'}, async (req,res)=>{

@@ -116,9 +116,11 @@ un CP hasta comprobar la tarifa y condiciones de la paquetería.
 - `production.js`: cambio de estado autenticado, receta guardada por unidad y
   tamaño, rechazo de materiales insuficientes y ninguna segunda deducción de esencia.
 
-Pendiente conectar las entradas públicas y pantallas administrativas a estos módulos,
-cerrar las escrituras directas y migrar todos los colaboradores. El método de estado
-actual del cliente NO invoca todavía `production.js`. El constructor de compras no
+Pendiente conectar las entradas públicas de checkout a estos módulos,
+cerrar las escrituras directas y migrar todos los colaboradores. En la rama candidata,
+el cambio de estado de pedidos Web pagados invoca `webOrderStatus`, que verifica el
+token con revocación antes de llamar a `production.js`. No está desplegado.
+El constructor de compras no
 persiste ni publica preferencias por sí solo. No afirmar que checkout esté completo.
 
 Para validar: `npm ci` y `npm ci --prefix payments`; luego `npm test` y
@@ -133,3 +135,22 @@ Pruebas aisladas: `npm run test:rules` usa exclusivamente `demo-instinto-v10`
 en localhost:8085. No usa credenciales ni datos de producción. Las reglas de
 `security/firestore.transition.rules` son solo la transición con pagos apagados;
 NO deben usarse como reglas finales de una tienda con descuentos automáticos.
+
+## Continuación del 27 de octubre: estado de pedidos Web
+
+Se verificó acceso autenticado a Firebase Console del proyecto correcto. En producción
+siguen presentes únicamente `storeApi` y `mpWebhook`; no se desplegó esta continuación.
+La consola Google Cloud y el iframe Cloud Shell mostraron Site Unavailable en el
+navegador integrado. La herramienta local Firebase CLI no tiene cuentas autorizadas.
+La sesión Console no equivale a autorización de despliegue.
+
+Se añadió `webOrderStatus` y se conectó `cambiarEst` de pedidos Web pagados a ese
+método. La identidad procede exclusivamente del token verificado con revocación;
+la transacción conserva los interruptores privados existentes. La interfaz no
+modifica materiales ni esencia como alternativa ante una respuesta incierta, reutiliza
+el identificador de operación al reintentar y espera la actualización de Firestore.
+Los pedidos Directo conservan su ruta anterior. No se modificó el diseño.
+
+Validación de esta continuación: 52 pruebas locales y 17 de integración aprobadas.
+No representa prueba de pago, cotización real ni despliegue productivo. Siguen
+pendientes checkout, reservas, recuperación, respaldo, mapeos reales y publicación.

@@ -1126,6 +1126,10 @@ function cambiarEst(id,est){
   const webPrepaid = p.canal === 'Web' && p.origenWeb === true && p.pagoConfirmadoServidor === true;
   const estAnterior=p.estatus;
   if(est===estAnterior) return;
+  if(webPrepaid){
+    cambiarEstWebServidor(p,est);
+    return;
+  }
 
   const elaborados=['Elaborado','Entregado','Cobrado','Entregado/Cobrado'];
   const eraElaborado=elaborados.includes(estAnterior);
@@ -1180,6 +1184,36 @@ function cambiarEst(id,est){
       }
     }
   }
+}
+const webStatusRequests=new Map();
+async function cambiarEstWebServidor(p,status){
+  if(syncPending()){toast('⚠ Sincroniza los cambios pendientes antes de actualizar un pedido web.');return;}
+  const key=p.id+'|'+p.estatus+'|'+status;
+  const existing=webStatusRequests.get(key);
+  if(existing?.running)return;
+  const request=existing||{operationId:crypto.randomUUID(),running:false};
+  request.running=true;webStatusRequests.set(key,request);
+  try{
+    const user=await InstintoAccess.requireUser();
+    const response=await fetch('https://us-central1-instinto-fragancias.cloudfunctions.net/webOrderStatus',{
+      method:'POST',signal:AbortSignal.timeout(20000),headers:{'Content-Type':'application/json',Authorization:'Bearer '+await user.getIdToken()},
+      body:JSON.stringify({orderId:p.id,status,expectedStatus:p.estatus,operationId:request.operationId})});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok){
+      const messages={production_disabled:'La operación de pedidos web aún no está habilitada.',
+        insufficient_material:'No hay materiales suficientes para esta presentación.',
+        status_conflict:'El pedido cambió en otro dispositivo. Espera la sincronización.',
+        invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',
+        forbidden:'Tu cuenta no está autorizada para esta operación.'};
+      throw Error(messages[result.error]||'No se confirmó el cambio del pedido. Puedes volver a intentar.');
+    }
+    if(!['applied','already_applied'].includes(result.outcome))throw Error('No se confirmó el cambio del pedido.');
+    webStatusRequests.delete(key);
+    // The Firestore listener receives the committed inventory and order together.
+    // Never apply materials or essence locally as a fallback after an API error.
+    toast('Estatus confirmado por el servidor ✓');
+  }catch(e){toast('⚠ '+e.message);}
+  finally{request.running=false;renderAll();}
 }
 function verificarStockAlCargar(){
   // Buscar pedidos activos (Pedido/Comprado) de clientes con esencia sin stock
