@@ -49,7 +49,7 @@ cálculo previo de 100 ml (50 g esencia, 5.83 g feromonas, 8.33 g fijador y 35.8
 perfumol) y se incorporó como módulo verificable, sin activarlo contra inventario.
 Falta mapear los envases de 100 ml y etiquetas reales antes de incorporar pedidos.
 
-Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 36
+Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 39
 pruebas locales de lógica/UI. No se probaron permisos desplegados, checkout sandbox,
 cotización de Skydropx ni aceptación con colaboradores.
 
@@ -69,7 +69,13 @@ cotización de Skydropx ni aceptación con colaboradores.
    Dirección de origen completada con los datos autorizados y guardada en Skydropx
    como INSTINTO Origen, marcada Predeterminada. Incluye contacto y referencia.
    No guardar domicilio particular ni credenciales en este repositorio público.
-   Falta confirmar empaquetado real de uno y múltiples frascos.
+   Política autorizada: una caja por perfume. Pesos proporcionados: 60 ml = 250 g,
+   100 ml = 299 g, interpretados como empacados por el contexto de la pregunta.
+   `packing.js` conserva estos pesos y expande cantidades en paquetes individuales.
+   Las dimensiones 7×7×20 cm siguen sin verificar para ambos tamaños: el módulo
+   exige configuración de cajas verificada antes de cotizar. El contrato v1 exige
+   peso mínimo 1 kg en la solicitud; el adaptador aplica ese mínimo sin sustituir
+   el peso real guardado. Pendiente validación real del proveedor, sin tarifa fija.
 4. Verificar fuente/configuración desplegada y establecer un medio autorizado
    de despliegue Firebase. Ver una sesión Console no acredita acceso CLI.
 

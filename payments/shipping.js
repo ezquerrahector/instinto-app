@@ -21,8 +21,10 @@ function quotePayload(origin,destination,parcels) {
   return {quotation:{address_from:address(origin),address_to:address(destination),parcels:parcels.map(p=>{
     if(!p)throw Error('invalid_parcel');
     for(const k of ['length','width','height'])if(!Number.isSafeInteger(p[k])||p[k]<1||p[k]>200)throw Error('invalid_parcel');
-    if(typeof p.weight!=='number'||!Number.isFinite(p.weight)||p.weight<1||p.weight>70)throw Error('invalid_parcel');
-    return {length:p.length,width:p.width,height:p.height,weight:p.weight,package_protected:false};
+    if(typeof p.weight!=='number'||!Number.isFinite(p.weight)||p.weight<=0||p.weight>70)throw Error('invalid_parcel');
+    // Documented v1 quotation contract requires >= 1 kg. Preserve actual weight
+    // in the packing result; apply this minimum only to the provider request.
+    return {length:p.length,width:p.width,height:p.height,weight:Math.max(1,p.weight),package_protected:false};
   })}};
 }
 function cents(value) {
