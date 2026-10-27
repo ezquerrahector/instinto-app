@@ -15,6 +15,7 @@ const mpLive = defineSecret('INSTINTO_MP_ACCESS_TOKEN');
 const mpTest = defineSecret('INSTINTO_MP_TEST_ACCESS_TOKEN');
 const signingKey = defineSecret('INSTINTO_MP_WEBHOOK_SECRET');
 const skydropx = defineSecret('INSTINTO_SKYDROPX_CREDENTIALS');
+const smtp = defineSecret('INSTINTO_SMTP');
 const WEBHOOK_URL = 'https://us-central1-instinto-fragancias.cloudfunctions.net/mpWebhook';
 const STORE_ORIGINS = new Set(['https://instintofragancias.com', 'https://www.instintofragancias.com']);
 const ADMIN_ORIGIN = 'https://ezquerrahector.github.io';
@@ -27,6 +28,8 @@ const {createShippingClient} = require('./shipping');
 const checkout = require('./checkout');
 const maintenance = require('./maintenance');
 const actions = require('./admin-actions');
+const {createMailer} = require('./email');
+const mailerFactory = () => { const raw = smtp.value(); if (!raw || raw === 'PENDIENTE_CONFIGURAR') throw Error('smtp_not_configured'); return createMailer({smtp: JSON.parse(raw)}); };
 
 async function runtime() { return (await db.doc('instinto_private/runtime').get()).data() || {}; }
 async function mpClient() {
@@ -142,12 +145,12 @@ exports.webAdmin = onRequest({region: REGION, timeoutSeconds: 60, memory: '256Mi
 });
 
 exports.maintenance = onSchedule({region: REGION, schedule: 'every 5 minutes', timeZone: 'America/Mexico_City', timeoutSeconds: 240,
-  memory: '256MiB', maxInstances: 1, retryCount: 0, secrets: [mpLive, mpTest, skydropx]}, async () => {
+  memory: '256MiB', maxInstances: 1, retryCount: 0, secrets: [mpLive, mpTest, skydropx, smtp]}, async () => {
   const config = await runtime();
   if (config.reconciliationEnabled !== true || config.compatibleWritesValidated !== true) return;
   const now = Date.now(), report = {at: now};
   try { report.reconcile = await maintenance.reconcileOpenPurchases({db, mp: await mpClient(), now}); } catch (e) { report.reconcileError = e.message; }
-  try { report.outbox = await maintenance.processOutbox({db, now, handlers: {purchase_paid: maintenance.purchasePaidHandler}}); } catch (e) { report.outboxError = e.message; }
+  try { report.outbox = await maintenance.processOutbox({db, now, handlers: {purchase_paid: maintenance.purchasePaidHandler, label_ready: maintenance.labelReadyHandler, mailerFactory}}); } catch (e) { report.outboxError = e.message; }
   try { report.tracking = await maintenance.refreshTracking({db, shipping: shipping(), now}); } catch (e) { report.trackingError = e.message; }
   try { report.integrity = await maintenance.verifyIntegrity({db, now}); } catch (e) { report.integrityError = e.message; }
   await db.doc('instinto_private/maintenance').set({last: report}, {merge: true});

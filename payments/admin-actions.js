@@ -120,6 +120,8 @@ async function createLabel({db, shipping, identity, body, now = Date.now()}) {
       const shipment = {state: 'label_ready', id: shipmentId, operationId, actor, carrier: s.carrier, costCents: s.totalCents,
         trackingNumber: s.masterTrackingNumber || s.packages[0].trackingNumber, packages: s.packages, readyAt: now};
       await ref.update({shipment});
+      // Aviso durable "pedido enviado" (correo al cliente vía outbox, con reintentos).
+      await db.doc('instinto_web_outbox/shipped_' + purchaseId).create({type: 'label_ready', purchaseId, state: 'pending', createdAt: now}).catch(() => {});
       return {outcome: 'label_ready', shipment};
     }
     if (['error', 'cancelled', 'canceled'].includes(s.workflowStatus)) {

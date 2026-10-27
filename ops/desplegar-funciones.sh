@@ -8,7 +8,7 @@ PROJECT=instinto-fragancias
 FUNCS=${1:-checkoutApi,webAdmin,maintenance,webOrderStatus}
 # Secretos que deben existir para desplegar. Si faltan, se crean con un MARCADOR no válido
 # (no es una credencial); el propietario agrega la versión real desde la consola/Cloud Shell.
-for s in INSTINTO_MP_TEST_ACCESS_TOKEN INSTINTO_MP_WEBHOOK_SECRET; do
+for s in INSTINTO_MP_TEST_ACCESS_TOKEN INSTINTO_MP_WEBHOOK_SECRET INSTINTO_SMTP; do
   if ! gcloud secrets describe "$s" --project "$PROJECT" >/dev/null 2>&1; then
     printf 'PENDIENTE_CONFIGURAR' | gcloud secrets create "$s" --project "$PROJECT" --replication-policy=automatic --data-file=- >/dev/null
     echo "Secreto $s creado con marcador (sin valor real)."

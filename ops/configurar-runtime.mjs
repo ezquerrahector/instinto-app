@@ -42,6 +42,8 @@ const runtime = {
   origin: {postal_code: tpl.address.postal_code, area_level1: tpl.address.area_level1, area_level2: tpl.address.area_level2,
     area_level3: tpl.address.area_level3, address_template_id: tpl.id},
   shippingLabels: {enabled: on('guias'), consignmentNote: '53131620', packageType: '4G', originTemplateId: tpl.id, printingFormat: 'standard', maxCostDifferenceCents: 0},
+  // Correos al cliente: --correos on [--copia correo@dominio] (requiere secreto INSTINTO_SMTP).
+  emails: {enabled: on('correos'), copyTo: arg('copia') || 'ezquerrahector@gmail.com'},
   excludedPaymentTypes: ['ticket', 'atm'], quoteTtlMs: 30 * 60000, holdMs: 20 * 60000, maxShippingCents: 60000,
   updatedAt: new Date().toISOString(), updatedBy: 'ops/configurar-runtime.mjs'};
 
@@ -56,4 +58,4 @@ const r = await fetch(url, {method: 'PATCH', headers: {...headers, 'Content-Type
 if (!r.ok) throw Error('Firestore ' + r.status + ' ' + await r.text());
 console.log(JSON.stringify({escrito: emu ? 'emulador' : 'produccion', modo, collectorId: me.id, cuentaDePrueba: (me.tags || []).includes('test_user'),
   checkoutEnabled: runtime.checkoutEnabled, reconciliationEnabled: runtime.reconciliationEnabled, compatibleWritesValidated: runtime.compatibleWritesValidated,
-  cajaVerificada: runtime.boxes[60].verified, guias: runtime.shippingLabels.enabled, origenCP: runtime.origin.postal_code}, null, 1));
+  cajaVerificada: runtime.boxes[60].verified, guias: runtime.shippingLabels.enabled, correos: runtime.emails.enabled, origenCP: runtime.origin.postal_code}, null, 1));

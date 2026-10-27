@@ -249,3 +249,42 @@ test('a stale "creating" label without shipment id can be retried; a recent one 
   const r = await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'p'.repeat(20)}, now: T0 + 100000 + 11 * 60000});
   assert.equal(r.outcome, 'label_ready');
 });
+
+test('customer emails: paid confirmation and shipped tracking are sent once each, only when enabled', async () => {
+  const sent = [];
+  const mailerFactory = () => ({async send(msg, opt) { sent.push({...msg, bcc: opt?.bcc}); return {messageId: 'm' + sent.length}; }});
+  const s = fakeShipping(), mp = fakeMp();
+  const {res} = await buy(s, mp);
+  await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});
+  // Deshabilitado: la tarea se completa sin enviar.
+  await m.processOutbox({db, now: T0 + 61000, handlers: {purchase_paid: m.purchasePaidHandler, label_ready: m.labelReadyHandler, mailerFactory}});
+  assert.equal(sent.length, 0);
+  await db.doc('instinto_private/runtime').set({...runtime(), emails: {enabled: true, copyTo: 'ezquerrahector@gmail.com'}});
+  await db.doc('instinto_web_outbox/paidmail_' + res.purchaseId).set({type: 'purchase_paid', purchaseId: res.purchaseId, state: 'pending', createdAt: T0});
+  await m.processOutbox({db, now: T0 + 62000, handlers: {purchase_paid: m.purchasePaidHandler, label_ready: m.labelReadyHandler, mailerFactory}});
+  assert.equal(sent.length, 1); assert.equal(sent[0].to, 'ana@example.com'); assert.match(sent[0].subject, /confirmado/); assert.equal(sent[0].bcc, 'ezquerrahector@gmail.com');
+  assert.match(sent[0].html, /Fragancia A/); assert.doesNotMatch(sent[0].html, /<script/i);
+  await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'e'.repeat(20)}, now: T0 + 70000});
+  await m.processOutbox({db, now: T0 + 71000, handlers: {purchase_paid: m.purchasePaidHandler, label_ready: m.labelReadyHandler, mailerFactory}});
+  assert.equal(sent.length, 2); assert.match(sent[1].subject, /TRK1/);
+  // Reencolar no reenvía.
+  await db.doc('instinto_web_outbox/again').set({type: 'purchase_paid', purchaseId: res.purchaseId, state: 'pending', createdAt: T0});
+  await m.processOutbox({db, now: T0 + 72000, handlers: {purchase_paid: m.purchasePaidHandler, label_ready: m.labelReadyHandler, mailerFactory}});
+  assert.equal(sent.length, 2);
+  const p = (await db.doc('instinto_web_purchases/' + res.purchaseId).get()).data();
+  assert.ok(p.emails.paidSentAt && p.emails.shippedSentAt);
+});
+
+test('email failure retries the task without marking it sent', async () => {
+  let fail = true; const sent = [];
+  const mailerFactory = () => ({async send(msg) { if (fail) throw Error('smtp_down'); sent.push(msg); return {messageId: 'ok'}; }});
+  const {res} = await buy(fakeShipping(), fakeMp());
+  await db.doc('instinto_private/runtime').set({...runtime(), emails: {enabled: true}});
+  await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});
+  const h = {purchase_paid: m.purchasePaidHandler, label_ready: m.labelReadyHandler, mailerFactory};
+  const r1 = await m.processOutbox({db, now: T0 + 61000, handlers: h});
+  assert.equal(r1.retried, 1); assert.equal(sent.length, 0);
+  fail = false;
+  const r2 = await m.processOutbox({db, now: T0 + 61000 + 3 * 60000, handlers: h});
+  assert.equal(r2.done, 1); assert.equal(sent.length, 1);
+});

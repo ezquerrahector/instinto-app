@@ -46,3 +46,12 @@ test('MP test-user payments (live_mode=true) validate only against the configure
  assert.throws(()=>validatePayment(pay,purchase,{collectorId:3315715461,liveMode:false}),/payment_environment_mismatch/);
  assert.throws(()=>validatePayment({...pay,collector_id:71623902},purchase,{collectorId:3315715461,liveMode:false,paymentLiveMode:true}),/collector_mismatch/);
 });
+test('email templates escape customer text and include folio, totals and tracking',()=>{
+ const {paidEmail,shippedEmail}=require('../payments/email');
+ const p={id:'wb4332ab4ab5d9df037f0b720',address:{firstName:'Ana<script>',lastName:'X',email:'a@b.com',street:'C 1',colony:'Col',city:'León',state:'Gto',postal:'37210'},
+  items:[{qty:1,brand:'CREED',name:'AVENTUS',size:60,unitPriceCents:31000,gift:true,giftText:'<b>hola</b>'}],shipping:{carrier:'Paquetexpress',service:'Nacional'},shippingCents:5125,totalCents:36125,
+  shipment:{carrier:'paquetexpress',trackingNumber:'221255606694',packages:[{trackingUrl:'https://www.paquetexpress.com.mx/rastreo/221255606694'}]}};
+ const a=paidEmail(p),b=shippedEmail(p);
+ assert.match(a.subject,/B4332AB4/);assert.match(a.html,/\$361\.25/);assert.doesNotMatch(a.html,/<script>|<b>hola/);
+ assert.match(b.subject,/221255606694/);assert.match(b.html,/RASTREAR/);
+});

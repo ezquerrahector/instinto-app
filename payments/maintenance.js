@@ -6,6 +6,7 @@
 // 4) Actualización de rastreo de guías emitidas.
 // 5) Verificación de integridad: pedidos Web en instinto/datos contra la compra autoritativa.
 const {reconcilePayment} = require('./reconcile');
+const {sendPurchaseEmail} = require('./email');
 
 const GRACE_MS = 10 * 60000;
 const MAX_ATTEMPTS = 6;
@@ -82,7 +83,7 @@ async function processOutbox({db, handlers, now = Date.now(), limit = 20}) {
     try {
       const handler = handlers[leased.type];
       if (!handler) throw Error('no_handler');
-      await handler(leased, {db, now});
+      await handler(leased, {db, now, mailerFactory: handlers.mailerFactory});
       await doc.ref.update({state: 'done', doneAt: now}); out.done++;
     } catch (e) {
       if (leased.attempts >= MAX_ATTEMPTS) {
@@ -100,11 +101,17 @@ async function processOutbox({db, handlers, now = Date.now(), limit = 20}) {
 }
 
 // Aviso operativo de compra pagada: queda visible en el panel de pedidos en línea.
-async function purchasePaidHandler(task, {db, now}) {
+async function purchasePaidHandler(task, {db, now, mailerFactory}) {
   const p = (await db.doc('instinto_web_purchases/' + task.purchaseId).get()).data();
   if (!p || p.state !== 'paid') throw Error('purchase_not_paid');
-  await db.doc('instinto_alerts/paid_' + p.id).set({type: 'new_paid_order', purchaseId: p.id, adminOrderIds: p.adminOrderIds,
-    totalCents: p.totalCents, units: p.items.reduce((n, i) => n + i.qty, 0), state: 'open', firstAt: now, lastAt: now, count: 1}, {merge: true});
+  // create(): un reintento o reencolado no reabre una alerta ya atendida.
+  await db.doc('instinto_alerts/paid_' + p.id).create({type: 'new_paid_order', purchaseId: p.id, adminOrderIds: p.adminOrderIds, key: 'paid_' + p.id,
+    totalCents: p.totalCents, units: p.items.reduce((n, i) => n + i.qty, 0), state: 'open', firstAt: now, lastAt: now, count: 1}).catch(e => { if (e.code !== 6 && !/already exists/i.test(e.message)) throw e; });
+  // Correo "pedido confirmado" al cliente (si está habilitado). Un fallo de envío reintenta la tarea.
+  if (mailerFactory) await sendPurchaseEmail({db, mailerFactory, kind: 'paid', purchaseId: p.id, now});
+}
+async function labelReadyHandler(task, {db, now, mailerFactory}) {
+  if (mailerFactory) await sendPurchaseEmail({db, mailerFactory, kind: 'shipped', purchaseId: task.purchaseId, now});
 }
 
 async function refreshTracking({db, shipping, now = Date.now(), limit = 20}) {
@@ -147,4 +154,4 @@ async function verifyIntegrity({db, now = Date.now()}) {
   return {checked: snap.size, issues: issues.length};
 }
 
-module.exports = {alert, reconcileOpenPurchases, releaseReservation, processOutbox, purchasePaidHandler, refreshTracking, verifyIntegrity};
+module.exports = {alert, reconcileOpenPurchases, releaseReservation, processOutbox, purchasePaidHandler, labelReadyHandler, refreshTracking, verifyIntegrity};
