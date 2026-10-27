@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Resume el contrato público de Skydropx para envíos/recolecciones (campos, sin ejemplos)."""
-import json, sys, urllib.request
-doc = json.load(urllib.request.urlopen('https://app.skydropx.com/es-MX/api-docs.json', timeout=20))
+import json, sys
+# Uso: curl -sA Mozilla/5.0 https://app.skydropx.com/es-MX/api-docs.json | python3 ops/skydropx-contrato.py --body --resp
+doc = json.load(sys.stdin)
 def walk(s, depth=0, name='', out=None, req=()):
     out = out if out is not None else []
     if not isinstance(s, dict): return out
