@@ -8,17 +8,18 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 git pull -q
 mkdir -p ~/salida; exec > >(tee ~/salida/activacion.txt) 2>&1
+DESDE=${1:-1}  # uso: bash ops/activar-produccion.sh 3  (reanuda desde el paso 3)
 paso(){ printf '\n=== %s (%s) ===\n' "$1" "$(date -u +%H:%M:%SZ)"; }
 
 paso "1. Respaldo fresco previo"
-bash ops/respaldo-produccion.sh | tail -2
+if [ "$DESDE" -le 1 ]; then bash ops/respaldo-produccion.sh | tail -2; else echo "omitido (respaldo $(cat ~/instinto-respaldos/ULTIMO))"; fi
 
 paso "2. Verificar secretos reales (sin mostrar valores)"
 for s in INSTINTO_MP_ACCESS_TOKEN INSTINTO_MP_WEBHOOK_SECRET INSTINTO_SKYDROPX_CREDENTIALS; do
   v=$(gcloud secrets versions access latest --secret "$s"); [ "$v" != "PENDIENTE_CONFIGURAR" ] && [ ${#v} -ge 16 ] || { echo "FALTA $s"; exit 1; }; echo "OK $s"; done
 
 paso "3. Reglas Firestore cerradas"
-bash ops/publicar-reglas.sh
+if [ "$DESDE" -le 3 ] && [ "$DESDE" -lt 3 ]; then bash ops/publicar-reglas.sh; else SOLO_VERIFICAR=1 bash ops/publicar-reglas.sh; fi
 
 paso "4. Funciones (webhook firmado incluido)"
 CB=$(gcloud functions describe mpWebhook --region us-central1 --format='value(labels.firebase-functions-codebase)' 2>/dev/null || true)
