@@ -111,8 +111,10 @@ function createShippingClient({credentials,fetchImpl=fetch,now=Date.now}) {
     async createShipment({rateId,originTemplateId,from,to,packages,printingFormat='standard'}) {
       if(typeof rateId!=='string'||!ID.test(rateId))throw Error('invalid_rate');
       if(!Array.isArray(packages)||!packages.length||packages.length>12)throw Error('invalid_parcels');
-      const party=(x,ref)=>({street1:text(x.street1,200),name:text(x.name),company:text(x.company)||text(x.name),
-        phone:text(x.phone,30),email:text(x.email),reference:text(x.reference,200)||ref});
+      // Límites del proveedor: reference ≤ 40 (validación observada); nombre/empresa ≤ 40 por seguridad.
+      const party=(x,ref)=>({street1:text(x.street1,45),name:text(x.name,40),company:(text(x.company)||text(x.name)).slice(0,40),
+        phone:text(x.phone,30),email:text(x.email),reference:(text(x.reference,200)||ref).slice(0,40),
+        ...(x.furtherInformation?{further_information:text(x.furtherInformation,200)}:{})});
       const body={shipment:{rate_id:rateId,printing_format:printingFormat,
         address_from:{address_template_id:originTemplateId,...party(from,'Origen INSTINTO')},
         address_to:party(to,'Sin referencia'),

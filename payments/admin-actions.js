@@ -49,8 +49,11 @@ async function overview({db, identity}) {
 function partyTo(address) {
   const name = `${address.firstName} ${address.lastName}`.trim();
   // La colonia ya viaja en la cotización (area_level3); varias paqueterías limitan street1 a ~45 caracteres.
-  return {street1: String(address.street).slice(0, 45), name: name.slice(0, 60), company: name.slice(0, 60), phone: String(address.phone).replace(/\D/g, '').slice(-10),
-    email: address.email, reference: [address.references, 'Col. ' + address.colony].filter(Boolean).join(' · ').slice(0, 100)};
+  // Límites de Skydropx observados en producción 27/10/2026: reference ≤ 40 caracteres.
+  // El texto completo de referencias viaja en further_information.
+  const full = [address.references, 'Col. ' + address.colony].filter(Boolean).join(' · ');
+  return {street1: String(address.street).slice(0, 45), name: name.slice(0, 40), company: name.slice(0, 40), phone: String(address.phone).replace(/\D/g, '').slice(-10),
+    email: address.email, reference: full.slice(0, 40), furtherInformation: full.slice(0, 200)};
 }
 
 async function createLabel({db, shipping, identity, body, now = Date.now()}) {

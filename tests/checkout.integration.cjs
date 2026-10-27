@@ -237,7 +237,7 @@ test('a rejected label keeps the provider message, creates no shipment and can b
   fail = false;
   const ok = await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'g'.repeat(20)}, now: T0 + 130000});
   assert.equal(ok.outcome, 'label_ready');
-  assert.ok(s.calls.filter(c => c[0] === 'ship').every(c => c[1].to.street1.length <= 45));
+  assert.ok(s.calls.filter(c => c[0] === 'ship').every(c => c[1].to.street1.length <= 45 && c[1].to.reference.length <= 40));
 });
 
 test('a stale "creating" label without shipment id can be retried; a recent one cannot', async () => {

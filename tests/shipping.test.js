@@ -69,3 +69,15 @@ test('provider validation errors keep the provider message for operators',async(
  await assert.rejects(client.createShipment({rateId:'r1',originTemplateId:'tpl',from:{street1:'a',name:'b',phone:'1',email:'e@x.com'},to:{street1:'a',name:'b',phone:'1',email:'e@x.com'},packages:[{consignmentNote:'53131620',packageType:'4G'}]}),
    e=>e.status===422&&/street1 is too long/.test(e.detail));
 });
+test('shipment payload respects provider field limits (reference <= 40)',async()=>{
+ const {createShippingClient}=require('../payments/shipping');
+ let body;
+ const client=createShippingClient({credentials:async()=>({client_id:'a',client_secret:'b'}),fetchImpl:async(url,opt)=>{
+   if(url.endsWith('/oauth/token'))return {ok:true,json:async()=>({access_token:'t',expires_in:7200})};
+   body=JSON.parse(opt.body);return {ok:true,json:async()=>({data:{id:'s1',attributes:{}},included:[]})};}});
+ const long='Dentro del fraccionamiento los naranjos · Col. Paseo de Los Naranjos';
+ await client.createShipment({rateId:'r1',originTemplateId:'tpl',from:{street1:'Origen 1',name:'INSTINTO',phone:'4770000000',email:'o@x.com',reference:long},
+   to:{street1:'Colina de la abeja 133',name:'Héctor Ezquerra',phone:'8120282120',email:'e@x.com',reference:long,furtherInformation:long},packages:[{consignmentNote:'53131620',packageType:'4G'}]});
+ assert.ok(body.shipment.address_to.reference.length<=40&&body.shipment.address_from.reference.length<=40);
+ assert.equal(body.shipment.address_to.further_information,long);
+});
