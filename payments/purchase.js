@@ -22,7 +22,7 @@ function normalizedInput(input) {
 }
 function basketHash(input) {return createHash('sha256').update(JSON.stringify(normalizedInput(input))).digest('hex');}
 // quote and config MUST come from private server storage, never from req.body.
-function buildPurchase({id,binding,input,catalog,quote,rateId,config,now=Date.now()}) {
+function buildPurchase({id,binding,input,catalog,quote,rateId,config,available=null,now=Date.now()}) {
   if(!KEY.test(id)||typeof id!=='string'||typeof binding!=='string'||binding.length<32)throw Error('invalid_purchase_identity');
   const normalized=normalizedInput(input),hash=basketHash(normalized);
   if(!quote||quote.basketHash!==hash||quote.status!=='completed'||!Number.isFinite(quote.expiresAt)||quote.expiresAt<=now)throw Error('quote_expired_or_changed');
@@ -32,15 +32,21 @@ function buildPurchase({id,binding,input,catalog,quote,rateId,config,now=Date.no
   const byId=new Map();for(const entry of catalog){if(byId.has(entry.id))throw Error('duplicate_catalog_id');byId.set(entry.id,entry);}
   const demands=new Map();
   const items=normalized.items.map(i=>{
+    if(config?.enabledSizes&&!config.enabledSizes.includes(i.size))throw Error('size_not_enabled');
     const product=byId.get(i.id);
     if(!product||!['Dama','Caballero','Unisex'].includes(product.linea))throw Error('unavailable_product');
     const grams=GRAMS[i.size]*i.qty;demands.set(i.id,(demands.get(i.id)||0)+grams);
-    if(!Number.isFinite(Number(product.stockGramos))||Number(product.stockGramos)<demands.get(i.id))throw Error('insufficient_stock');
+    // available: gramos libres tras los apartados de pedidos Directo/WhatsApp pendientes.
+    const free=available?(available.get(i.id)??0):Number(product.stockGramos);
+    if(!Number.isFinite(free)||free<demands.get(i.id))throw Error('insufficient_stock');
     const packaging=config?.packaging?.[i.size]?.[product.linea];
     if(packaging?.verified!==true)throw Error('materials_mapping_not_verified');
+    const recipe=config?.recipes?.[i.size];
+    if(config?.recipes&&(!recipe||recipe.essence!==GRAMS[i.size]))throw Error('recipe_not_verified');
+    const unitPriceCents=config?.prices?.[i.size]??PRICES[i.size];
     return {...i,brand:text(product.disenador),name:text(product.referencia),linea:product.linea,
-      unitPriceCents:PRICES[i.size],gramsPerUnit:GRAMS[i.size],costoEsencia:Number(product.costoEsencia)||0,
-      materialsPerUnit:requirements(i.size,1,packaging)};
+      unitPriceCents,gramsPerUnit:GRAMS[i.size],costoEsencia:Number(product.costoEsencia)||0,
+      materialsPerUnit:requirements(i.size,1,packaging,recipe||undefined)};
   });
   const subtotalCents=items.reduce((sum,i)=>sum+i.qty*i.unitPriceCents,0);
   return {schemaVersion:10,id,binding,basketHash:hash,items,address:normalized.address,currency:'MXN',
@@ -48,7 +54,7 @@ function buildPurchase({id,binding,input,catalog,quote,rateId,config,now=Date.no
     shipping:{quotationId:quote.id,rateId:rate.id,carrier:rate.carrier,service:rate.service},
     createdAt:now,expiresAt:Math.min(now+15*60*1000,quote.expiresAt),state:'awaiting_payment',paymentId:null};
 }
-function preferencePayload(purchase,{webhookUrl,now=Date.now()}) {
+function preferencePayload(purchase,{webhookUrl,excludedPaymentTypes=['ticket','atm'],now=Date.now()}) {
   if(purchase.state!=='awaiting_payment'||purchase.expiresAt<=now)throw Error('purchase_not_payable');
   const callback=new URL(webhookUrl);
   if(callback.protocol!=='https:'||callback.hostname!=='us-central1-instinto-fragancias.cloudfunctions.net'||callback.pathname!=='/mpWebhook'||callback.search||callback.username||callback.password)throw Error('invalid_webhook_url');
@@ -59,6 +65,9 @@ function preferencePayload(purchase,{webhookUrl,now=Date.now()}) {
   return {items,external_reference:purchase.id,metadata:{instinto_purchase:purchase.id,instinto_binding:purchase.binding},
     payer:{email:purchase.address.email},notification_url:callback.href,
     back_urls:{success:'https://instintofragancias.com/?payment=success',failure:'https://instintofragancias.com/?payment=failure',pending:'https://instintofragancias.com/?payment=pending'},
-    auto_return:'approved',expires:true,expiration_date_to:new Date(purchase.expiresAt).toISOString()};
+    auto_return:'approved',expires:true,expiration_date_to:new Date(purchase.expiresAt).toISOString(),
+    // Pagos inmediatos: sin efectivo/OXXO (ticket/atm) para que la reserva no quede abierta días.
+    payment_methods:{excluded_payment_types:excludedPaymentTypes.map(id=>({id})),installments:1},
+    binary_mode:true,statement_descriptor:'INSTINTO'};
 }
 module.exports={normalizedInput,basketHash,buildPurchase,preferencePayload};

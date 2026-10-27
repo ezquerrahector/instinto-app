@@ -1,4 +1,5 @@
 'use strict';
+const {pendingClaims}=require('./availability');
 function toCents(value) {
   if(!['number','string'].includes(typeof value)||!/^\d{1,9}(\.\d{1,2})?$/.test(String(value)))return null;
   return Math.round(Number(value)*100);
@@ -43,8 +44,13 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
     if(payment.status!=='approved') {
       tx.set(ledgerRef,{...record,disposition:'waiting'},{merge:true});return {outcome:'waiting'};
     }
-    if(purchase.state!=='awaiting_payment')return review('purchase_not_payable');
-    if(!Number.isFinite(Date.parse(payment.date_approved))||Date.parse(payment.date_approved)>purchase.expiresAt)return review('late_payment');
+    const held=purchase.reservation?.state==='held';
+    const released=purchase.reservation?.state==='released';
+    if(!Number.isFinite(Date.parse(payment.date_approved)))return review('invalid_payment_timestamp');
+    if(purchase.state==='expired'&&!released)return review('purchase_not_payable');
+    if(purchase.state!=='awaiting_payment'&&purchase.state!=='expired')return review('purchase_not_payable');
+    // Sin modelo de reserva (compras anteriores): se conserva la regla original de caducidad.
+    if(!purchase.reservation&&Date.parse(payment.date_approved)>purchase.expiresAt)return review('late_payment');
     const inventorySnap=await tx.get(inventoryRef),inventory=inventorySnap.data();
     if(!inventory||!Array.isArray(inventory.cat)||!Array.isArray(inventory.peds))return review('inventory_invalid');
     if(!Array.isArray(purchase.items)||!purchase.items.length)return review('purchase_invalid');
@@ -53,16 +59,27 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
     const demands=new Map();let units=0;
     for(const item of purchase.items) {
       if(![60,100].includes(item.size)||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>5||
-        item.gramsPerUnit!==({60:30,100:50})[item.size]||item.unitPriceCents!==({60:31000,100:49000})[item.size])return review('purchase_invalid');
+        item.gramsPerUnit!==({60:30,100:50})[item.size]||!Number.isSafeInteger(item.unitPriceCents)||item.unitPriceCents<=0)return review('purchase_invalid');
       units+=item.qty;demands.set(item.id,(demands.get(item.id)||0)+item.gramsPerUnit*item.qty);
     }
     if(units>12)return review('purchase_invalid');
     if(!Number.isSafeInteger(purchase.shippingCents)||purchase.shippingCents<=0||
        purchase.items.reduce((sum,i)=>sum+i.unitPriceCents*i.qty,0)+purchase.shippingCents!==purchase.totalCents)return review('purchase_invalid');
-    for(const [sku,grams] of demands) {
-      const entry=byId.get(sku),stock=Number(entry?.stockGramos);
-      if(!entry||!Number.isFinite(stock)||stock<grams)return review('insufficient_stock');
-      entry.stockGramos=Math.round((stock-grams)*100)/100;
+    if(held) {
+      // La esencia ya se descontó al crear la reserva: verificar que coincide y NO descontar de nuevo.
+      const reserved=purchase.reservation.grams||{};
+      if(Object.keys(reserved).length!==demands.size||[...demands].some(([sku,g])=>reserved[sku]!==g))return review('reservation_mismatch');
+      for(const sku of demands.keys())if(!byId.has(sku))return review('insufficient_stock');
+    } else {
+      // Compra sin reserva vigente (anterior al modelo o reserva liberada): descontar solo si hay
+      // existencia libre después de los apartados de pedidos Directo/WhatsApp pendientes.
+      const free=released?pendingClaims(inventory).available:null;
+      for(const [sku,grams] of demands) {
+        const entry=byId.get(sku),stock=Number(entry?.stockGramos);
+        const limit=free?(free.get(sku)??0):stock;
+        if(!entry||!Number.isFinite(stock)||stock<grams||limit<grams)return review(released?'late_payment_no_stock':'insufficient_stock');
+        entry.stockGramos=Math.round((stock-grams)*100)/100;
+      }
     }
     const peds=inventory.peds.map(p=>({...p}));
     if(peds.some(p=>p.folioWeb===purchaseId))return review('existing_orders_without_ledger');
@@ -85,7 +102,10 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
     const revision=inventory.syncRevision??0;
     if(!Number.isSafeInteger(revision)||revision<0)return review('inventory_revision_invalid');
     tx.update(inventoryRef,{cat:catalog,peds,syncRevision:revision+1,syncClient:'v10',lastWriteId:'mp_'+id,updatedAt:date});
-    tx.update(purchaseRef,{state:'paid',paymentId:id,paidAt:now,adminOrderIds:adminIds});
+    const purchaseUpdate={state:'paid',paymentId:id,paidAt:now,adminOrderIds:adminIds};
+    if(purchase.reservation)purchaseUpdate.reservation={...purchase.reservation,state:'consumed',consumedAt:now,
+      ...(released?{lateRecovered:true}:{})};
+    tx.update(purchaseRef,purchaseUpdate);
     tx.set(ledgerRef,{...record,disposition:'applied',adminOrderIds:adminIds},{merge:true});
     // Durable task, not an email side effect inside a retryable transaction.
     tx.create(db.doc('instinto_web_outbox/paid_'+purchaseId),{type:'purchase_paid',purchaseId,state:'pending',createdAt:now});

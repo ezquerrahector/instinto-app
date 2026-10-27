@@ -1,5 +1,6 @@
 'use strict';
-// Server-only adapter. No public endpoint and no label purchases/recollections.
+// Server-only adapter. Quotes are public through checkoutApi; label purchase, pickups and
+// cancellations are only reachable from authenticated, idempotent admin actions.
 // Contract: https://app.skydropx.com/es-MX/api-docs.json (2026-10-27).
 const BASE='https://api-pro.skydropx.com';
 const ID=/^[a-zA-Z0-9_-]{1,100}$/;
@@ -83,7 +84,66 @@ function createShippingClient({credentials,fetchImpl=fetch,now=Date.now}) {
     try{return await request(path,{...options,headers:{'Content-Type':'application/json',Authorization:'Bearer '+token}});}
     catch(e){if(e.status===401)cached=null;throw e;} // Do not blindly replay a timed-out POST.
   }
+  const text=(v,n=120)=>typeof v==='string'?v.trim().slice(0,n):'';
+  function shipmentView(body) {
+    const d=body?.data,a=d?.attributes;
+    if(!d||typeof d.id!=='string'||!ID.test(d.id))throw Error('invalid_provider_response');
+    const pkgs=(Array.isArray(body.included)?body.included:[]).filter(x=>x?.type==='package').map(x=>({
+      id:String(x.id),trackingNumber:text(x.attributes?.tracking_number,80)||null,labelUrl:text(x.attributes?.label_url,600)||null,
+      trackingStatus:text(x.attributes?.tracking_status,60)||null,trackingUrl:text(x.attributes?.tracking_url_provider,600)||null}));
+    return {id:d.id,workflowStatus:text(a?.workflow_status,60),paymentStatus:text(a?.payment_status,60),
+      carrier:text(a?.carrier_name,60),masterTrackingNumber:text(a?.master_tracking_number,80)||null,
+      totalCents:cents(a?.total),errorCode:text(a?.error_code,80)||null,errorMessage:text(a?.error_message,300)||null,packages:pkgs};
+  }
   return {
+    async addressTemplate(id) {
+      if(typeof id!=='string'||!/^[A-Za-z0-9-]{1,80}$/.test(id))throw Error('invalid_template');
+      const out=await authorized('/api/v1/address_templates/'+encodeURIComponent(id),{method:'GET'});
+      const a=out?.data?.address;if(!a)throw Error('invalid_provider_response');
+      return {name:text(a.name),company:text(a.company)||text(a.name),street1:text(a.street1,200),phone:text(a.phone,30),
+        email:text(a.email),reference:text(a.reference,200)||'Sin referencia',postal_code:text(a.postal_code,5)};
+    },
+    // Compra una guía REAL (cargo a créditos Skydropx). Solo se invoca desde una acción
+    // administrativa autenticada e idempotente; nunca automáticamente sin interruptor privado.
+    async createShipment({rateId,originTemplateId,from,to,packages,printingFormat='standard'}) {
+      if(typeof rateId!=='string'||!ID.test(rateId))throw Error('invalid_rate');
+      if(!Array.isArray(packages)||!packages.length||packages.length>12)throw Error('invalid_parcels');
+      const party=(x,ref)=>({street1:text(x.street1,200),name:text(x.name),company:text(x.company)||text(x.name),
+        phone:text(x.phone,30),email:text(x.email),reference:text(x.reference,200)||ref});
+      const body={shipment:{rate_id:rateId,printing_format:printingFormat,
+        address_from:{address_template_id:originTemplateId,...party(from,'Origen INSTINTO')},
+        address_to:party(to,'Sin referencia'),
+        packages:packages.map((p,i)=>({package_number:String(i+1),consignment_note:p.consignmentNote,package_type:p.packageType,
+          package_protected:false}))}};
+      for(const side of ['address_from','address_to'])for(const k of ['street1','name','phone','email'])
+        if(!body.shipment[side][k])throw Error('shipment_address_incomplete');
+      let out;
+      try{out=await authorized('/api/v1/shipments',{method:'POST',body:JSON.stringify(body)});}
+      catch(e){if(e.message==='shipping_network_error')throw Error('shipment_request_uncertain');throw e;}
+      return shipmentView(out);
+    },
+    async getShipment(id) {
+      if(typeof id!=='string'||!ID.test(id))throw Error('invalid_shipment_id');
+      return shipmentView(await authorized('/api/v1/shipments/'+encodeURIComponent(id),{method:'GET'}));
+    },
+    async cancelShipment(id,reason) {
+      if(typeof id!=='string'||!ID.test(id))throw Error('invalid_shipment_id');
+      const out=await authorized('/api/v1/shipments/'+encodeURIComponent(id)+'/cancellations',{method:'POST',
+        body:JSON.stringify({reason:text(reason,200)||'Cancelación solicitada por INSTINTO',shipment_id:id})});
+      return {status:text(out?.status,60),success:out?.success===true};
+    },
+    async tracking(trackingNumber,carrier) {
+      if(!/^[A-Za-z0-9-]{4,60}$/.test(String(trackingNumber))||!/^[a-z0-9_-]{2,40}$/i.test(String(carrier)))throw Error('invalid_tracking');
+      const out=await authorized('/api/v1/shipments/tracking?tracking_number='+encodeURIComponent(trackingNumber)+'&carrier_name='+encodeURIComponent(carrier),{method:'GET'});
+      const a=out?.data?.attributes||{};
+      return {status:text(a.status,60),description:text(a.description,300),location:text(a.location,120),date:text(a.date,40)};
+    },
+    async schedulePickup({shipmentIds,packages,totalWeightKg,from,to}) {
+      const out=await authorized('/api/v2/pickups',{method:'POST',body:JSON.stringify({pickup:{shipment_ids:shipmentIds,
+        packages,total_weight:String(totalWeightKg),scheduled_from:from,scheduled_to:to}})});
+      const a=out?.data?.attributes||{};
+      return {id:text(out?.data?.id,80),status:text(a.status,60),requestNumber:text(a.request_number,80),errorReason:text(a.error_reason,300)};
+    },
     async createQuote(origin,destination,serverParcels) {
       const payload=quotePayload(origin,destination,serverParcels);
       return normalizeQuote(await authorized('/api/v1/quotations',{method:'POST',body:JSON.stringify(payload)}));
@@ -94,4 +154,4 @@ function createShippingClient({credentials,fetchImpl=fetch,now=Date.now}) {
     }
   };
 }
-module.exports={quotePayload,normalizeQuote,createShippingClient};
+module.exports={quotePayload,normalizeQuote,createShippingClient,cents};
