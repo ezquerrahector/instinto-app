@@ -5,11 +5,12 @@
 <style>
 :root{--ink:#1d1c18;--gold:#bd9b4c;--cream:#f7f5f0;--line:#ddd8ce}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:14px Jost,Arial,sans-serif}header{padding:22px clamp(16px,5vw,70px);background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}header h1{font:20px Cinzel,serif;letter-spacing:.15em;margin:0}header small{color:#817b70}main{max-width:1250px;margin:auto;padding:35px 18px}.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}h2{font:25px Cinzel,serif;font-weight:400}button{padding:10px 15px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:white;font:12px Jost,sans-serif;letter-spacing:.04em}button:disabled{opacity:.5}button.outline{background:#fff;color:var(--ink)}.note{border-left:3px solid var(--gold);background:#f0eadb;padding:13px 16px;line-height:1.55}.panel{background:white;border:1px solid var(--line);margin-top:20px;overflow:auto}.table{width:100%;border-collapse:collapse;text-align:left;min-width:740px}td,th{border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:top}th{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#746e65;background:#faf9f6}tr:last-child td{border-bottom:0}.pill{font-size:11px;background:#f1e9d6;padding:5px 8px;white-space:nowrap}.muted{color:#8c8579;font-size:12px}.error{color:#9e322b}.hidden{display:none}.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#status{margin:12px 0;min-height:18px}details{max-width:320px}details summary{cursor:pointer;color:#7d6133}details p{margin:5px 0;font-size:12px}#uid{font:12px monospace;word-break:break-all}a{color:#755622}
 </style></head><body>
-<header><div><h1>INSTINTO</h1><small>Fragancias · Pedidos de tienda en línea · V8</small></div><div class="tools"><button id="login">Acceder con Google</button><button id="logout" class="outline hidden">Cerrar sesión</button></div></header>
+<header><div><h1>INSTINTO</h1><small>Fragancias · Pedidos de tienda en línea · V9</small></div><div class="tools"><button id="login">Acceder con Google</button><button id="logout" class="outline hidden">Cerrar sesión</button></div></header>
 <main><div class="bar"><h2>Pedidos recibidos por internet</h2><button id="refresh" class="outline" disabled>Actualizar</button></div>
 <p class="note"><strong>Panel de solo lectura.</strong> Los pedidos de prueba son independientes de los pedidos administrativos actuales. No se modifica ni descuenta <code>stockGramos</code>. Un pedido de prueba no es una venta pagada.</p>
 <p id="status" role="status">Inicia sesión con la cuenta administradora autorizada.</p>
 <div class="panel"><table class="table"><thead><tr><th>Folio / fecha</th><th>Cliente</th><th>Artículos</th><th>Subtotal</th><th>Estado</th><th>Datos de entrega</th></tr></thead><tbody id="orders"><tr><td colspan="6">Inicia sesión para ver los pedidos.</td></tr></tbody></table></div>
+<section class="panel" style="padding:16px;margin-top:24px"><div class="bar"><h2 style="font-size:20px">Diagnóstico de inventario · V9</h2><button id="auditBtn" class="outline" disabled>Revisar disponibilidad</button></div><p class="muted">Consulta solo lectura. No reserva, libera ni descuenta gramos. No permite ventas.</p><p id="auditStatus" role="status">Inicia sesión para consultar el diagnóstico.</p><div id="auditResult"></div></section>
 <p class="muted">Esta vista usa Firebase Authentication y una API protegida. No escribe sobre el inventario ni incorpora pedidos en <code>instinto/datos</code>.</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
@@ -32,6 +33,22 @@ c=row.insertCell();const d=document.createElement('details');const sum=document.
 }}
 async function load(){const user=auth.currentUser;if(!user)return; $('refresh').disabled=true;status('Consultando pedidos…');try{const token=await user.getIdToken();const res=await fetch(API,{headers:{Authorization:'Bearer '+token},cache:'no-store'});let data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);draw(data.orders||[]);status(`${(data.orders||[]).length} pedido(s) mostrados. Solo lectura.`)}catch(e){draw([]);status(e.message,true)}finally{$('refresh').disabled=false}}
 $('login').addEventListener('click',async()=>{try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}catch(e){status(e.message,true)}});
+async function auditInventory(){
+ const user=auth.currentUser;if(!user)return;
+ $('auditBtn').disabled=true;$('auditStatus').textContent='Consultando inventario…';$('auditResult').replaceChildren();
+ try{
+  const token=await user.getIdToken();const url=API.replace('/api/admin/orders','/api/admin/inventory-audit');
+  const res=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+  const data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);
+  const p=$('auditResult');
+  const summary=[['Referencias en catálogo',data.catalogCount],['Pedidos administrativos',data.adminOrdersCount],['Presentaciones de 60 ml posibles',data.available60],['Presentaciones de 100 ml posibles',data.available100],['Referencias sin stock',data.zeroStock],['Reservas de prueba activas',data.activeHolds],['Reservas de prueba vencidas',data.expiredHolds],['Inconsistencias detectadas (máx. 80)',data.issues.length]];
+  for(const [name,val] of summary){const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee';t(row,'span',name);t(row,'strong',val===null?'—':val);p.appendChild(row)}
+  if(data.issues.length){const heading=t(p,'h3','Inconsistencias a revisar');heading.style.fontSize='15px';for(const x of data.issues){t(p,'p',`${x.id}: ${x.issue}`)}}
+  t(p,'p','AVISO: '+data.warning).className='muted';
+  $('auditStatus').textContent='Diagnóstico completado: '+new Date(data.checkedAt).toLocaleString('es-MX');
+ }catch(e){$('auditStatus').textContent=e.message;$('auditStatus').className='error'}finally{$('auditBtn').disabled=!auth.currentUser}
+}
+$('auditBtn').addEventListener('click',auditInventory);
 $('logout').addEventListener('click',()=>auth.signOut());$('refresh').addEventListener('click',load);
-auth.onAuthStateChanged(user=>{$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;if(user)load();else{draw([]);status('Inicia sesión con la cuenta administradora autorizada.')}});
+auth.onAuthStateChanged(user=>{$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;$('auditBtn').disabled=!user;if(user)load();else{draw([]);$('auditResult').replaceChildren();$('auditStatus').textContent='Inicia sesión para consultar el diagnóstico.';status('Inicia sesión con la cuenta administradora autorizada.')}});
 </script></body></html>
