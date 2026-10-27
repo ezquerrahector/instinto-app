@@ -18,6 +18,7 @@ const fn = name => ast.body.find(n => n.type === 'FunctionDeclaration' && n.id.n
 const stmt = test => ast.body.filter(n => n.type === 'ExpressionStatement' && test(js.slice(n.start, n.end)));
 
 const NEW_LOAD = `async function loadCatalog(){/* INSTINTO_CHECKOUT_V10 */
+ if(/\\/storeApi$/.test(CONFIG.apiBase))CONFIG.apiBase=CONFIG.apiBase.replace(/storeApi$/,'checkoutApi');
  if(!CONFIG.apiBase){products=REFERENCE_PRODUCTS.map(p=>({...p,availableSizes:[]}));catalogIsLive=false;ready();return}
  try{const res=await fetch(CONFIG.apiBase+CONFIG.catalogEndpoint,{cache:'no-store'});
   if(!res.ok)throw Error('No se pudo consultar el inventario');const result=await res.json();
@@ -101,6 +102,7 @@ for (const [node, code] of edits) html = html.slice(0, base + node.start) + code
 // Etiquetas del botón principal (renderCart) y aviso inicial.
 const swaps = [["'CONTINUAR CON PRUEBA →'", "'CONTINUAR CON EL PEDIDO →'"], ["'REGISTRAR PEDIDO DE PRUEBA →'", "(checkoutEnabled?'PAGAR CON MERCADO PAGO →':'COMPRA EN LÍNEA PRÓXIMAMENTE')"],
   ['Prueba interna: el pedido se guardará en Firebase sin cobro ni envío. No compartas la clave de prueba.', 'Cotiza tu envío con tu domicilio y paga de forma segura con Mercado Pago.']];
+swaps.push(['<script src="config.js">', '<script src="config.js?v=10.1">']);
 for (const [a, b] of swaps) { if (!html.includes(a)) throw Error('texto no encontrado: ' + a); html = html.replace(a, b); }
 if (html.includes('X-Instinto-Test-Key')) throw Error('quedó la clave de prueba');
 acorn.parse(/<script>([\s\S]*?)<\/script>/g.exec(html.slice(best.index))[1], {ecmaVersion: 2022});
