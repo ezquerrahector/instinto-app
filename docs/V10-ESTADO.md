@@ -29,9 +29,9 @@ Inspección: 26 de octubre de 2026. Base administrativa:
 - Protección de esencia en cambios de estatus de órdenes Web con indicadores
   de pago confirmado por servidor. No descuenta otra vez ni devuelve esencia
   al retroceder el estatus. Los pedidos Directo conservan el comportamiento previo.
-- Receptor MP recuperado con validación de firma extraída para pruebas;
-  ahora exige `data.id` de la URL y compara con el cuerpo. Sigue siendo SOLO
-  recepción y auditoría: no confirma órdenes ni toca inventario.
+- Receptor MP con firma validada, exige `data.id` de URL y compara el cuerpo.
+  Por defecto solo recibe y audita. La conciliación nueva está detrás de dos
+  interruptores privados que siguen sin habilitarse. No se ha desplegado.
 - SW versionado, incorpora el módulo nuevo y limpia solo cachés `instinto-*`.
 
 ## Límites que impiden liberar
@@ -49,8 +49,9 @@ cálculo previo de 100 ml (50 g esencia, 5.83 g feromonas, 8.33 g fijador y 35.8
 perfumol) y se incorporó como módulo verificable, sin activarlo contra inventario.
 Falta mapear los envases de 100 ml y etiquetas reales antes de incorporar pedidos.
 
-Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 39
-pruebas locales de lógica/UI. No se probaron permisos desplegados, checkout sandbox,
+Se ejecutaron 44 pruebas locales de lógica/UI y las pruebas de integración de
+reglas, pagos y elaboración en Firestore Emulator (ver informe de entrega).
+No se probaron permisos desplegados, checkout sandbox,
 cotización de Skydropx ni aceptación con colaboradores.
 
 ## Entradas necesarias
@@ -101,6 +102,28 @@ caducidad y cotejar el rate elegido en servidor. Nunca aceptar el costo ni las
 dimensiones que envíe el navegador como autoridad. La compra de guías y solicitud
 de recolección no forman parte de este módulo. No se garantiza recolección para
 un CP hasta comprobar la tarifa y condiciones de la paquetería.
+
+## Pagos y elaboración preparados en servidor
+
+- `purchase.js`: precios 310/490 MXN desde servidor, cotización vinculada a cesta
+  y domicilio, caducidad, recetas por presentación y rechazo de mapeos no verificados.
+- `mercadopago.js`: creación de preferencia y consulta del pago por HTTPS,
+  validación de destino de checkout y errores sin exposición de claves.
+- `reconcile.js`: transacción conjunta de compra, inventario, pedidos administrativos,
+  registro idempotente del pago y tarea pendiente de notificación. Comprueba vendedor,
+  moneda, importe, ambiente y vínculo de compra. No aplica descuentos ante faltantes,
+  pagos tardíos, segundos pagos ni devoluciones; registra revisión manual.
+- `production.js`: cambio de estado autenticado, receta guardada por unidad y
+  tamaño, rechazo de materiales insuficientes y ninguna segunda deducción de esencia.
+
+Pendiente conectar las entradas públicas y pantallas administrativas a estos módulos,
+cerrar las escrituras directas y migrar todos los colaboradores. El método de estado
+actual del cliente NO invoca todavía `production.js`. El constructor de compras no
+persiste ni publica preferencias por sí solo. No afirmar que checkout esté completo.
+
+Para validar: `npm ci` y `npm ci --prefix payments`; luego `npm test` y
+`npm run test:integration`. La integración exige FIRESTORE_EMULATOR_HOST local
+127.0.0.1:8085 y proyecto demo-instinto-v10, sin credenciales productivas.
 
 Validación local: `npm test`. Los casos cubren conflictos con escritor antiguo,
 stock cambiado por otro escritor, cola, desconexión, reinicio, persistencia fallida,

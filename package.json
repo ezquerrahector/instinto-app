@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "test:rules": "firebase emulators:exec --config firebase.emulators.json --project demo-instinto-v10 --only firestore 'node --test tests/firestore.rules.integration.cjs'"
+    "test:rules": "firebase emulators:exec --config firebase.emulators.json --project demo-instinto-v10 --only firestore 'node --test tests/firestore.rules.integration.cjs'",
+    "test:integration": "firebase emulators:exec --config firebase.emulators.json --project demo-instinto-v10 --only firestore 'node --test --test-concurrency=1 tests/*.integration.cjs'"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^4.0.1",

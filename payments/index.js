@@ -1,6 +1,6 @@
 'use strict';
-// INSTINTO: receptor de webhooks de pago, producción, SOLO REGISTRO.
-// No modifica instinto/datos, inventario, pedidos ni materiales.
+// INSTINTO: signed payment receiver. Defaults to audit-only. Reconciliation needs
+// both private rollout gates, which MUST stay off until final migration validation.
 const {onRequest} = require('firebase-functions/v2/https');
 const {defineSecret} = require('firebase-functions/params');
 const admin = require('firebase-admin');
@@ -9,6 +9,7 @@ const token = defineSecret('INSTINTO_MP_ACCESS_TOKEN');
 const signingKey = defineSecret('INSTINTO_MP_WEBHOOK_SECRET');
 const REGION = 'us-central1';
 const {validSignature} = require('./signature');
+const {reconcilePayment} = require('./reconcile');
 const scalar = s => typeof s === 'string' ? s : '';
 exports.mpWebhook = onRequest({region:REGION, timeoutSeconds:45, memory:'256MiB', maxInstances:3,
   secrets:[token,signingKey], invoker:'public'}, async (req,res)=>{
@@ -20,7 +21,7 @@ exports.mpWebhook = onRequest({region:REGION, timeoutSeconds:45, memory:'256MiB'
     const id = String(req.body?.data?.id || req.query['data.id'] || req.query.id || '');
     if(!/^\d{1,30}$/.test(id)) return res.status(400).send('invalid_payment_id');
     const answer = await fetch(`https://api.mercadopago.com/v1/payments/${encodeURIComponent(id)}`, {
-      headers:{Authorization:`Bearer ${token.value()}`}, signal:AbortSignal.timeout(10000)});
+      headers:{Authorization:`Bearer ${token.value()}`}, redirect:'error', signal:AbortSignal.timeout(10000)});
     if (!answer.ok) {
       console.error('mp_payment_lookup_failed',answer.status);
       return res.status(503).send('retry');
@@ -40,6 +41,18 @@ exports.mpWebhook = onRequest({region:REGION, timeoutSeconds:45, memory:'256MiB'
       lastReceivedAt:admin.firestore.FieldValue.serverTimestamp()
     };
     await admin.firestore().collection('instinto_mp_webhook_inbox').doc('payment_'+id).set(record,{merge:true});
+    const runtime=(await admin.firestore().doc('instinto_private/runtime').get()).data()||{};
+    if(runtime.reconciliationEnabled===true && runtime.compatibleWritesValidated===true) {
+      // Payment is the fresh server-to-server API response obtained above.
+      try {await reconcilePayment(admin.firestore(),payment);}
+      catch(error) {
+        const invalid=new Set(['invalid_payment_reference','unknown_purchase','collector_mismatch',
+          'payment_environment_mismatch','purchase_binding_mismatch','payment_total_mismatch','invalid_payment_timestamp']);
+        if(!invalid.has(error.message))throw error; // transient failures must be retried
+        await admin.firestore().collection('instinto_mp_webhook_inbox').doc('payment_'+id).set(
+          {integrationState:'blocked_manual_review',reason:error.message},{merge:true});
+      }
+    }
     return res.status(200).send('received');
   } catch(e) { console.error('mp_webhook_error',e?.message||'error'); return res.status(503).send('retry'); }
 });
