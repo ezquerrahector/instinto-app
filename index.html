@@ -513,6 +513,7 @@ nav::-webkit-scrollbar{display:none}
 
 <div id="toast"></div>
 
+<script src="assets/safe-sync.js"></script>
 <script>
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
 const CFG_DEF = {gesencia:30,gfijador:5,pfijador:0.35,gferomonas:3.5,pferomonas:2.00,gperfumol:21.5,pperfumol:0.06,envprov:5,atomizador:17.50,sticker:4.00,pventa:250};
@@ -1121,6 +1122,7 @@ function descargarPedidosFiltrados(){
 
 function cambiarEst(id,est){
   const p=peds.find(x=>x.id===id); if(!p)return;
+  const webPrepaid = p.canal === 'Web' && p.origenWeb === true && p.pagoConfirmadoServidor === true;
   const estAnterior=p.estatus;
   if(est===estAnterior) return;
 
@@ -1137,7 +1139,7 @@ function cambiarEst(id,est){
     // Materiales
     if(!p.matDescontado){ descontarMateriales(p); p.matDescontado=true; }
     // Esencia
-    if(!p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
+    if(!webPrepaid && !p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
       const fragCat=cat.find(x=>x.id===p.codigo);
       if(fragCat){
         fragCat.stockGramos=Math.max(0,(parseFloat(fragCat.stockGramos)||0)-cfg.gesencia);
@@ -1151,7 +1153,7 @@ function cambiarEst(id,est){
     // Materiales
     if(p.matDescontado){ revertirMateriales(p); p.matDescontado=false; }
     // Esencia
-    if(p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
+    if(!webPrepaid && p.esenciaDescontada && p.codigo && p.codigo!=='OTRO'){
       const fragCat=cat.find(x=>x.id===p.codigo);
       if(fragCat){
         fragCat.stockGramos=(parseFloat(fragCat.stockGramos)||0)+cfg.gesencia;
@@ -2995,48 +2997,78 @@ function setSyncStatus(status){
   }
 }
 
-async function fbSave(skipMerge=false){
-  if(_fbSaving){ console.warn('fbSave: ya en progreso, ignorando llamada duplicada'); return false; }
-  _fbSaving = true;
-  try {
-    setSyncStatus('syncing');
+const PENDING_SYNC_KEY = 'if_pending_v10';
+let _pendingRecoveryError = false;
+const currentSyncData = () => ({cfg, cat, peds, materiales, gramosEditados:_gramosEditados});
+const syncQueue = new InstintoSafeSync.SaveQueue({
+  makeId: () => crypto.randomUUID(),
+  persist: record => localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(record)),
+  clear: () => localStorage.removeItem(PENDING_SYNC_KEY),
+  commit: async (base, desired, writeId) => {
     await loadFirebase();
     const ref = db.collection('instinto').doc('datos');
-
-    // ── PROTECCIÓN ANTI-BORRADO ──────────────────────────────────────────
-    // skipMerge=true cuando la operación es una eliminación intencional
-    // Protección anti-borrado: fusionar IDs que estén en nube pero no en local
-    try { if(skipMerge) throw 'skip';
-      const snap = await ref.get();
-      if(snap.exists){
-        const cloudPeds = snap.data().peds || [];
-        // Comparar por IDs reales, no por conteo (el conteo puede diferir por duplicados/basura)
-        const localIds = new Set(peds.map(p => Number(p.id)));
-        // Filtrar objetos válidos (con id numérico real) antes de comparar
-        const cloudPedsValidos = cloudPeds.filter(p => p && p.id != null && !isNaN(Number(p.id)));
-        const faltantes = cloudPedsValidos.filter(p => !localIds.has(Number(p.id)));
-        const basura = cloudPeds.length - cloudPedsValidos.length;
-        if(basura > 0) console.warn(`fbSave: ${basura} entrada(s) sin ID válido en Firebase (se ignorarán)`);
-        if(faltantes.length > 0){
-          console.warn(`fbSave: fusionando ${faltantes.length} pedido(s) faltante(s):`, faltantes.map(p=>p.id));
-          peds = [...peds, ...faltantes].sort((a,b) => Number(b.id) - Number(a.id));
-          nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
-          save();
-          renderAll();
-          toast(`✓ ${faltantes.length} pedido(s) recuperado(s) de la nube`);
-        }
-        // Siempre continúa y guarda — limpia entradas basura y sube versión fusionada
-      }
-    } catch(checkErr){ if(checkErr !== 'skip') console.warn('fbSave check error (non-fatal):', checkErr.message || checkErr); }
-
-    await ref.set({ cfg, cat, peds, materiales, gramosEditados:_gramosEditados, updatedAt: new Date().toISOString() });
-    setSyncStatus('ok');
-    return true;
-  } catch(e){ setSyncStatus('err'); console.warn('Firebase save error:', e.message || e.code || e); return false; }
-  finally { _fbSaving = false; }
+    return db.runTransaction(async tx => {
+      const snap = await tx.get(ref);
+      const remote = snap.exists ? snap.data() : null;
+      // Handles a committed write whose acknowledgement was lost.
+      if(remote && remote.lastWriteId === writeId) return remote;
+      const merged = InstintoSafeSync.checkedUpdate(base, remote, desired, writeId, new Date().toISOString());
+      tx.update(ref, merged);
+      return merged;
+    });
+  }
+});
+try {
+  const pending = localStorage.getItem(PENDING_SYNC_KEY);
+  if(pending){
+    syncQueue.restore(JSON.parse(pending));
+    const desired = syncQueue.pending.desired;
+    cfg = desired.cfg; cat = desired.cat; peds = desired.peds;
+    materiales = desired.materiales; _gramosEditados = desired.gramosEditados;
+    nextId = Math.max(...peds.map(p=>Number(p.id)),0)+1;
+  }
+} catch(e) { _pendingRecoveryError = true; }
+function syncPending(){ return _pendingRecoveryError || !!syncQueue.pending || !!syncQueue.running; }
+function showPendingSync(){
+  let el=document.getElementById('sync-pending');
+  if(!el){
+    el=document.createElement('div'); el.id='sync-pending'; el.setAttribute('role','alert');
+    el.style.cssText='position:fixed;bottom:16px;left:16px;right:16px;z-index:99999;background:#42251c;color:#fff;padding:16px;border:1px solid #e8c96a;border-radius:8px';
+    document.body.appendChild(el);
+  }
+  el.replaceChildren();
+  const message=document.createElement('p');
+  message.textContent='Hay cambios locales pendientes. No cierres ni borres los datos de esta aplicación. Si otro colaborador hizo cambios, se requiere revisar el respaldo antes de continuar.';
+  el.appendChild(message);
+  const retry=document.createElement('button');retry.className='btn';retry.textContent='Reintentar sincronización';
+  retry.onclick=()=>fbRetry();el.appendChild(retry);
+  const backup=document.createElement('button');backup.className='btn';backup.textContent='Guardar respaldo pendiente';
+  backup.onclick=()=>{
+    const blob=new Blob([JSON.stringify({pending:localStorage.getItem(PENDING_SYNC_KEY),local:currentSyncData()},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
+    a.download='instinto-cambios-pendientes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  };el.appendChild(backup);
 }
+async function runSync(action){
+  _fbSaving=true;setSyncStatus('syncing');
+  try {
+    if(_pendingRecoveryError) throw new Error('El respaldo pendiente requiere revisión.');
+    await action();
+    setSyncStatus('ok');document.getElementById('sync-pending')?.remove();return true;
+  } catch(e){
+    window._lastFbError=e.message||e.code;
+    setSyncStatus('err');showPendingSync();return false;
+  } finally { _fbSaving=!!syncQueue.running; }
+}
+// skipMerge is retained for callers; deletion now has the same concurrency checks.
+async function fbSave(skipMerge=false){
+  return runSync(()=>syncQueue.save(currentSyncData()));
+}
+async function fbRetry(){ return runSync(()=>syncQueue.retry()); }
+window.addEventListener('beforeunload',e=>{if(syncPending()){e.preventDefault();e.returnValue='';}});
 
 async function fbLoad(){
+  if(syncPending()){showPendingSync();return false;}
   try {
     setSyncStatus('syncing');
     await loadFirebase();
@@ -3044,6 +3076,7 @@ async function fbLoad(){
     const snap = await ref.get();
     if(snap.exists){
       const data = snap.data();
+      if(!syncQueue.accept(data)){showPendingSync();return;}
 
       // Firebase es la fuente de verdad — siempre reemplazar local con lo que hay en la nube
       const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
@@ -3064,9 +3097,7 @@ async function fbLoad(){
       // ⚠ Solo subir si ya tenemos pedidos locales; no borrar con vacío
       setSyncStatus('ok');
       renderAll(); loadCfg(); renderMateriales();
-      if(peds.length > 0 || cat.length > 0){
-        await fbSave(); // subir lo que ya teníamos localmente
-      }
+      showPendingSync(); // A missing production document must never be initialized from stale local data.
     }
   } catch(e){
     window._lastFbError = e.message || e.code || e;
@@ -3143,9 +3174,10 @@ async function iniciarSyncTiempoReal(){
     setSyncStatus('syncing');
     _unsubscribe = ref.onSnapshot(snap => {
       // Si estamos guardando, no permitimos que el listener reemplace el pedido recién capturado.
-      if(_fbSaving){ console.warn('onSnapshot ignorado temporalmente porque hay guardado en curso'); return; }
+      if(syncPending() || _fbSaving || document.getElementById('modal-overlay')?.classList.contains('open')){ return; }
       if(!snap.exists) return;
       const data = snap.data();
+      if(!syncQueue.accept(data)) return;
       const firebasePeds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
       if(data.cfg) cfg = data.cfg;
       if(data.cat) cat = data.cat;
@@ -3171,6 +3203,7 @@ async function iniciarSyncTiempoReal(){
 }
 
 window.addEventListener('load', async () => {
+  if(syncPending()){renderAll();loadCfg();renderMateriales();showPendingSync();}
   await iniciarSyncTiempoReal(); // sync en tiempo real
   addSyncButtons();
 });

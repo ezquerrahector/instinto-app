@@ -1,0 +1,7 @@
+{
+  "functions": [{
+    "source": "payments",
+    "codebase": "instinto-payments",
+    "runtime": "nodejs22"
+  }]
+}

@@ -1,7 +1,7 @@
-const CACHE = 'instinto-v22-niimbot-labels';
+const CACHE = 'instinto-v23-safe-sync';
 // Solo cachear index.html — no incluir manifest.json ni '/' que pueden fallar
 // en GitHub Pages o servidores sin esos archivos exactos.
-const ASSETS = ['/instinto-app/index.html'];
+const ASSETS = ['/instinto-app/index.html', '/instinto-app/assets/safe-sync.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -17,7 +17,7 @@ self.addEventListener('install', e => {
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    Promise.all(keys.filter(k => k.startsWith('instinto-') && k !== CACHE).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
