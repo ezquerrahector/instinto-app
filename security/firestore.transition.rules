@@ -1,0 +1,29 @@
+rules_version = '2';
+// CANDIDATE ONLY. Publish only after both collaborators have authenticated on
+// the compatible client and the migration checks have passed. Payments remain off.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function collaborator() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+          'ezquerrahector@gmail.com', 'osmararobles@hotmail.com'
+        ];
+    }
+    match /instinto/datos {
+      allow read: if collaborator();
+      allow update: if collaborator()
+        && request.resource.data.syncClient == 'v10'
+        && request.resource.data.syncRevision is int
+        && request.resource.data.syncRevision == resource.data.get('syncRevision', 0) + 1
+        && request.resource.data.lastWriteId is string
+        && request.resource.data.lastWriteId != resource.data.get('lastWriteId', '')
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'cfg', 'cat', 'peds', 'materiales', 'gramosEditados',
+          'updatedAt', 'syncRevision', 'syncClient', 'lastWriteId'
+        ]);
+      allow create, delete: if false;
+    }
+    match /{document=**} { allow read, write: if false; }
+  }
+}

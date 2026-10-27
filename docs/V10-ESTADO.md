@@ -40,26 +40,31 @@ Estos cambios NO cierran por sí solos el acceso público y NO vuelven seguros
 los clientes antiguos. Un cliente antiguo todavía puede sobrescribir datos
 mientras las reglas públicas sigan vigentes.
 
-Falta implementar y validar la transición autenticada de TODOS los colaboradores,
+Falta publicar y validar la transición autenticada de TODOS los colaboradores,
 las mutaciones autorizadas en servidor, reglas finales, preferencias Checkout Pro,
 Skydropx, conciliación transaccional, cola de recuperación y devolución autorizada.
 Las ediciones/eliminaciones manuales de órdenes web deberán restringirse en servidor.
-El consumo de materiales actual es por pedido con receta global; falta definir y
-validar la representación de cantidades y materiales/envases de 100 ml antes de
-incorporar pedidos web. No inferir la receta de 100 ml a partir de la de 60 ml.
+El consumo de materiales actual es por pedido con receta global. Se recuperó el
+cálculo previo de 100 ml (50 g esencia, 5.83 g feromonas, 8.33 g fijador y 35.84 g
+perfumol) y se incorporó como módulo verificable, sin activarlo contra inventario.
+Falta mapear los envases de 100 ml y etiquetas reales antes de incorporar pedidos.
 
-No se ejecutaron pruebas de Firestore Emulator, permisos reales, checkout sandbox,
-cotización de Skydropx ni aceptación con colaboradores. Las pruebas unitarias no
-sustituyen estas verificaciones.
+Se ejecutaron cinco pruebas de reglas/transacciones en Firestore Emulator y 28
+pruebas locales de lógica/UI. No se probaron permisos desplegados, checkout sandbox,
+cotización de Skydropx ni aceptación con colaboradores.
 
 ## Entradas necesarias
 
-1. Identidad de los colaboradores actuales y quién puede autorizar devoluciones.
-   Tener cuentas en Authentication no basta para asumir que están autorizadas.
-2. Sesiones disponibles en Webempresa y Skydropx. Contraseñas y secretos solo
-   mediante los mecanismos seguros del proveedor, nunca en chat ni Git.
-3. Dirección de origen y medidas/pesos de paquetes, preferentemente recuperados
-   de la cuenta Skydropx, más receta/materiales de 100 ml si no están configurados.
+1. Colaboradores autorizados por el propietario: ezquerrahector@gmail.com y
+   osmararobles@hotmail.com. Sesión LOCAL persistente, Google o enlace por correo.
+   Firebase Console muestra únicamente la cuenta de Héctor y proveedor Google.
+   El proveedor de enlace por correo sigue pendiente de activación/publicación.
+2. Webempresa y Skydropx accesibles por las sesiones abiertas. Carpeta de tienda
+   confirmada: public_html/instintofragancias.com. No se modificaron archivos vivos.
+3. Skydropx: plantilla Instinto 7×7×20 cm, 1 kg. Lista de direcciones de origen
+   vacía; cotizador sin origen. API sin aplicaciones/credenciales conectadas.
+   Falta dirección real de origen, política de empaquetado de múltiples frascos y
+   creación segura de credenciales limitadas para cotización.
 4. Verificar fuente/configuración desplegada y establecer un medio autorizado
    de despliegue Firebase. Ver una sesión Console no acredita acceso CLI.
 
@@ -71,3 +76,8 @@ sustituyen estas verificaciones.
 Validación local: `npm test`. Los casos cubren conflictos con escritor antiguo,
 stock cambiado por otro escritor, cola, desconexión, reinicio, persistencia fallida,
 firma manipulada/vencida, reglas de estatus y sintaxis de scripts administrativos.
+
+Pruebas aisladas: `npm run test:rules` usa exclusivamente `demo-instinto-v10`
+en localhost:8085. No usa credenciales ni datos de producción. Las reglas de
+`security/firestore.transition.rules` son solo la transición con pagos apagados;
+NO deben usarse como reglas finales de una tienda con descuentos automáticos.

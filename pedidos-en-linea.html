@@ -13,10 +13,12 @@
 <section class="panel" style="padding:16px;margin-top:24px"><div class="bar"><h2 style="font-size:20px">Diagnóstico de inventario · V9</h2><button id="auditBtn" class="outline" disabled>Revisar disponibilidad</button></div><p class="muted">Consulta solo lectura. No reserva, libera ni descuenta gramos. No permite ventas.</p><p id="auditStatus" role="status">Inicia sesión para consultar el diagnóstico.</p><div id="auditResult"></div></section>
 <p class="muted">Esta vista usa Firebase Authentication y una API protegida. No escribe sobre el inventario ni incorpora pedidos en <code>instinto/datos</code>.</p></main>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="assets/admin-access.js"></script>
 <script>
 'use strict';
 const app=firebase.initializeApp({apiKey:'AIzaSyBafY_htzgeMH5_J_h9-VscHHnrHdLX0IY',authDomain:'instinto-fragancias.firebaseapp.com',projectId:'instinto-fragancias',appId:'1:972424984397:web:5910eef68d595de71ee904'});
 const auth=firebase.auth();
+InstintoAccess.start(auth);
 const API='https://us-central1-instinto-fragancias.cloudfunctions.net/storeApi/api/admin/orders';
 const $=id=>document.getElementById(id);
 const status=(str,err=false)=>{$('status').textContent=str;$('status').className=err?'error':''};
@@ -50,5 +52,5 @@ async function auditInventory(){
 }
 $('auditBtn').addEventListener('click',auditInventory);
 $('logout').addEventListener('click',()=>auth.signOut());$('refresh').addEventListener('click',load);
-auth.onAuthStateChanged(user=>{$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;$('auditBtn').disabled=!user;if(user)load();else{draw([]);$('auditResult').replaceChildren();$('auditStatus').textContent='Inicia sesión para consultar el diagnóstico.';status('Inicia sesión con la cuenta administradora autorizada.')}});
+auth.onAuthStateChanged(user=>{if(user&&!InstintoAccess.authorized(user)){status('Esta cuenta no está autorizada.',true);return;}$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;$('auditBtn').disabled=!user;if(user)load();else{draw([]);$('auditResult').replaceChildren();$('auditStatus').textContent='Inicia sesión para consultar el diagnóstico.';status('Inicia sesión con la cuenta administradora autorizada.')}});
 </script></body></html>

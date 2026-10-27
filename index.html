@@ -514,6 +514,7 @@ nav::-webkit-scrollbar{display:none}
 <div id="toast"></div>
 
 <script src="assets/safe-sync.js"></script>
+<script src="assets/admin-access.js"></script>
 <script>
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
 const CFG_DEF = {gesencia:30,gfijador:5,pfijador:0.35,gferomonas:3.5,pferomonas:2.00,gperfumol:21.5,pperfumol:0.06,envprov:5,atomizador:17.50,sticker:4.00,pventa:250};
@@ -2944,38 +2945,27 @@ let db = null;
 let _fbLoaded = false;
 let _fbSaving = false; // guard contra re-entrada en fbSave
 
-function loadFirebase(){
-  return new Promise((resolve, reject) => {
-    if(_fbLoaded){ resolve(); return; }
-
-    // Timeout de 10 segundos para no quedarse colgado indefinidamente
-    const timeout = setTimeout(() => reject(new Error('Firebase scripts timeout (10s)')), 10000);
-
-    const s1 = document.createElement('script');
-    s1.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js';
-    s1.onerror = () => { clearTimeout(timeout); reject(new Error('No se pudo cargar firebase-app-compat.js')); };
-    s1.onload = () => {
-      const s2 = document.createElement('script');
-      s2.src = 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js';
-      s2.onerror = () => { clearTimeout(timeout); reject(new Error('No se pudo cargar firebase-firestore-compat.js')); };
-      s2.onload = () => {
-        clearTimeout(timeout);
-        try {
-          // Evitar error si ya fue inicializado (ej. recarga con SW)
-          if (!firebase.apps.length) {
-            firebase.initializeApp(FB_CFG);
-          }
-          db = firebase.firestore();
-          _fbLoaded = true;
-          resolve();
-        } catch(initErr) {
-          reject(initErr);
-        }
-      };
-      document.head.appendChild(s2);
-    };
-    document.head.appendChild(s1);
-  });
+let _firebaseInit = null;
+async function loadFirebase(){
+  if(!_firebaseInit){
+    _firebaseInit = (async()=>{
+      for(const name of ['app','auth','firestore']){
+        await new Promise((resolve,reject)=>{
+          const script=document.createElement('script');
+          const timeout=setTimeout(()=>reject(new Error('No fue posible conectar con Firebase.')),15000);
+          script.src='https://www.gstatic.com/firebasejs/10.12.0/firebase-'+name+'-compat.js';
+          script.onload=()=>{clearTimeout(timeout);resolve();};
+          script.onerror=()=>{clearTimeout(timeout);reject(new Error('No fue posible cargar Firebase.'));};
+          document.head.appendChild(script);
+        });
+      }
+      if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
+      db=firebase.firestore();_fbLoaded=true;
+    })().catch(error=>{_firebaseInit=null;throw error;});
+  }
+  await _firebaseInit;
+  await InstintoAccess.start(firebase.auth());
+  await InstintoAccess.requireUser();
 }
 
 // Indicador de sync en el header
@@ -3165,6 +3155,8 @@ function addSyncButtons(){
 // Al arrancar: siempre esperar Firebase antes de renderizar
 // Suscripción en tiempo real — escucha cambios de Firebase mientras la app está abierta
 let _unsubscribe = null;
+window.addEventListener('instinto-auth-locked',()=>{if(_unsubscribe){_unsubscribe();_unsubscribe=null;}});
+window.addEventListener('instinto-auth-ready',()=>{if(_fbLoaded && !_unsubscribe)iniciarSyncTiempoReal();});
 async function iniciarSyncTiempoReal(){
   try {
     await loadFirebase();
