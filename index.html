@@ -161,6 +161,15 @@ nav::-webkit-scrollbar{display:none}
 .resurtido-alert{font-size:11px;color:var(--amber);font-weight:700;margin-top:6px;line-height:1.35}
 @media(max-width:700px){.smart-filters{display:grid;grid-template-columns:1fr 1fr}.smart-filters input{grid-column:1/-1;min-width:0}.smart-filters select{width:100%}}
 
+
+/* INSTINTO V8.1: selector integrado de pedidos, sin alterar datos */
+.if-online-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 14px}
+.if-online-tab{background:var(--bg4,#f5f1e9);color:var(--text,#222);border:1px solid var(--border,#ded8ce);padding:11px 16px;cursor:pointer;border-radius:9px;font-weight:700;font-size:13px}
+.if-online-tab.active{background:#cba842;color:#171717;border-color:#cba842}
+.if-online-info{font-size:12px;line-height:1.6;color:var(--text2,#555);margin:0 0 12px}
+.if-online-iframe{width:100%;height:780px;min-height:66vh;border:1px solid var(--border,#ddd);border-radius:9px;background:#f8f6f2;display:block}
+.if-online-link{display:inline-block;margin:0 0 12px;color:var(--text,#222);text-decoration:underline;text-underline-offset:3px;font-size:12px}
+@media(max-width:700px){.if-online-iframe{height:850px}.if-online-tab{flex:1}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -197,6 +206,13 @@ nav::-webkit-scrollbar{display:none}
 
 <!-- PEDIDOS -->
 <div id="pedidos" class="section">
+  <!-- Selector V8.1: conserva el módulo de pedidos originales intacto -->
+  <div class="if-online-tabs" role="tablist" aria-label="Origen de pedidos">
+    <button class="if-online-tab active" id="if-tab-local" type="button" role="tab" aria-selected="true" aria-controls="if-pedidos-local" onclick="ifChangeOrdersView('local')">Pedidos actuales</button>
+    <button class="if-online-tab" id="if-tab-web" type="button" role="tab" aria-selected="false" aria-controls="if-pedidos-web" onclick="ifChangeOrdersView('web')">🛍 Tienda en línea</button>
+  </div>
+  <div id="if-pedidos-local" role="tabpanel" aria-labelledby="if-tab-local">
+
   <div class="search-bar">
     <input type="search" placeholder="Buscar cliente, fragancia, código o #número..." oninput="filterPedidos(this.value)"/>
     <select onchange="setOrden(this.value)">
@@ -229,6 +245,12 @@ nav::-webkit-scrollbar{display:none}
     <button class="btn btn-sm" onclick="descargarPedidosFiltrados()">⬇ Descargar pedidos del filtro</button>
   </div>
   <div id="pedidos-list"></div>
+  </div>
+  <div id="if-pedidos-web" role="tabpanel" aria-labelledby="if-tab-web" hidden style="display:none">
+    <p class="if-online-info"><strong>Pedidos recibidos por internet.</strong> Consulta protegida y de solo lectura. No modifica pedidos existentes ni descuenta existencias. Los pedidos de prueba no representan ventas pagadas.</p>
+    <a class="if-online-link" href="pedidos-en-linea.html" target="_blank" rel="noopener noreferrer">Abrir panel completo en otra pestaña</a>
+    <iframe class="if-online-iframe" id="if-online-panel" title="Pedidos de la tienda en línea (acceso protegido con Google)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="identity-credentials-get"></iframe>
+  </div>
 </div>
 
 <!-- INVENTARIO -->
@@ -3522,6 +3544,25 @@ function descargarEtiqueta(){
   },700);
 }
 
+</script>
+
+<script>
+/* INSTINTO V8.1 - Solo alterna vistas visuales. No escribe en Firebase. */
+function ifChangeOrdersView(view){
+  var isWeb = view === 'web';
+  var local = document.getElementById('if-pedidos-local');
+  var web = document.getElementById('if-pedidos-web');
+  if (!local || !web) return;
+  local.hidden=isWeb;local.style.display=isWeb?'none':'';
+  web.hidden=!isWeb;web.style.display=isWeb?'':'none';
+  var t1=document.getElementById('if-tab-local'),t2=document.getElementById('if-tab-web');
+  t1.classList.toggle('active',!isWeb);t2.classList.toggle('active',isWeb);
+  t1.setAttribute('aria-selected',String(!isWeb));t2.setAttribute('aria-selected',String(isWeb));
+  if(isWeb){
+    var iframe=document.getElementById('if-online-panel');
+    if(iframe&&!iframe.getAttribute('src'))iframe.setAttribute('src','pedidos-en-linea.html');
+  }
+}
 </script>
 </body>
 </html>
