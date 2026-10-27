@@ -18,7 +18,9 @@ function createMercadoPagoClient({accessToken,fetchImpl=fetch}) {
       if(typeof result.id!=='string'||!result.id||result.external_reference!==purchase.id)throw Error('mp_preference_mismatch');
       let url;try{url=new URL(result.init_point);}catch{throw Error('mp_checkout_url_invalid');}
       if(url.protocol!=='https:'||!['www.mercadopago.com.mx','www.mercadopago.com'].includes(url.hostname)||url.username||url.password)throw Error('mp_checkout_url_invalid');
-      return {id:result.id,initPoint:url.href};
+      let sandbox=null;
+      try{const s=new URL(result.sandbox_init_point);if(s.protocol==='https:'&&['sandbox.mercadopago.com.mx','sandbox.mercadopago.com'].includes(s.hostname))sandbox=s.href;}catch{}
+      return {id:result.id,initPoint:url.href,sandboxInitPoint:sandbox};
     },
     // Recuperación: localizar una preferencia creada cuya respuesta se perdió.
     async findPreference(purchaseId) {
