@@ -73,3 +73,27 @@ Despliegue 27/10/2026 18:35 UTC (commit `a9d2169`): `checkoutApi`, `webAdmin`, `
 - Tienda: volver a subir `index.html`/`config.js` del commit `e51a7bb`.
 - Funciones: borrar `instinto_private/runtime.checkoutEnabled` (apaga cotizar/pagar al instante) y `reconciliationEnabled` (apaga mantenimiento); `webhook` y conciliación se mantienen para pagos en tránsito.
 - Datos: nunca restaurar a ciegas; usar `ops/huella-datos.mjs` para cotejar, compensar por movimiento (`instinto_admin_operations`, `instinto_payment_ledger`).
+
+## Evidencia: compra sandbox de extremo a extremo (27/10/2026 18:47–18:58 UTC)
+
+Ambiente: emulador Firestore en Cloud Shell con el respaldo `20261027T180340Z` restaurado (copia idéntica de
+producción), código commit `a48d7cf`, proveedores reales en modo prueba: Skydropx (credencial productiva,
+solo cotización) y Mercado Pago (vendedor de prueba 3315715461, comprador de prueba 3315715463).
+Caja 60 ml confirmada por el propietario: 7×7×20 cm, 250 g empacada.
+
+| Paso | Resultado |
+| --- | --- |
+| Cesta | 2 × ARIANA GRANDE · CLOUD (DP02522), 60 ml, con dedicatoria de regalo |
+| Cotización real Skydropx (2 cajas, León 37530 → CDMX 06600) | quote `d0b508b1-17f9-4273-8c75-8a4368e1114d`: ampm $102.50, Sendex $102.50, 99minutos $175.97, FedEx $181 / $182.41, PuntoPost $221.15 |
+| Compra persistida | `wd29b1cf758f1d94647e2ad3a`: subtotal $620 + envío $102.50 = **$722.50** (servidor) |
+| Reserva | DP02522 60 g → 0 g; revisión de inventario null → 1; libre 60 → 0 |
+| Preferencia MP | `3315715461-2c296cfc-d4fb-41eb-951f-d647c8efdf79` |
+| Pago (persona, comprador de prueba, tarjeta APRO) | MP operación **185338674611**: approved/accredited, $722.50 MXN, master |
+| Primer intento de conciliación | Bloqueado `payment_environment_mismatch` (MP reporta live_mode=true en cuentas de prueba). Sin efectos. Corregido con `paymentLiveMode` (commit `a48d7cf`). |
+| Conciliación por API (sin webhook) | applied 1; compra `paid`, reserva `consumed`; pedidos admin **#857 y #858** (canal Web, 60 ml, 30 g c/u, $310, esencia descontada, materiales pendientes de elaboración: env_cristal 1, atomizador 1, feromonas 3.5, fijador 6, perfumol 21.5) |
+| Repetición ×3 del mismo pago | `already_processed` ×3 — sin segundo descuento ni pedidos duplicados |
+| Outbox | 1 aviso procesado (alerta `new_paid_order`) |
+| Inventario antes / después | DP02522 60 → 0 g (exactamente 60 g, una vez). Pedidos 564 → 566 (id máx. 856 → 858). Materiales sin cambio hasta "Elaborado". Revisión null → 2. |
+| Ledger | `mp_185338674611` disposition `applied` |
+
+Pendiente para cerrar el flujo real: webhook firmado desplegado, guía real (cargo Skydropx), transición de colaboradores, publicación y compra con cargo real autorizado.
