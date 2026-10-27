@@ -97,3 +97,28 @@ Caja 60 ml confirmada por el propietario: 7×7×20 cm, 250 g empacada.
 | Ledger | `mp_185338674611` disposition `applied` |
 
 Pendiente para cerrar el flujo real: webhook firmado desplegado, guía real (cargo Skydropx), transición de colaboradores, publicación y compra con cargo real autorizado.
+
+## Producción activada (27/10/2026)
+
+| Hora UTC | Acción | Verificación |
+| --- | --- | --- |
+| 20:12 aprox. | Enlace por correo habilitado en Firebase Auth | `signIn.email.enabled=true`; dominio github.io autorizado |
+| 20:16 aprox. | Administración V10 publicada (`main` 426a3c7 → 934b2e5, avance rápido) | Sesión Google de Héctor verificada; 1 318 fragancias / 564 pedidos; safe-sync activo |
+| 20:37 | Respaldo fresco `20261027T203714Z` (SHA-256 `2723b17f…eb52cb`) | — |
+| 20:39 | Reglas Firestore cerradas (`security/firestore.transition.rules`) | Lectura autenticada de Héctor OK con reglas cerradas |
+| 20:47 | Funciones redeplegadas; `mpWebhook` bootstrap reemplazado por receptor firmado | GET `ready`; POST sin firma → 401 |
+| 20:47 | `instinto_private/runtime` modo real: vendedor 71623902, 60 ml $310, caja 7×7×20/250 g, conciliación y guías activas | Catálogo `live`, 159 fragancias |
+| 20:50 aprox. | Tienda V10 publicada en Webempresa (`index.html`, `config.js`) | Cotización real Monterrey: 6 opciones desde $51.25 |
+
+## Evidencia: primera compra REAL (27/10/2026 20:55–20:56 UTC)
+
+| Paso | Resultado |
+| --- | --- |
+| Compra | `wb4332ab4ab5d9df037f0b720`: 1 × CREED · AVENTUS (CP02269) 60 ml, dedicatoria de regalo |
+| Total servidor | $310 + Paquetexpress Nacional $51.25 = **$361.25** (destino CP 37210) |
+| Pago Mercado Pago | **185359125309** approved/accredited, $361.25 MXN, vendedor 71623902, Mastercard 1 cuota; comisión $19.27, neto $341.98 |
+| Webhook firmado | Recibido 20:56:02Z, `applied` (1 s después de la aprobación) |
+| Reserva | held 20:55:05Z → consumed 20:56:03Z |
+| Pedido administrativo | **#857**, canal Web, 60 ml, 30 g, $310, esencia descontada, materiales pendientes (env_mate 1, atomizador 1, feromonas 3.5, fijador 6, perfumol 21.5) |
+| Inventario antes / después | CP02269 **60 → 30 g** (única fragancia con cambio en todo el catálogo). Pedidos 564 → 565. Materiales sin cambio (se descuentan al pasar a Elaborado). Revisión null → 2, cliente `v10`. |
+| Ledger / outbox / alerta | `mp_185359125309` applied; outbox `done` 1 intento; alerta `new_paid_order` visible en el panel |
