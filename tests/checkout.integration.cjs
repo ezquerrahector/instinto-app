@@ -202,6 +202,27 @@ test('authorized cancellation refunds once, restocks only unused essence, never 
   await assert.rejects(actions.cancelPurchase({db, mp, identity: ident('osmararobles@hotmail.com'), body, now: T0 + 3600002}), {message: 'operation_reused'});
 });
 
+test('cancelling with an unshipped label also cancels the label; our own refund raises no alert and no orphan', async () => {
+  const s = fakeShipping({async cancelShipment(id, reason) { this.calls.push(['cancel', id, reason]); return {status: 'requested'}; }}), mp = fakeMp();
+  const {res} = await buy(s, mp);
+  const pay = paymentFor(res);
+  await reconcilePayment(db, pay, {now: T0 + 60000});
+  await actions.createLabel({db, shipping: s, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'k'.repeat(20)}, now: T0 + 120000});
+  const r = await actions.cancelPurchase({db, mp, shipping: s, identity: ident('ezquerrahector@gmail.com'),
+    body: {purchaseId: res.purchaseId, operationId: 'op_' + 'q'.repeat(20), refund: 'full', restockEssence: false, reason: 'Prueba de cancelación'}, now: T0 + 3600000});
+  assert.equal(r.outcome, 'cancelled'); assert.equal(r.label, 'cancel_requested');
+  assert.equal(s.calls.filter(c => c[0] === 'cancel').length, 1);
+  const pr = (await db.doc('instinto_web_purchases/' + res.purchaseId).get()).data();
+  assert.equal(pr.shipment.state, 'cancel_requested');
+  const out = await reconcilePayment(db, {...pay, status: 'refunded', transaction_amount_refunded: pay.transaction_amount,
+    date_last_updated: new Date(T0 + 3700000).toISOString()}, {now: T0 + 3700000});
+  assert.equal(out.outcome, 'refund_recorded');
+  assert.notEqual((await db.doc('instinto_web_purchases/' + res.purchaseId).get()).data().reviewRequired, true);
+  const before = (await db.collection('instinto_alerts').where('type', '==', 'web_order_integrity').get()).size;
+  await m.verifyIntegrity({db, now: T0 + 3800000});
+  assert.equal((await db.collection('instinto_alerts').where('type', '==', 'web_order_integrity').get()).size, before);
+});
+
 test('integrity check detects deleted or edited web orders', async () => {
   const {res} = await buy(fakeShipping(), fakeMp());
   await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});

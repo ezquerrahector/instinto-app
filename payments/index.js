@@ -138,7 +138,7 @@ exports.webAdmin = onRequest({region: REGION, timeoutSeconds: 60, memory: '256Mi
     if (path === '/overview' && req.method === 'GET') return res.json(await actions.overview(ctx));
     if (path === '/label' && req.method === 'POST') return res.json(await actions.createLabel({...ctx, shipping: shipping()}));
     if (path === '/label/cancel' && req.method === 'POST') return res.json(await actions.cancelLabel({...ctx, shipping: shipping()}));
-    if (path === '/cancel' && req.method === 'POST') return res.json(await actions.cancelPurchase({...ctx, mp: await mpClient()}));
+    if (path === '/cancel' && req.method === 'POST') return res.json(await actions.cancelPurchase({...ctx, mp: await mpClient(), shipping: shipping()}));
     if (path === '/pickup' && req.method === 'POST') return res.json(await actions.schedulePickup({...ctx, shipping: shipping()}));
     if (path === '/alert/resolve' && req.method === 'POST') return res.json(await actions.resolveAlert(ctx));
     return res.status(404).json({error: 'not_found'});

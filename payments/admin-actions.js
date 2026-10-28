@@ -164,7 +164,7 @@ async function cancelLabel({db, shipping, identity, body, now = Date.now()}) {
 //  - esencia: restockEssence solo para frascos aún NO elaborados (esencia sin usar);
 //  - materiales: nunca se reponen aquí (un frasco elaborado no regresa envase/atomizador).
 // Un contracargo/mediación no se resuelve aquí: queda en revisión hasta su resolución.
-async function cancelPurchase({db, mp, identity, body, now = Date.now()}) {
+async function cancelPurchase({db, mp, shipping, identity, body, now = Date.now()}) {
   const actor = actorOf(identity);
   const {purchaseId, operationId, refund, restockEssence, reason} = body || {};
   if (!PID.test(String(purchaseId)) || !OP.test(String(operationId)) || !['full', 'none'].includes(refund) || typeof restockEssence !== 'boolean')
@@ -186,7 +186,7 @@ async function cancelPurchase({db, mp, identity, body, now = Date.now()}) {
     await ref.update({refund: {...refundResult, actor, at: now, operationId}});
   }
   // 2) Inventario y pedidos administrativos en una transacción.
-  return db.runTransaction(async tx => {
+  const result = await db.runTransaction(async tx => {
     p = (await tx.get(ref)).data();
     const inv = (await tx.get(invRef)).data();
     if (p.state === 'cancelled') return {outcome: 'already_cancelled', refund: p.refund || refundResult};
@@ -212,6 +212,22 @@ async function cancelPurchase({db, mp, identity, body, now = Date.now()}) {
       ...(refundResult ? {refund: refundResult} : {})});
     return {outcome: 'cancelled', restocked, refund: refundResult};
   });
+  // 3) Guía: si existe y el paquete no ha salido, se solicita su cancelación a Skydropx (best-effort,
+  //    nunca revierte la cancelación ya aplicada). Las recolecciones no tienen API de cancelación aquí.
+  p = (await ref.get()).data();
+  const s = p.shipment;
+  if (shipping && s?.id && ['label_ready', 'processing'].includes(s.state) && (!s.trackingStatus || s.trackingStatus === 'created')) {
+    try {
+      const r = await shipping.cancelShipment(s.id, 'Pedido cancelado: ' + why);
+      await ref.update({shipment: {...s, state: 'cancel_requested', cancel: {...r, actor, at: now}}, shipmentHistory: [...(p.shipmentHistory || []), s]});
+      result.label = 'cancel_requested';
+    } catch (e) {
+      await alert(db, 'label_cancel_' + purchaseId, {type: 'label_cancel_failed', purchaseId, reason: String(e.detail || e.message).slice(0, 300)}, now);
+      result.label = 'cancel_failed';
+    }
+  }
+  if (p.pickup?.state === 'scheduled') result.pickup = 'manual';
+  return result;
 }
 
 // Solicita a la paquetería que recoja el paquete (Skydropx v2 pickups). Idempotente por operationId;

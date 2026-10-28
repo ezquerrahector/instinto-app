@@ -1055,7 +1055,7 @@ function renderPedidos(){
             <span style="font-size:11px;font-weight:600;background:var(--bg4);color:var(--text2);padding:2px 7px;border-radius:4px;flex-shrink:0">#${p.id}</span>
             <div class="card-name">${p.cliente}</div>
             ${stockBadge}
-            ${p.origenWeb===true?`<span title="Compra en instintofragancias.com pagada con Mercado Pago${p.pagoId?' · pago '+p.pagoId:''}" style="font-size:11px;background:#1d1b18;color:#c9a84c;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.03em">🛍️ Tienda en línea · Pagado${p.folioWeb?' · Folio '+String(p.folioWeb).slice(1,9).toUpperCase():''}</span>`:''}
+            ${p.origenWeb===true?`<span title="Compra en instintofragancias.com pagada con Mercado Pago${p.pagoId?' · pago '+p.pagoId:''}" style="font-size:11px;background:#1d1b18;color:#c9a84c;padding:2px 8px;border-radius:4px;font-weight:600;letter-spacing:.03em">🛍️ Tienda en línea · ${p.estatus==='Cancelado'?'Cancelado'+(/Reembolsado/.test(p.notas||'')?' · Reembolsado':''):'Pagado'}${p.folioWeb?' · Folio '+String(p.folioWeb).slice(1,9).toUpperCase():''}</span>`:''}
           </div>
           <div class="card-sub" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
             ${p.fragancia} · ${p.disenador||''}
@@ -1072,6 +1072,13 @@ function renderPedidos(){
       </div>
       <div class="card-actions">
         ${(()=>{
+          // Pedido cancelado (p. ej. compra en línea cancelada/reembolsada desde el panel): solo lectura.
+          if(p.estatus==='Cancelado'){
+            return `<div style="flex:1;display:flex;align-items:center;gap:6px;background:var(--bg3);border-radius:var(--radius-sm);padding:6px 10px;font-size:11px">
+              <span style="color:var(--red);font-weight:600">✕ Cancelado${p.origenWeb===true?' · gestionado desde Tienda en línea':''}</span>
+              ${p.esenciaRepuesta?'<span style="color:var(--text2)">· esencia repuesta</span>':(p.esenciaDescontada?'<span style="color:var(--text2)">· esencia no repuesta</span>':'')}
+            </div>`;
+          }
           // Pedidos Para stock — verificar si ya hay stock
           if(p.cliente==='Para stock'){
             const fragCat=cat.find(x=>x.id===p.codigo);

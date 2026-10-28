@@ -148,7 +148,9 @@ async function verifyIntegrity({db, now = Date.now()}) {
         issues.push({purchaseId: p.id, adminId, issue: 'tampered', n});
     }
   }
-  const orphan = peds.filter(o => o.origenWeb === true && !snap.docs.some(d => d.id === o.folioWeb));
+  const cancelled = await db.collection('instinto_web_purchases').where('state', '==', 'cancelled').get();
+  const known = new Set([...snap.docs, ...cancelled.docs].map(d => d.id));
+  const orphan = peds.filter(o => o.origenWeb === true && !known.has(o.folioWeb));
   for (const o of orphan) issues.push({purchaseId: o.folioWeb, adminId: o.id, issue: 'orphan_web_order'});
   for (const i of issues) await alert(db, `integrity_${i.purchaseId}_${i.adminId}`, {type: 'web_order_integrity', ...i}, now);
   return {checked: snap.size, issues: issues.length};

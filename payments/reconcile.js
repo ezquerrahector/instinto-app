@@ -37,6 +37,11 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
       tx.update(purchaseRef,{reviewRequired:true,reviewReason:reason});
       return {outcome:'review_required',reason};
     };
+    // Reembolso total hecho por nosotros desde el panel (cancelación autorizada): se registra, sin alerta.
+    const fullRefund=payment.status==='refunded'&&Math.abs(Number(payment.transaction_amount_refunded||0)-Number(payment.transaction_amount||0))<0.01;
+    if(purchase.refund&&purchase.paymentId===id&&fullRefund){
+      tx.set(ledgerRef,{...record,disposition:'refunded_by_admin'},{merge:true});return {outcome:'refund_recorded'};
+    }
     if(purchase.reviewRequired===true)return review('purchase_requires_review');
     // Refunds and chargebacks never replenish essence without an authorized workflow.
     if(['refunded','charged_back','in_mediation'].includes(payment.status)||Number(payment.transaction_amount_refunded)>0)return review('payment_reversal');

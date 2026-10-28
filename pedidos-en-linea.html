@@ -210,7 +210,7 @@ function renderKpis(){
 }
 const ALERT_TXT={new_paid_order:['Pedido nuevo pagado',''],label_failed:['No se pudo generar la guía','bad'],label_uncertain:['Guía con respuesta incierta','bad'],payment_review:['Pago por revisar','bad'],
  payment_rejected_by_validation:['Pago rechazado por validación','bad'],shipping_exception:['Incidencia de envío','bad'],refund_failed:['Reembolso no confirmado','bad'],outbox_failed:['Aviso o correo no enviado','bad'],
- web_order_integrity:['Pedido Web modificado en la administración','bad'],reconcile_error:['Error al conciliar pago','bad'],payment_in_flight_48h:['Pago en proceso por más de 48 h','']};
+ web_order_integrity:['Pedido Web modificado en la administración','bad'],reconcile_error:['Error al conciliar pago','bad'],payment_in_flight_48h:['Pago en proceso por más de 48 h',''],label_cancel_failed:['No se pudo cancelar la guía en Skydropx','bad']};
 function renderAlerts(){
  const byId=new Map(DATA.purchases.map(p=>[p.id,p]));
  const live=DATA.alerts.filter(a=>{const p=byId.get(a.purchaseId);
@@ -257,7 +257,15 @@ function card(p){
  else if(st==='camino')hint=`${TRACK[s?.trackingStatus]||'En tránsito'}${s?.trackingDetail?' · '+s.trackingDetail:''}`;
  else if(st==='entregado')hint='Entregado al cliente.';
  else if(st==='atencion')hint=p.reviewReason?`Revisar: ${why(p.reviewReason)}. Si necesitas ayuda, no generes guía todavía.`:(TRACK[s?.trackingStatus]||'Revisa este pedido.');
- else if(st==='cancelado')hint=`Cancelado${p.refund?' · reembolso '+(p.refund.status||''):''}`;
+ else if(st==='cancelado'){
+   const refundTxt=p.refund?(p.refund.status==='approved'?' · reembolso aprobado':' · reembolso '+(p.refund.status||'en proceso')):'';
+   if(s?.state==='label_ready'&&(!s.trackingStatus||s.trackingStatus==='created')){
+     hint=`Cancelado${refundTxt}. ⚠ La guía ${s.trackingNumber||''} sigue activa en Skydropx: cancélala para recuperar el costo.`+(p.pickup?.state==='scheduled'?' También cancela la recolección en Skydropx → Recolecciones.':'');
+     primary=h('button',{class:'btn danger',type:'button',onclick:e=>cancelLabelDialog(p,e.target)},'Cancelar guía');
+   } else if(s?.state==='cancel_requested'){
+     hint=`Cancelado${refundTxt} · cancelación de guía solicitada a Skydropx.`+(p.pickup?.state==='scheduled'?' Revisa que la recolección también quede cancelada en Skydropx → Recolecciones.':'');
+   } else hint=`Cancelado${refundTxt}.`;
+ }
  const labelLinks=(s?.packages||[]).filter(x=>x.labelUrl).map((x,i,all)=>h('a',{class:'btn ghost sm',href:x.labelUrl,target:'_blank',rel:'noopener'},all.length>1?`⬇ Guía ${i+1}`:'⬇ Descargar guía'));
  const trackUrl=(s?.packages||[]).find(x=>x.trackingUrl)?.trackingUrl;
  const wa=a.phone?'https://wa.me/52'+String(a.phone).replace(/\D/g,'').slice(-10)+'?text='+encodeURIComponent(`Hola ${a.firstName||''}, te escribimos de INSTINTO Fragancias sobre tu pedido ${folio(p)}.`):null;
@@ -329,7 +337,7 @@ function cancelDialog(p){openDialog(()=>[h('h3',null,'Cancelar pedido '+folio(p)
   const reason=$('cReason').value.trim();if(reason.length<5)return dlgError(MSG.reason_required);const refund=$('cRefund').checked,restock=$('cRestock').checked;
   if(e.target.dataset.confirm!=='1'){e.target.dataset.confirm='1';e.target.textContent=refund?'Confirmar cancelación y reembolso':'Confirmar cancelación';return}
   e.target.disabled=true;try{const d=await call('/cancel',{purchaseId:p.id,operationId:opFor('c'+p.id),refund:refund?'full':'none',restockEssence:restock,reason});closeDlg();
-   const g=Object.values(d.restocked||{}).reduce((s,x)=>s+x,0);toast(`Pedido cancelado${refund?' y reembolsado':''}${g?` · ${g} g de esencia repuestos`:''}`);load(true)}catch(err){dlgError(err.message);e.target.disabled=false}}},'Cancelar pedido'))])}
+   const g=Object.values(d.restocked||{}).reduce((s,x)=>s+x,0);toast(`Pedido cancelado${refund?' y reembolsado':''}${g?` · ${g} g de esencia repuestos`:''}${d.label==='cancel_requested'?' · guía cancelada en Skydropx':d.label==='cancel_failed'?' · ⚠ no se pudo cancelar la guía: hazlo desde Más ▾':''}${d.pickup==='manual'?' · cancela la recolección en Skydropx':''}`);load(true)}catch(err){dlgError(err.message);e.target.disabled=false}}},'Cancelar pedido'))])}
 
 /* ---------- Controles ---------- */
 $('q').value=filter.q;$('range').value=filter.range;$('sort').value=filter.sort;$('showTest').checked=filter.test;
