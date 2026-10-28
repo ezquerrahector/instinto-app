@@ -529,11 +529,16 @@ let cat    = JSON.parse(localStorage.getItem('if_cat')  || '[]');
 let peds   = JSON.parse(localStorage.getItem('if_peds') || '[]');
 let nextId = Math.max(...peds.map(p=>p.id), 0) + 1;
 
+// Copia local de cortesía (la fuente de verdad es Firebase). El dominio ezquerrahector.github.io
+// comparte ~5 MB de almacenamiento con otras apps; si no cabe, no se interrumpe nada.
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch(e) { console.warn('Copia local omitida:', k, e.name); } };
 const save = () => {
-  localStorage.setItem('if_cfg',  JSON.stringify(cfg));
-  localStorage.setItem('if_cat',  JSON.stringify(cat));
-  localStorage.setItem('if_peds', JSON.stringify(peds));
-  localStorage.setItem('if_updated', Date.now().toString());
+  try {
+    localStorage.setItem('if_cfg',  JSON.stringify(cfg));
+    localStorage.setItem('if_cat',  JSON.stringify(cat));
+    localStorage.setItem('if_peds', JSON.stringify(peds));
+    localStorage.setItem('if_updated', Date.now().toString());
+  } catch(e) { console.warn('Copia local omitida (almacenamiento lleno):', e.name); }
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────
@@ -2561,7 +2566,7 @@ let _gramosEditados = JSON.parse(localStorage.getItem('if_gramos_edit')||'{}');
 let _gramosTimer = null;
 
 function saveGramos(){
-  localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados));
+  lsSet('if_gramos_edit', JSON.stringify(_gramosEditados));
   // Debounce: esperar 1s después del último cambio antes de subir a Firebase
   clearTimeout(_gramosTimer);
   _gramosTimer = setTimeout(async ()=>{
@@ -2849,7 +2854,7 @@ const MAT_DEF = [
 
 let materiales = JSON.parse(localStorage.getItem('if_mat')||'null') || [];
 
-function saveMat(){ localStorage.setItem('if_mat',JSON.stringify(materiales)); fbSave(); }
+function saveMat(){ lsSet('if_mat',JSON.stringify(materiales)); fbSave(); }
 
 function descontarMateriales(pedido){
   const linea = pedido.linea || lineaDesdeId(pedido.codigo||'') || 'Caballero';
@@ -3028,13 +3033,27 @@ function setSyncStatus(status){
 }
 
 const PENDING_SYNC_KEY = 'if_pending_v10';
+// V10.3: el respaldo del cambio pendiente se guarda en localStorage y, si el espacio compartido del
+// dominio está lleno, en sessionStorage (cuota propia; sobrevive recargas de esta pestaña).
+// Si ninguno funciona se mantiene el bloqueo de seguridad (no se escribe sin respaldo).
+const pendingStore = {
+  where: null,
+  set(value){
+    try { localStorage.setItem(PENDING_SYNC_KEY, value); try{sessionStorage.removeItem(PENDING_SYNC_KEY)}catch(_){} this.where='local'; return; }
+    catch(e) { try{localStorage.removeItem(PENDING_SYNC_KEY)}catch(_){} }
+    sessionStorage.setItem(PENDING_SYNC_KEY, value); this.where='session';
+  },
+  get(){ let v=null; try{v=localStorage.getItem(PENDING_SYNC_KEY)}catch(_){}
+    if(v){this.where='local';return v} try{v=sessionStorage.getItem(PENDING_SYNC_KEY)}catch(_){} if(v)this.where='session'; return v; },
+  clear(){ try{localStorage.removeItem(PENDING_SYNC_KEY)}catch(_){} try{sessionStorage.removeItem(PENDING_SYNC_KEY)}catch(_){} this.where=null; }
+};
 let _lastMerge = null;
 let _pendingRecoveryError = false;
 const currentSyncData = () => ({cfg, cat, peds, materiales, gramosEditados:_gramosEditados});
 const syncQueue = new InstintoSafeSync.SaveQueue({
   makeId: () => crypto.randomUUID(),
-  persist: record => localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(record)),
-  clear: () => localStorage.removeItem(PENDING_SYNC_KEY),
+  persist: record => pendingStore.set(JSON.stringify(record)),
+  clear: () => pendingStore.clear(),
   commit: async (base, desired, writeId) => {
     await loadFirebase();
     const ref = db.collection('instinto').doc('datos');
@@ -3053,7 +3072,7 @@ const syncQueue = new InstintoSafeSync.SaveQueue({
   }
 });
 try {
-  const pending = localStorage.getItem(PENDING_SYNC_KEY);
+  const pending = pendingStore.get();
   if(pending){
     syncQueue.restore(JSON.parse(pending));
     const desired = syncQueue.pending.desired;
@@ -3072,13 +3091,16 @@ function showPendingSync(){
   }
   el.replaceChildren();
   const message=document.createElement('p');
-  message.textContent='Tu último cambio aún no se guarda en la nube (sin internet o error del servidor). Está a salvo en este dispositivo: no cierres ni borres los datos de la aplicación y toca "Reintentar sincronización".';
+  const reason=String(window._lastFbError||'');
+  message.textContent = /quota|storage|almacen/i.test(reason)
+    ? 'No se pudo guardar porque el almacenamiento de este navegador está lleno. Tu cambio sigue en pantalla: toca "Reintentar sincronización"; si vuelve a fallar, toca "Guardar respaldo pendiente".'
+    : 'Tu último cambio aún no se guarda en la nube (sin internet o error del servidor). Está a salvo en este dispositivo'+(pendingStore.where==='session'?' mientras no cierres esta pestaña':'')+': no borres los datos de la aplicación y toca "Reintentar sincronización".';
   el.appendChild(message);
   const retry=document.createElement('button');retry.className='btn';retry.textContent='Reintentar sincronización';
   retry.onclick=()=>fbRetry();el.appendChild(retry);
   const backup=document.createElement('button');backup.className='btn';backup.textContent='Guardar respaldo pendiente';
   backup.onclick=()=>{
-    const blob=new Blob([JSON.stringify({pending:localStorage.getItem(PENDING_SYNC_KEY),local:currentSyncData()},null,2)],{type:'application/json'});
+    const blob=new Blob([JSON.stringify({pending:pendingStore.get(),local:currentSyncData()},null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;
     a.download='instinto-cambios-pendientes.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
   };el.appendChild(backup);
@@ -3106,8 +3128,8 @@ function aplicarDatosCombinados(data, notes){
   peds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
   nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
   if(data.materiales) materiales = data.materiales;
-  if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
-  save(); localStorage.setItem('if_mat', JSON.stringify(materiales));
+  if(data.gramosEditados){ _gramosEditados = data.gramosEditados; lsSet('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+  save(); lsSet('if_mat', JSON.stringify(materiales));
   renderAll(); loadCfg(); renderMateriales();
   const ren = (notes||[]).filter(n => n.kind === 'renumbered');
   if(ren.length) toast('✓ Guardado. Se actualizó con cambios de otro dispositivo. Tu pedido quedó como #' + ren.map(n => n.to).join(', #') + ' porque ese folio ya se había usado.', 7000);
@@ -3138,9 +3160,9 @@ async function fbLoad(){
       peds = firebasePeds;
       nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
       if(data.materiales) materiales = data.materiales;
-      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; lsSet('if_gramos_edit', JSON.stringify(_gramosEditados)); }
       save();
-      localStorage.setItem('if_mat', JSON.stringify(materiales));
+      lsSet('if_mat', JSON.stringify(materiales));
       renderAll(); loadCfg(); renderMateriales();
       setSyncStatus('ok');
       toast('✓ Sincronizado');
@@ -3239,9 +3261,9 @@ async function iniciarSyncTiempoReal(){
       peds = firebasePeds;
       nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
       if(data.materiales) materiales = data.materiales;
-      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+      if(data.gramosEditados){ _gramosEditados = data.gramosEditados; lsSet('if_gramos_edit', JSON.stringify(_gramosEditados)); }
       save();
-      localStorage.setItem('if_mat', JSON.stringify(materiales));
+      lsSet('if_mat', JSON.stringify(materiales));
       renderAll(); loadCfg(); renderMateriales();
       setSyncStatus('ok');
       setTimeout(verificarStockAlCargar, 800);
