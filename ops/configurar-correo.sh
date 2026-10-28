@@ -6,6 +6,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 git pull -q
 USER_MAIL=${1:?correo del buzón, p. ej. pedidos@instintofragancias.com}
+echo "Verificando pruebas (unitarias + emulador) antes de tocar producción…"
+npm ci --silent && npm ci --prefix payments --silent
+npm test >/dev/null && npm run test:integration > ~/salida/integracion-correo.txt 2>&1 || { echo "PRUEBAS FALLARON: no se modificó nada"; grep -aE "not ok|fail [0-9]" ~/salida/integracion-correo.txt; exit 1; }
+grep -aE "tests [0-9]|fail [0-9]" ~/salida/integracion-correo.txt
 HOST=${SMTP_HOST:-$(echo "$USER_MAIL" | sed 's/.*@/mail./')}
 read -rsp "Contraseña del buzón $USER_MAIL: " PASS; echo
 node -e '
