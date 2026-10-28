@@ -26,7 +26,11 @@ function publicCatalog(inventory, enabledSizes = [60]) {
     if (!id || !brand || !name || !gender) return [];
     const availableSizes = enabledSizes.filter(s => free >= GRAMS[s]);
     if (!availableSizes.length) return [];
-    return [{id, code: id, brand, name, gender, availableSizes}];
+    // Perfil olfativo opcional, capturado en el catálogo del administrador (solo texto público).
+    const profile = {family: clean(x.familia, 80), top: clean(x.notasSalida, 200), heart: clean(x.notasCorazon, 200),
+      base: clean(x.notasFondo, 200), intensity: clean(x.intensidad, 20), moment: clean(x.momento, 20)};
+    const extra = Object.fromEntries(Object.entries(profile).filter(([, v]) => v));
+    return [{id, code: id, brand, name, gender, availableSizes, ...extra}];
   });
 }
 

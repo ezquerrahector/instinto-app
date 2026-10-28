@@ -1,6 +1,5 @@
 Options -Indexes
 <IfModule mod_headers.c>
-  Header set X-Robots-Tag "noindex, nofollow, noarchive"
   Header always set X-Content-Type-Options "nosniff"
   <FilesMatch "\.(html|js)$">
     Header set Cache-Control "no-cache"

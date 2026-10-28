@@ -167,6 +167,9 @@ nav::-webkit-scrollbar{display:none}
 .if-online-tab{background:var(--bg4,#f5f1e9);color:var(--text,#222);border:1px solid var(--border,#ded8ce);padding:11px 16px;cursor:pointer;border-radius:9px;font-weight:700;font-size:13px}
 .if-online-tab.active{background:#cba842;color:#171717;border-color:#cba842}
 .if-online-info{font-size:12px;line-height:1.6;color:var(--text2,#555);margin:0 0 12px}
+.olf-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.olf-chip{font-size:10.5px;padding:2px 8px;border-radius:999px;background:rgba(189,155,76,.16);color:var(--gold,#bd9b4c);font-weight:600}.olf-chip.soft{background:var(--bg4,#eee);color:var(--text2,#666);font-weight:500}
+.olf-notas{margin-top:5px;font-size:12px;color:var(--text2)}.olf-notas summary{cursor:pointer;color:var(--text2);font-size:11.5px}.olf-notas div{margin:3px 0}
+.olf-box{border:1px solid var(--border,#ddd);border-radius:var(--radius-sm,8px);padding:10px 12px;margin:6px 0 10px}.olf-box legend{font-size:12px;font-weight:600;padding:0 6px;color:var(--gold,#bd9b4c)}
 .if-web-badge{display:inline-block;min-width:20px;padding:1px 7px;margin-left:4px;border-radius:999px;background:#b3261e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
 .if-online-iframe{width:100%;height:calc(100vh - 150px);min-height:620px;border:1px solid var(--border,#ddd);border-radius:9px;background:#f8f6f2;display:block}
 .if-online-link{display:inline-block;margin:0 0 12px;color:var(--text,#222);text-decoration:underline;text-underline-offset:3px;font-size:12px}
@@ -342,10 +345,18 @@ nav::-webkit-scrollbar{display:none}
 <div id="catalogo" class="section">
   <div class="section-head">
     <span class="section-title">Catálogo de fragancias</span>
-    <button class="btn btn-gold btn-sm" onclick="openModal('fragancia')">+ Fragancia</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-sm" onclick="completarPerfilesOlfativos()" title="Llena solo los campos vacíos con información sugerida">🌿 Completar perfiles olfativos</button>
+      <button class="btn btn-gold btn-sm" onclick="openModal('fragancia')">+ Fragancia</button>
+    </div>
   </div>
   <div class="smart-filters">
-    <input type="search" placeholder="Buscar fragancia, marca, código o base..." oninput="filterCat(this.value)"/>
+    <input type="search" placeholder="Buscar fragancia, marca, código, base o nota (ej. vainilla)..." oninput="filterCat(this.value)"/>
+    <select onchange="filterCatFam(this.value)">
+      <option value="">Familia olfativa: todas</option>
+      <option>Fresca</option><option>Dulce</option><option>Floral</option><option>Amaderada</option><option>Aromática</option><option>Oriental</option>
+      <option value="__sin">Sin perfil olfativo</option>
+    </select>
     <select onchange="filterCatLinea(this.value)">
       <option value="">Todas las líneas</option>
       <option>Caballero</option><option>Dama</option><option>Unisex</option><option>Nicho</option>
@@ -516,6 +527,7 @@ nav::-webkit-scrollbar{display:none}
 <div id="toast"></div>
 
 <script src="assets/safe-sync.js"></script>
+<script src="assets/perfiles-olfativos.js"></script>
 <script src="assets/admin-access.js"></script>
 <script>
 // ── DEFAULTS ──────────────────────────────────────────────────────────────
@@ -557,6 +569,20 @@ const costoFijo = (linea='Caballero') => {
 const costoProd = (ce, linea='Caballero') => costoFijo(linea) + cfg.gesencia*(parseFloat(ce)||2.80);
 const ganancia  = p  => (parseFloat(p.precio)||cfg.pventa) - costoProd(p.costoEsencia, p.linea||lineaDesdeId(p.codigo||''));
 const norm = s => (s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+// ── PERFIL OLFATIVO (V10.4) ── campos opcionales en cada fragancia del catálogo.
+const FAMILIAS_OLF=['Fresca','Dulce','Floral','Amaderada','Aromática','Oriental'];
+const INTENSIDADES_OLF=['Discreta','Moderada','Intensa'];
+const MOMENTOS_OLF=['Día','Noche','Día y noche'];
+const CAMPOS_OLF=['familia','notasSalida','notasCorazon','notasFondo','intensidad','momento'];
+const escH = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tienePerfil = r => !!(r && (r.familia||r.notasSalida||r.notasCorazon||r.notasFondo));
+function htmlPerfil(r, compacto){
+  if(!tienePerfil(r)) return compacto?'':'<div class="card-sub" style="margin-top:3px;color:var(--text3)">Sin perfil olfativo</div>';
+  const chips=`<div class="olf-chips">${String(r.familia||'').split(',').map(x=>x.trim()).filter(Boolean).map(f=>`<span class="olf-chip">${escH(f)}</span>`).join('')}${r.intensidad?`<span class="olf-chip soft">${escH(r.intensidad)}</span>`:''}${r.momento?`<span class="olf-chip soft">${escH(r.momento)}</span>`:''}</div>`;
+  if(compacto) return chips;
+  const fila=(t,v)=>v?`<div><b>${t}:</b> ${escH(v)}</div>`:'';
+  return chips+((r.notasSalida||r.notasCorazon||r.notasFondo)?`<details class="olf-notas"><summary>Notas olfativas</summary>${fila('Salida',r.notasSalida)}${fila('Corazón',r.notasCorazon)}${fila('Fondo',r.notasFondo)}</details>`:'');
+}
 function lineaDesdeId(id){
   const p=id.toUpperCase();
   if(p.startsWith('CP')||p.startsWith('C'))return 'Caballero';
@@ -1442,6 +1468,7 @@ function renderInv(){
         <div style="flex:1;min-width:0">
           <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
           <div class="card-sub">${r.disenador} · ${r.id} · ${bLin(r.linea)}</div>
+          ${htmlPerfil(r,true)}
           <div class="card-sub" style="margin-top:2px">Disponible ${rest}g · Pedido por clientes ${st.pedidosHist} vez${st.pedidosHist!==1?'es':''} · Consumo estimado ${usado}g</div>
           ${renderFragPills(st)}
           ${st.oportunidad?`<div class="resurtido-alert">Oportunidad: se ha pedido por clientes, tiene ${rest}g y aún no está solicitado al proveedor.</div>`:''}
@@ -1460,7 +1487,8 @@ function renderInv(){
 }
 
 // ── CATÁLOGO ──────────────────────────────────────────────────────────────
-let _catTxt='',_catLin='',_catStock='',_catProv='',_catDemand='',_catSort='az';
+let _catTxt='',_catLin='',_catStock='',_catProv='',_catDemand='',_catSort='az',_catFam='';
+function filterCatFam(v){_catFam=v;renderCat();}
 function filterCat(v){_catTxt=(v||'').toLowerCase();renderCat();}
 function filterCatLinea(v){_catLin=v;renderCat();}
 function filterCatStock(v){_catStock=v;renderCat();}
@@ -1469,8 +1497,9 @@ function filterCatDemand(v){_catDemand=v;renderCat();}
 function sortCat(v){_catSort=v||'az';renderCat();}
 function renderCat(){
   let list=cat.map(r=>({...r,_stats:fragStats(r)})).filter(r=>{
-    const m=!_catTxt||norm(r.referencia).includes(norm(_catTxt))||norm(r.disenador).includes(norm(_catTxt))||norm(r.base).includes(norm(_catTxt))||norm(r.id).includes(norm(_catTxt));
-    return m&&(!_catLin||r.linea===_catLin)&&passStockFilter(r._stats,_catStock)&&passProvFilter(r._stats,_catProv)&&passDemandFilter(r._stats,_catDemand);
+    const m=!_catTxt||[r.referencia,r.disenador,r.base,r.id,r.familia,r.notasSalida,r.notasCorazon,r.notasFondo].some(v=>norm(v).includes(norm(_catTxt)));
+    const fam=!_catFam||(_catFam==='__sin'?!tienePerfil(r):norm(r.familia).includes(norm(_catFam)));
+    return m&&fam&&(!_catLin||r.linea===_catLin)&&passStockFilter(r._stats,_catStock)&&passProvFilter(r._stats,_catProv)&&passDemandFilter(r._stats,_catDemand);
   });
   sortFragList(list,_catSort);
   const cp=ce=>costoProd(ce);
@@ -1482,6 +1511,7 @@ function renderCat(){
           <div class="card-name" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.referencia}</div>
           <div class="card-sub">${r.disenador} · ${r.id}</div>
           ${r.base?`<div class="card-sub" style="font-style:italic;margin-top:2px">${r.base}</div>`:''}
+          ${htmlPerfil(r,false)}
           <div class="card-sub" style="margin-top:3px">Stock ${st.rest}g · Pedidos históricos ${st.pedidosHist}</div>
           ${renderFragPills(st)}
           ${st.oportunidad?`<div class="resurtido-alert">Oportunidad de resurtido: baja existencia, con demanda y sin pedido al proveedor.</div>`:''}
@@ -1645,6 +1675,20 @@ function openModal(mode,id=null){
       <div class="form-group"><label>Nombre referencia (fragancia original)</label><input type="text" id="fc-ref" value="${r?r.referencia:''}" placeholder="BACCARAT ROUGE"/></div>
       <div class="form-group"><label>Diseñador / Casa</label><input type="text" id="fc-dis" value="${r?r.disenador:''}" placeholder="MAISON FRANCIS KURKDJIAN"/></div>
       <div class="form-group"><label>Nombre interno / Base (opcional)</label><input type="text" id="fc-base" value="${r?r.base||'':''}" placeholder="BASE ROJO BACCARAT NICHE"/></div>
+      <fieldset class="olf-box"><legend>Perfil olfativo (opcional · se muestra en la tienda)</legend>
+        <div class="form-group"><label>Familia olfativa <span style="font-weight:400;color:var(--text3)">(la primera es la principal; separa con coma)</span></label>
+          <input type="text" id="fc-familia" list="fc-familias" value="${escH(r?.familia||'')}" placeholder="Dulce, Oriental"/>
+          <datalist id="fc-familias">${FAMILIAS_OLF.map(f=>`<option value="${f}">`).join('')}</datalist></div>
+        <div class="form-group"><label>Notas de salida</label><input type="text" id="fc-salida" value="${escH(r?.notasSalida||'')}" placeholder="Bergamota, pimienta rosa"/></div>
+        <div class="form-group"><label>Notas de corazón</label><input type="text" id="fc-corazon" value="${escH(r?.notasCorazon||'')}" placeholder="Jazmín, rosa"/></div>
+        <div class="form-group"><label>Notas de fondo</label><input type="text" id="fc-fondo" value="${escH(r?.notasFondo||'')}" placeholder="Vainilla, pachulí, ámbar"/></div>
+        <div class="form-row">
+          <div class="form-group"><label>Intensidad</label><select id="fc-intensidad"><option value="">—</option>${INTENSIDADES_OLF.map(x=>`<option ${r?.intensidad===x?'selected':''}>${x}</option>`).join('')}</select></div>
+          <div class="form-group"><label>Momento</label><select id="fc-momento"><option value="">—</option>${MOMENTOS_OLF.map(x=>`<option ${r?.momento===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        </div>
+        <button class="btn btn-sm" type="button" onclick="sugerirPerfilEnFormulario()">🌿 Sugerir lo que esté vacío</button>
+        <span id="fc-olf-msg" style="font-size:11px;color:var(--text2);margin-left:6px"></span>
+      </fieldset>
       <div class="form-row">
         <div class="form-group"><label>Costo esencia proveedor ($/g)</label><input type="number" id="fc-cesencia" value="${r?r.costoEsencia:2.80}" step="0.10"/></div>
         <div class="form-group"><label>Stock inicial (gramos)</label><input type="number" id="fc-stock" value="${r?r.stockGramos:60}"/></div>
@@ -2045,6 +2089,38 @@ function autoLineaFrag(val){
   const linea=lineaDesdeId(val.trim().toUpperCase());
   if(linea){const el=document.getElementById('fc-linea');if(el)el.value=linea;}
 }
+function sugerirPerfilEnFormulario(){
+  const sug=window.InstintoPerfiles?.suggest({disenador:document.getElementById('fc-dis')?.value,referencia:document.getElementById('fc-ref')?.value,linea:document.getElementById('fc-linea')?.value});
+  const msg=document.getElementById('fc-olf-msg');
+  if(!sug){if(msg)msg.textContent='No hay sugerencia para esta fragancia; captúrala manualmente.';return;}
+  let n=0;for(const [campo,el] of Object.entries({familia:'fc-familia',notasSalida:'fc-salida',notasCorazon:'fc-corazon',notasFondo:'fc-fondo',intensidad:'fc-intensidad',momento:'fc-momento'})){
+    const e=document.getElementById(el);if(e&&!e.value.trim()&&sug[campo]){e.value=sug[campo];n++;}}
+  if(msg)msg.textContent=n?`✓ ${n} campo(s) sugeridos. Revisa y guarda.`:'Los campos ya tenían información; no se cambió nada.';
+}
+function completarPerfilesOlfativos(){
+  if(!window.InstintoPerfiles){toast('⚠ No se cargó la información sugerida. Recarga la página.');return;}
+  const cambios=[];let sinSug=0;
+  cat.forEach(r=>{const sug=InstintoPerfiles.suggest(r);if(!sug){if(!tienePerfil(r))sinSug++;return;}
+    const campos=CAMPOS_OLF.filter(c=>!String(r[c]||'').trim()&&sug[c]);if(campos.length)cambios.push({r,sug,campos});});
+  const mc=document.getElementById('modal-content'),overlay=document.getElementById('modal-overlay');
+  mc.innerHTML=`<div class="modal-handle"></div><div class="modal-title">🌿 Completar perfiles olfativos</div>
+    <p style="font-size:13px;color:var(--text2);line-height:1.6">Se llenarán <strong>solo los campos vacíos</strong> con información sugerida de la fragancia original (familia, notas de salida, corazón y fondo, intensidad y momento). <strong>No se cambia nada de lo que ya capturaste</strong>, ni stock, ni precios, ni pedidos. Después puedes editar cada fragancia.</p>
+    <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;margin:10px 0">
+      <div>✓ <strong>${cambios.length}</strong> fragancia(s) se completarán</div>
+      <div style="color:var(--text2)">• ${sinSug} sin sugerencia disponible (se capturan a mano)</div>
+    </div>
+    <div style="max-height:180px;overflow:auto;font-size:11.5px;color:var(--text2)">${cambios.slice(0,60).map(x=>`<div>${escH(x.r.id)} · ${escH(x.r.referencia)} — ${escH(x.sug.familia)}</div>`).join('')}${cambios.length>60?`<div>… y ${cambios.length-60} más</div>`:''}</div>
+    <div class="modal-footer"><button class="btn" type="button" onclick="closeModal()">Cancelar</button>
+    <button class="btn btn-gold" type="button" ${cambios.length?'':'disabled'} onclick="aplicarPerfilesOlfativos()">Completar ${cambios.length}</button></div>`;
+  window._olfPendientes=cambios;overlay.classList.add('open');
+}
+function aplicarPerfilesOlfativos(){
+  const cambios=window._olfPendientes||[];let n=0;
+  cambios.forEach(({r,sug})=>{const cur=cat.find(x=>x.id===r.id);if(!cur)return;let tocado=false;
+    CAMPOS_OLF.forEach(c=>{if(!String(cur[c]||'').trim()&&sug[c]){cur[c]=sug[c];tocado=true;}});if(tocado)n++;});
+  window._olfPendientes=null;closeModal();save();fbSave();renderCat();renderInv();
+  toast(`✓ Perfil olfativo agregado a ${n} fragancia(s)`);
+}
 function saveFrag(existingId){
   existingId = existingId==='null'||existingId===''||existingId===null?null:existingId;
   const id=(document.getElementById('fc-id')?.value||'').trim().toUpperCase();
@@ -2058,6 +2134,9 @@ function saveFrag(existingId){
     costoEsencia:parseFloat(document.getElementById('fc-cesencia')?.value)||1.70,
     stockGramos:parseFloat(document.getElementById('fc-stock')?.value??0)||0,
   };
+  // Perfil olfativo: se guarda tal cual lo capturaste (vacío = sin dato).
+  const olf={familia:'fc-familia',notasSalida:'fc-salida',notasCorazon:'fc-corazon',notasFondo:'fc-fondo',intensidad:'fc-intensidad',momento:'fc-momento'};
+  for(const [campo,el] of Object.entries(olf)){const v=(document.getElementById(el)?.value||'').trim().slice(0,200);if(v)data[campo]=v;else if(existingId)data[campo]='';}
   if(existingId){
     const idx=cat.findIndex(x=>x.id===existingId);
     if(idx>=0) cat[idx]={...cat[idx],...data};
@@ -2183,8 +2262,9 @@ function exportCSV(tipo){
     peds.forEach((p,i)=>{ csv+=`${i+1},${p.id},"${p.fecha}","${p.cliente}","${p.codigo}","${p.fragancia}","${p.disenador||''}","${p.linea}","${p.estatus}","${p.canal||''}",${p.precio},${p.costoEsencia},${Math.round(ganancia(p))},"${p.notas||''}"\n`; });
   } else if(tipo==='catalogo'){
     fn='instinto_catalogo.csv';
-    csv='codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\n';
-    cat.forEach(r=>{ csv+=`"${r.id}","${r.base||''}","${r.disenador}","${r.referencia}","${r.linea}",${r.costoEsencia},${r.stockGramos}\n`; });
+    csv='codigo,base,disenador,referencia,linea,costoEsencia,stockGramos,familia,notasSalida,notasCorazon,notasFondo,intensidad,momento\n';
+    const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    cat.forEach(r=>{ csv+=`"${r.id}","${r.base||''}","${r.disenador}","${r.referencia}","${r.linea}",${r.costoEsencia},${r.stockGramos},${CAMPOS_OLF.map(c=>q(r[c])).join(',')}\n`; });
   } else {
     fn='instinto_inventario.csv';
     const consumoCSV={};
@@ -2214,7 +2294,7 @@ function dlBlob(content,type,filename){
 
 function descargarPlantilla(tipo){
   if(tipo==='catalogo'){
-    dlBlob('codigo,base,disenador,referencia,linea,costoEsencia,stockGramos\nCP99999,BASE EJEMPLO,DIOR,SAUVAGE,Caballero,1.70,60\n','text/csv','plantilla_catalogo.csv');
+    dlBlob('codigo,base,disenador,referencia,linea,costoEsencia,stockGramos,familia,notasSalida,notasCorazon,notasFondo,intensidad,momento\nCP99999,BASE EJEMPLO,DIOR,SAUVAGE,Caballero,1.70,60,"Fresca, Aromática","Bergamota, pimienta","Lavanda, geranio","Ambroxan, cedro",Moderada,Día y noche\n','text/csv','plantilla_catalogo.csv');
   } else if(tipo==='pedidos'){
     dlBlob('fecha,cliente,codigo,fragancia,disenador,linea,estatus,canal,precio,costoEsencia,notas\n2026-04-07,Nombre Cliente,CP02158,SAUVAGE,DIOR,Caballero,Pedido,WhatsApp,250,1.70,\n','text/csv','plantilla_pedidos.csv');
   } else if(tipo==='inventario'){
@@ -2268,7 +2348,16 @@ function importCSV(input,tipo){
         if(!r.codigo)return;
         const existing=cat.find(x=>x.id===r.codigo.toUpperCase());
         const data={id:r.codigo.toUpperCase(),base:r.base||'',disenador:(r.disenador||'').toUpperCase(),referencia:(r.referencia||'').toUpperCase(),linea:r.linea||'Caballero',costoEsencia:parseFloat(r.costoEsencia)||1.70,stockGramos:parseFloat(r.stockGramos)||60};
-        if(existing){Object.assign(existing,data);updated++;}
+        // V10.4: en fragancias existentes solo se actualizan las columnas que vienen en el archivo
+        // (un archivo sin columna de stock o de perfil ya no borra esos datos).
+        const cols=new Set(Object.keys(r));
+        for(const c of CAMPOS_OLF){const v=String(r[c]??'').trim();if(v)data[c]=v.slice(0,200);}
+        if(existing){
+          const parcial={id:data.id};
+          for(const [k,col] of [['base','base'],['disenador','disenador'],['referencia','referencia'],['linea','linea'],['costoEsencia','costoEsencia'],['stockGramos','stockGramos']]) if(cols.has(col)&&String(r[col]).trim()!=='') parcial[k]=data[k];
+          for(const c of CAMPOS_OLF) if(data[c]) parcial[c]=data[c];
+          Object.assign(existing,parcial);updated++;
+        }
         else{cat.push(data);added++;}
       });
       save();fbSave(); renderCat();

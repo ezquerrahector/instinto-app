@@ -1,7 +1,7 @@
-const CACHE = 'instinto-v31-storage-fallback';
+const CACHE = 'instinto-v32-perfil-olfativo';
 // Solo cachear index.html — no incluir manifest.json ni '/' que pueden fallar
 // en GitHub Pages o servidores sin esos archivos exactos.
-const ASSETS = ['/instinto-app/index.html', '/instinto-app/assets/safe-sync.js', '/instinto-app/assets/admin-access.js'];
+const ASSETS = ['/instinto-app/index.html', '/instinto-app/assets/safe-sync.js', '/instinto-app/assets/admin-access.js', '/instinto-app/assets/perfiles-olfativos.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
