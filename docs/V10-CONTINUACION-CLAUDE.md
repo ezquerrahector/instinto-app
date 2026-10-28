@@ -122,3 +122,19 @@ Pendiente para cerrar el flujo real: webhook firmado desplegado, guía real (car
 | Pedido administrativo | **#857**, canal Web, 60 ml, 30 g, $310, esencia descontada, materiales pendientes (env_mate 1, atomizador 1, feromonas 3.5, fijador 6, perfumol 21.5) |
 | Inventario antes / después | CP02269 **60 → 30 g** (única fragancia con cambio en todo el catálogo). Pedidos 564 → 565. Materiales sin cambio (se descuentan al pasar a Elaborado). Revisión null → 2, cliente `v10`. |
 | Ledger / outbox / alerta | `mp_185359125309` applied; outbox `done` 1 intento; alerta `new_paid_order` visible en el panel |
+
+## Evidencia: guía real (27/10/2026)
+
+| Hora (León) | Evento |
+| --- | --- |
+| 17:06 | 1.er intento: Skydropx 422 (sin envío creado, sin cargo); estado quedó "creating" sin mensaje → defecto corregido (`8befded`): se guarda el mensaje del proveedor, se marca "failed" y se permite reintentar. |
+| 17:31 | 2.º intento: Skydropx 422 "Address to reference es demasiado largo (40 caracteres máximo)" → corregido (`87630be`): referencia ≤ 40, texto completo en `further_information`. |
+| 17:43 | **Guía generada**: Paquetexpress, rastreo **221255606694**, guía BJX01WE0591136, ruta BJX-3-14, entrega estimada 28/10/2026, Carta Porte "Perfumes o colonias o fragancias", observaciones con la referencia completa. Costo cotizado $51.25. |
+
+Nota: la etiqueta declara 1.00 kg (mínimo del contrato v1 de cotización) aunque el peso empacado configurado es 250 g.
+
+## Correos al cliente (preparado, ec743e4)
+
+Confirmación de pedido y aviso de envío con rastreo, vía outbox con reintentos e idempotencia por compra.
+Apagado hasta que exista el buzón SMTP del dominio (`ops/configurar-correo.sh`). 58 pruebas unitarias OK;
+integración en emulador de los 2 casos nuevos pendiente de ejecutar (la sesión de Cloud Shell se transfirió a otra pestaña).
