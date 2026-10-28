@@ -3028,6 +3028,7 @@ function setSyncStatus(status){
 }
 
 const PENDING_SYNC_KEY = 'if_pending_v10';
+let _lastMerge = null;
 let _pendingRecoveryError = false;
 const currentSyncData = () => ({cfg, cat, peds, materiales, gramosEditados:_gramosEditados});
 const syncQueue = new InstintoSafeSync.SaveQueue({
@@ -3042,9 +3043,12 @@ const syncQueue = new InstintoSafeSync.SaveQueue({
       const remote = snap.exists ? snap.data() : null;
       // Handles a committed write whose acknowledgement was lost.
       if(remote && remote.lastWriteId === writeId) return remote;
-      const merged = InstintoSafeSync.checkedUpdate(base, remote, desired, writeId, new Date().toISOString());
-      tx.update(ref, merged);
-      return merged;
+      // V10.2: si el documento cambió (otro colaborador, la tienda en línea o el servidor), se combinan
+      // los cambios en lugar de bloquear. Los descuentos de existencias de ambos lados se respetan.
+      const r = InstintoSafeSync.rebasedUpdate(base, remote, desired, writeId, new Date().toISOString());
+      tx.update(ref, r.doc);
+      _lastMerge = r;
+      return r.doc;
     });
   }
 });
@@ -3068,7 +3072,7 @@ function showPendingSync(){
   }
   el.replaceChildren();
   const message=document.createElement('p');
-  message.textContent='Hay cambios locales pendientes. No cierres ni borres los datos de esta aplicación. Si otro colaborador hizo cambios, se requiere revisar el respaldo antes de continuar.';
+  message.textContent='Tu último cambio aún no se guarda en la nube (sin internet o error del servidor). Está a salvo en este dispositivo: no cierres ni borres los datos de la aplicación y toca "Reintentar sincronización".';
   el.appendChild(message);
   const retry=document.createElement('button');retry.className='btn';retry.textContent='Reintentar sincronización';
   retry.onclick=()=>fbRetry();el.appendChild(retry);
@@ -3083,12 +3087,31 @@ async function runSync(action){
   _fbSaving=true;setSyncStatus('syncing');
   try {
     if(_pendingRecoveryError) throw new Error('El respaldo pendiente requiere revisión.');
+    _lastMerge = null;
     await action();
-    setSyncStatus('ok');document.getElementById('sync-pending')?.remove();return true;
+    setSyncStatus('ok');document.getElementById('sync-pending')?.remove();
+    if(_lastMerge && _lastMerge.merged) aplicarDatosCombinados(syncQueue.base, _lastMerge.notes);
+    return true;
   } catch(e){
     window._lastFbError=e.message||e.code;
     setSyncStatus('err');showPendingSync();return false;
   } finally { _fbSaving=!!syncQueue.running; }
+}
+// Tras combinar con cambios del servidor, la pantalla debe mostrar el resultado combinado; si no,
+// el siguiente guardado revertiría lo que hizo tu compañera o la tienda.
+function aplicarDatosCombinados(data, notes){
+  if(!data || syncQueue.pending || syncQueue.running) return;
+  if(data.cfg) cfg = data.cfg;
+  if(data.cat) cat = data.cat;
+  peds = (data.peds || []).filter(p => p && p.id != null && !isNaN(Number(p.id)));
+  nextId = Math.max(...peds.map(p => Number(p.id)), 0) + 1;
+  if(data.materiales) materiales = data.materiales;
+  if(data.gramosEditados){ _gramosEditados = data.gramosEditados; localStorage.setItem('if_gramos_edit', JSON.stringify(_gramosEditados)); }
+  save(); localStorage.setItem('if_mat', JSON.stringify(materiales));
+  renderAll(); loadCfg(); renderMateriales();
+  const ren = (notes||[]).filter(n => n.kind === 'renumbered');
+  if(ren.length) toast('✓ Guardado. Se actualizó con cambios de otro dispositivo. Tu pedido quedó como #' + ren.map(n => n.to).join(', #') + ' porque ese folio ya se había usado.', 7000);
+  else toast('✓ Guardado y actualizado con los cambios más recientes', 3500);
 }
 // skipMerge is retained for callers; deletion now has the same concurrency checks.
 async function fbSave(skipMerge=false){

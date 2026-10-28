@@ -76,3 +76,47 @@ test('saving identical data after a lost acknowledgement reuses its operation id
   await assert.rejects(q.save({peds:[{id:1}]}));fail=false;await q.save({peds:[{id:1}]});
   assert.deepEqual(ids,['1','1']);
 });
+
+// V10.2 — combinación de cambios concurrentes
+const {rebasedUpdate} = require('../assets/safe-sync');
+const doc = () => ({cfg:{gesencia:30},cat:[{id:'A',stockGramos:100},{id:'B',stockGramos:60}],peds:[{id:1,estado:'Pedido'},{id:2,estado:'Pedido'}],
+  materiales:[{id:'fijador',stockActual:500}],gramosEditados:{},syncRevision:4,lastWriteId:'w0',webLedger:{keep:true}});
+const desiredOf = d => ({cfg:d.cfg,cat:d.cat,peds:d.peds,materiales:d.materiales,gramosEditados:d.gramosEditados});
+test('a web reservation while editing an order is merged, not blocked', () => {
+  const base=doc(), remote=doc(); remote.cat[0].stockGramos=70; remote.syncRevision=5; remote.lastWriteId='srv'; // compra en línea
+  const local=doc(); local.peds[1].estado='Elaborado'; local.cat[1].stockGramos=30; local.materiales[0].stockActual=495;
+  const {doc:out,merged}=rebasedUpdate(base,remote,desiredOf(local),'me','now');
+  assert.equal(merged,true); assert.equal(out.cat[0].stockGramos,70); assert.equal(out.cat[1].stockGramos,30);
+  assert.equal(out.peds[1].estado,'Elaborado'); assert.equal(out.materiales[0].stockActual,495);
+  assert.equal(out.syncRevision,6); assert.deepEqual(out.webLedger,{keep:true});
+});
+test('both sides deducting the same essence keep both deductions', () => {
+  const base=doc(), remote=doc(); remote.cat[0].stockGramos=70;
+  const local=doc(); local.cat[0].stockGramos=40;
+  assert.equal(rebasedUpdate(base,remote,desiredOf(local),'me','now').doc.cat[0].stockGramos,10);
+});
+test('two collaborators editing different orders both persist', () => {
+  const base=doc(), remote=doc(); remote.peds[0].estado='Cobrado';
+  const local=doc(); local.peds[1].estado='Entregado';
+  const out=rebasedUpdate(base,remote,desiredOf(local),'me','now').doc;
+  assert.equal(out.peds[0].estado,'Cobrado'); assert.equal(out.peds[1].estado,'Entregado');
+});
+test('same new order number on two devices keeps both and renumbers mine', () => {
+  const base=doc(), remote=doc(); remote.peds.unshift({id:3,cliente:'Osmara'});
+  const local=doc(); local.peds.unshift({id:3,cliente:'Héctor'});
+  const r=rebasedUpdate(base,remote,desiredOf(local),'me','now');
+  assert.deepEqual(r.doc.peds.map(p=>p.id).sort(),[1,2,3,4]);
+  assert.equal(r.doc.peds.find(p=>p.id===3).cliente,'Osmara'); assert.equal(r.doc.peds.find(p=>p.id===4).cliente,'Héctor');
+  assert.equal(r.notes[0].kind,'renumbered');
+});
+test('a deletion is applied unless the other side changed that order', () => {
+  const base=doc(), remote=doc(); remote.peds.push({id:9,estado:'Pedido'});
+  const local=doc(); local.peds=local.peds.filter(p=>p.id!==2);
+  assert.deepEqual(rebasedUpdate(base,remote,desiredOf(local),'me','now').doc.peds.map(p=>p.id),[1,9]);
+  const remote2=doc(); remote2.peds[1].estado='Cobrado';
+  const r=rebasedUpdate(base,remote2,desiredOf(local),'me','now');
+  assert.deepEqual(r.doc.peds.map(p=>p.id),[1,2]); assert.equal(r.notes[0].kind,'kept_remote_after_local_delete');
+});
+test('unchanged server keeps the plain path', () => {
+  const r=rebasedUpdate(doc(),doc(),desiredOf(doc()),'me','now'); assert.equal(r.merged,false); assert.equal(r.doc.syncRevision,5);
+});
