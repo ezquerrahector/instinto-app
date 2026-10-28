@@ -5,6 +5,7 @@
 # Reversión inmediata de cobros: node ops/configurar-runtime.mjs --modo live --caja60 20x7x7 --peso60 0.25
 #   (sin banderas "on" = todo apagado; webhook y conciliación de pagos en tránsito siguen disponibles).
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
 cd "$(dirname "$0")/.."
 git pull -q
 mkdir -p ~/salida; exec > >(tee ~/salida/activacion.txt) 2>&1

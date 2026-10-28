@@ -4,6 +4,7 @@
 # ni funciones. Escribe únicamente en un bucket privado del mismo proyecto y en
 # ~/instinto-respaldos/<fecha>. No imprime ni copia valores de secretos.
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
 PROJECT=instinto-fragancias
 REGION=us-central1
 BUCKET=gs://${PROJECT}-respaldos-v10

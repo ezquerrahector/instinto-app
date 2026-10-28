@@ -3,6 +3,8 @@
 # correo de prueba a la copia administrativa, activa los correos y encola los de compras ya pagadas.
 # Uso: bash ops/configurar-correo.sh pedidos@instintofragancias.com
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
+gcloud config set project instinto-fragancias >/dev/null 2>&1
 cd "$(dirname "$0")/.."
 git pull -q
 USER_MAIL=${1:?correo del buzón, p. ej. pedidos@instintofragancias.com}

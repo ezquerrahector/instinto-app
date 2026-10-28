@@ -70,7 +70,7 @@ const when=ms=>ms?new Date(ms).toLocaleString('es-MX',{dateStyle:'medium',timeSt
 const ops=new Map();const opFor=k=>{if(!ops.has(k))ops.set(k,crypto.randomUUID().replace(/-/g,''));return ops.get(k)};
 const MSG={labels_disabled:'La generación de guías aún no está habilitada.',labels_not_configured:'Falta configuración verificada de guías.',
  cost_difference:'El costo actual de la guía es mayor al cobrado al cliente.',shipment_uncertain_check_provider:'Respuesta incierta: revisa en Skydropx si se generó la guía antes de reintentar.',
- purchase_not_shippable:'El pedido no está pagado o requiere revisión.',label_provider_rejected:'Skydropx rechazó la guía',shipment_in_progress:'Hay una generación de guía en curso; espera 10 minutos o actualiza.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
+ purchase_not_shippable:'El pedido no está pagado o requiere revisión.',label_provider_rejected:'Skydropx rechazó la guía',pickup_provider_rejected:'La paquetería rechazó la recolección',invalid_pickup_window:'Ventana inválida: debe ser futura, dentro de 10 días y de al menos 2 horas.',label_not_ready:'Primero genera la guía.',shipment_in_progress:'Hay una generación de guía en curso; espera 10 minutos o actualiza.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
  forbidden:'Cuenta no autorizada.',invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',reason_required:'Escribe el motivo.'};
 async function call(path,body){const u=firebase.auth().currentUser;if(!u)throw Error('Inicia sesión');
  const r=await fetch(WEB+path,{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+await u.getIdToken(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
@@ -92,11 +92,19 @@ function drawRows(list){const body=$('webRows');body.replaceChildren();if(!list.
   c=r.insertCell();
   if(p.state==='paid'&&!p.reviewRequired&&s?.state!=='label_ready'){const b=el('button','Generar guía');b.onclick=()=>label(p,false,b);c.append(b)}
   if(s?.state==='label_ready'){const b=el('button','Cancelar guía','outline');b.onclick=async()=>{const reason=prompt('Motivo de cancelación de la guía:');if(!reason)return;b.disabled=true;try{await call('/label/cancel',{purchaseId:p.id,operationId:opFor('lc'+p.id),reason});load()}catch(e){alert(e.message)}finally{b.disabled=false}};c.append(b)}
+  if(s?.state==='label_ready'){const pk=p.pickup;if(pk?.state==='scheduled')c.append(el('div','Recolección '+pk.date+' '+pk.from+'–'+pk.to+(pk.requestNumber?' · solicitud '+pk.requestNumber:''),'pill'));
+   else{if(pk?.state==='failed')c.append(el('div','Recolección rechazada: '+(pk.providerDetail||pk.error||''),'error'));const b=el('button','Programar recolección','outline');b.style.marginTop='6px';b.onclick=()=>pickup(p,b);c.append(b)}}
   if(p.state==='paid'){const b=el('button','Cancelar pedido','outline');b.style.marginTop='6px';b.onclick=()=>cancel(p,b);c.append(b)}
  }}
 async function label(p,accept,b){if(!accept&&!confirm('Se comprará una guía REAL en Skydropx para '+p.items.reduce((n,i)=>n+i.qty,0)+' caja(s). ¿Continuar?'))return;
  b.disabled=true;try{const d=await call('/label',{purchaseId:p.id,operationId:opFor('l'+p.id),acceptCostDifference:accept});if(d.outcome==='processing')alert('Skydropx está generando la guía. Actualiza en un minuto.');load()}
  catch(e){if(e.error==='cost_difference'&&confirm('Cobrado al cliente '+money(e.paidCents)+', costo actual '+money(e.currentCents)+'. ¿Generar de todos modos?')){ops.delete('l'+p.id);return label(p,true,b)}alert(e.message)}finally{b.disabled=false}}
+async function pickup(p,b){const t=new Date(Date.now()+86400000);const def=t.toISOString().slice(0,10);
+ const date=prompt('Fecha de recolección (AAAA-MM-DD, día hábil):',def);if(!date)return;
+ const win=prompt('Horario en que habrá alguien para entregar el paquete (HH:MM-HH:MM, mínimo 2 horas):','10:00-14:00');if(!win)return;
+ const [from,to]=win.split('-').map(x=>x.trim());
+ b.disabled=true;try{const d=await call('/pickup',{purchaseId:p.id,operationId:opFor('pk'+p.id+date+win),date,from,to});alert(d.outcome==='scheduled'||d.outcome==='already_scheduled'?'Recolección solicitada '+date+' '+from+'–'+to+(d.pickup.requestNumber?' · solicitud '+d.pickup.requestNumber:''):'La paquetería no confirmó: '+(d.pickup.error||''));load()}
+ catch(e){alert(e.message)}finally{b.disabled=false}}
 async function cancel(p,b){const reason=prompt('Motivo de la cancelación (queda registrado):');if(!reason)return;
  const refund=confirm('¿Reembolsar el TOTAL al cliente por Mercado Pago ('+money(p.totalCents)+')?\nAceptar = reembolsar · Cancelar = no reembolsar');
  const restock=confirm('¿Reponer al inventario la esencia de los frascos que AÚN NO se elaboran?\n(Los materiales nunca se reponen automáticamente.)');

@@ -41,7 +41,7 @@ async function overview({db, identity}) {
         reviewRequired: p.reviewRequired === true, reviewReason: p.reviewReason || null,
         items: p.items.map(i => ({id: i.id, name: i.name, brand: i.brand, size: i.size, qty: i.qty, gift: i.gift, giftText: i.giftText})),
         address: p.address, shippingChoice: p.shipping, reservation: p.reservation?.state || null,
-        shipment: p.shipment || null, refund: p.refund || null};
+        shipment: p.shipment || null, pickup: p.pickup || null, refund: p.refund || null};
     }),
     alerts: alerts.docs.map(d => d.data()).sort((a, b) => b.lastAt - a.lastAt)};
 }
@@ -214,6 +214,36 @@ async function cancelPurchase({db, mp, identity, body, now = Date.now()}) {
   });
 }
 
+// Solicita a la paquetería que recoja el paquete (Skydropx v2 pickups). Idempotente por operationId;
+// ventana elegida por el operador en hora del centro de México (UTC-6, sin horario de verano).
+async function schedulePickup({db, shipping, identity, body, now = Date.now()}) {
+  const actor = actorOf(identity);
+  const {purchaseId, operationId, date, from, to} = body || {};
+  if (!PID.test(String(purchaseId)) || !OP.test(String(operationId)) || !/^\d{4}-\d{2}-\d{2}$/.test(String(date)) ||
+    !/^\d{2}:\d{2}$/.test(String(from)) || !/^\d{2}:\d{2}$/.test(String(to)) || from >= to) throw err(400, 'invalid_request');
+  const startMs = Date.parse(`${date}T${from}:00-06:00`), endMs = Date.parse(`${date}T${to}:00-06:00`);
+  if (!Number.isFinite(startMs) || startMs < now || startMs > now + 10 * 86400000 || endMs - startMs < 2 * 3600000) throw err(400, 'invalid_pickup_window');
+  const ref = db.doc('instinto_web_purchases/' + purchaseId);
+  const p = (await ref.get()).data();
+  if (!p || p.shipment?.state !== 'label_ready') throw err(409, 'label_not_ready');
+  if (p.pickup?.state === 'scheduled') return {outcome: 'already_scheduled', pickup: p.pickup};
+  await audit(db, operationId, {action: 'schedule_pickup', purchaseId, actor, createdAt: now, date, from, to});
+  const packages = p.items.reduce((n, i) => n + i.qty, 0);
+  const runtime = (await db.doc('instinto_private/runtime').get()).data() || {};
+  const kg = Math.max(1, Math.round(p.items.reduce((w, i) => w + i.qty * (runtime.boxes?.[i.size]?.packedWeightKg || 0.3), 0) * 100) / 100);
+  try {
+    const r = await shipping.schedulePickup({shipmentIds: [p.shipment.id], packages, totalWeightKg: kg,
+      from: `${date}T${from}:00-06:00`, to: `${date}T${to}:00-06:00`});
+    const pickup = {state: r.errorReason ? 'failed' : 'scheduled', id: r.id, requestNumber: r.requestNumber || null, providerStatus: r.status,
+      error: r.errorReason || null, date, from, to, actor, operationId, at: now};
+    await ref.update({pickup});
+    return {outcome: pickup.state, pickup};
+  } catch (e) {
+    await ref.update({pickup: {state: 'failed', error: e.message, providerDetail: e.detail || null, date, from, to, actor, operationId, at: now}});
+    throw err(502, 'pickup_provider_rejected', {detail: e.detail || e.message});
+  }
+}
+
 async function resolveAlert({db, identity, body, now = Date.now()}) {
   const actor = actorOf(identity);
   const key = String(body?.key || '');
@@ -224,4 +254,4 @@ async function resolveAlert({db, identity, body, now = Date.now()}) {
   return {outcome: 'resolved'};
 }
 
-module.exports = {overview, createLabel, cancelLabel, cancelPurchase, resolveAlert, actorOf};
+module.exports = {overview, createLabel, cancelLabel, cancelPurchase, schedulePickup, resolveAlert, actorOf};

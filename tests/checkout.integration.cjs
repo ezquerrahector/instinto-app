@@ -288,3 +288,19 @@ test('email failure retries the task without marking it sent', async () => {
   const r2 = await m.processOutbox({db, now: T0 + 61000 + 3 * 60000, handlers: h});
   assert.equal(r2.done, 1); assert.equal(sent.length, 1);
 });
+
+test('pickup is scheduled once for a ready label, with validated window and provider detail on rejection', async () => {
+  const calls = [];
+  const s = fakeShipping({async schedulePickup(a) { calls.push(a); return {id: 'pk1', status: 'scheduled', requestNumber: 'R-77', errorReason: ''}; }});
+  const {res} = await buy(s, fakeMp());
+  await reconcilePayment(db, paymentFor(res), {now: T0 + 60000});
+  const who = ident('ezquerrahector@gmail.com');
+  await assert.rejects(actions.schedulePickup({db, shipping: s, identity: who, body: {purchaseId: res.purchaseId, operationId: 'op_' + 'q'.repeat(20), date: '2026-10-28', from: '10:00', to: '14:00'}, now: T0}), {message: 'label_not_ready'});
+  await actions.createLabel({db, shipping: s, identity: who, body: {purchaseId: res.purchaseId, operationId: 'op_' + 'r'.repeat(20)}, now: T0 + 70000});
+  await assert.rejects(actions.schedulePickup({db, shipping: s, identity: who, body: {purchaseId: res.purchaseId, operationId: 'op_' + 's'.repeat(20), date: '2026-10-28', from: '10:00', to: '11:00'}, now: T0}), {message: 'invalid_pickup_window'});
+  const r = await actions.schedulePickup({db, shipping: s, identity: who, body: {purchaseId: res.purchaseId, operationId: 'op_' + 't'.repeat(20), date: '2026-10-28', from: '10:00', to: '14:00'}, now: T0});
+  assert.equal(r.outcome, 'scheduled'); assert.equal(r.pickup.requestNumber, 'R-77');
+  assert.deepEqual(calls[0].shipmentIds, ['shp1']); assert.equal(calls[0].packages, 2); assert.equal(calls[0].from, '2026-10-28T10:00:00-06:00');
+  const again = await actions.schedulePickup({db, shipping: s, identity: who, body: {purchaseId: res.purchaseId, operationId: 'op_' + 'u'.repeat(20), date: '2026-10-28', from: '10:00', to: '14:00'}, now: T0});
+  assert.equal(again.outcome, 'already_scheduled'); assert.equal(calls.length, 1);
+});

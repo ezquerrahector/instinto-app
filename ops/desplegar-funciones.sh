@@ -3,6 +3,7 @@
 # Solo las funciones listadas; NUNCA el codebase default (storeApi queda intacto).
 # Los efectos automáticos dependen de instinto_private/runtime (apagado si no existe).
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
 cd "$(dirname "$0")/.."
 PROJECT=instinto-fragancias
 FUNCS=${1:-checkoutApi,webAdmin,maintenance,webOrderStatus}

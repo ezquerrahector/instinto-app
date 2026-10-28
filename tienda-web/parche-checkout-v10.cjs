@@ -102,7 +102,10 @@ for (const [node, code] of edits) html = html.slice(0, base + node.start) + code
 // Etiquetas del botón principal (renderCart) y aviso inicial.
 const swaps = [["'CONTINUAR CON PRUEBA →'", "'CONTINUAR CON EL PEDIDO →'"], ["'REGISTRAR PEDIDO DE PRUEBA →'", "(checkoutEnabled?'PAGAR CON MERCADO PAGO →':'COMPRA EN LÍNEA PRÓXIMAMENTE')"],
   ['Prueba interna: el pedido se guardará en Firebase sin cobro ni envío. No compartas la clave de prueba.', 'Cotiza tu envío con tu domicilio y paga de forma segura con Mercado Pago.']];
-swaps.push(['<script src="config.js">', '<script src="config.js?v=10.1">']);
+swaps.push(['<script src="config.js">', '<script src="config.js?v=10.2">']);
+// Los códigos internos de esencia (DP…/CP…) no se muestran ni se usan para buscar (decisión del propietario 27/10/2026).
+swaps.push(["<small>Inspirada en ${safe(p.name)} · ${safe(p.code||'')}</small>", "<small>Inspirada en ${safe(p.name)}</small>"]);
+swaps.push(["[p.name,p.brand,p.code].some(", "[p.name,p.brand].some("]);
 for (const [a, b] of swaps) { if (!html.includes(a)) throw Error('texto no encontrado: ' + a); html = html.replace(a, b); }
 if (html.includes('X-Instinto-Test-Key')) throw Error('quedó la clave de prueba');
 acorn.parse(/<script>([\s\S]*?)<\/script>/g.exec(html.slice(best.index))[1], {ecmaVersion: 2022});

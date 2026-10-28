@@ -2,6 +2,7 @@
 # Levanta Firestore Emulator (127.0.0.1:8085) con el último respaldo de producción y configura
 # instinto_private/runtime en MODO SANDBOX dentro del emulador. No toca producción.
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
 cd "$(dirname "$0")/.."
 STAMP=$(cat ~/instinto-respaldos/ULTIMO)
 IMPORT=~/instinto-restauracion/$STAMP/import

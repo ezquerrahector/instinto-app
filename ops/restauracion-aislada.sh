@@ -3,6 +3,7 @@
 # de Cloud Shell. No escribe en producción. Compara la huella restaurada con la de producción
 # tomada en el mismo momento y reporta movimientos posteriores al respaldo (si los hubo).
 set -euo pipefail
+export CLOUDSDK_CORE_PROJECT=instinto-fragancias
 cd "$(dirname "$0")/.."
 STAMP=${1:-$(cat ~/instinto-respaldos/ULTIMO)}
 BUCKET=gs://instinto-fragancias-respaldos-v10
