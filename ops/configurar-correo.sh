@@ -17,7 +17,13 @@ read -rsp "Contraseña del buzón $USER_MAIL: " PASS; echo
 node -e '
 const [user,host,pass]=process.argv.slice(1);
 process.stdout.write(JSON.stringify({host,port:465,user,pass,from:`"INSTINTO Fragancias" <${user}>`,replyTo:user}));' "$USER_MAIL" "$HOST" "$PASS" \
-  | gcloud secrets versions add INSTINTO_SMTP --data-file=- >/dev/null
+  > ~/.instinto-smtp.tmp; chmod 600 ~/.instinto-smtp.tmp
+if gcloud secrets describe INSTINTO_SMTP >/dev/null 2>&1; then
+  gcloud secrets versions add INSTINTO_SMTP --data-file="$HOME/.instinto-smtp.tmp" >/dev/null
+else
+  gcloud secrets create INSTINTO_SMTP --replication-policy=automatic --data-file="$HOME/.instinto-smtp.tmp" >/dev/null
+fi
+shred -u ~/.instinto-smtp.tmp 2>/dev/null || rm -f ~/.instinto-smtp.tmp
 unset PASS; echo "Secreto INSTINTO_SMTP guardado (host $HOST, puerto 465)."
 npm ci --prefix payments --silent
 node -e '
