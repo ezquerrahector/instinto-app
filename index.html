@@ -167,9 +167,10 @@ nav::-webkit-scrollbar{display:none}
 .if-online-tab{background:var(--bg4,#f5f1e9);color:var(--text,#222);border:1px solid var(--border,#ded8ce);padding:11px 16px;cursor:pointer;border-radius:9px;font-weight:700;font-size:13px}
 .if-online-tab.active{background:#cba842;color:#171717;border-color:#cba842}
 .if-online-info{font-size:12px;line-height:1.6;color:var(--text2,#555);margin:0 0 12px}
-.if-online-iframe{width:100%;height:780px;min-height:66vh;border:1px solid var(--border,#ddd);border-radius:9px;background:#f8f6f2;display:block}
+.if-web-badge{display:inline-block;min-width:20px;padding:1px 7px;margin-left:4px;border-radius:999px;background:#b3261e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.if-online-iframe{width:100%;height:calc(100vh - 150px);min-height:620px;border:1px solid var(--border,#ddd);border-radius:9px;background:#f8f6f2;display:block}
 .if-online-link{display:inline-block;margin:0 0 12px;color:var(--text,#222);text-decoration:underline;text-underline-offset:3px;font-size:12px}
-@media(max-width:700px){.if-online-iframe{height:850px}.if-online-tab{flex:1}}
+@media(max-width:700px){.if-online-iframe{height:calc(100vh - 120px)}.if-online-tab{flex:1}}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -209,7 +210,7 @@ nav::-webkit-scrollbar{display:none}
   <!-- Selector V8.1: conserva el módulo de pedidos originales intacto -->
   <div class="if-online-tabs" role="tablist" aria-label="Origen de pedidos">
     <button class="if-online-tab active" id="if-tab-local" type="button" role="tab" aria-selected="true" aria-controls="if-pedidos-local" onclick="ifChangeOrdersView('local')">Pedidos actuales</button>
-    <button class="if-online-tab" id="if-tab-web" type="button" role="tab" aria-selected="false" aria-controls="if-pedidos-web" onclick="ifChangeOrdersView('web')">🛍 Tienda en línea</button>
+    <button class="if-online-tab" id="if-tab-web" type="button" role="tab" aria-selected="false" aria-controls="if-pedidos-web" onclick="ifChangeOrdersView('web')">🛍 Tienda en línea <span class="if-web-badge" id="if-web-badge" hidden></span></button>
   </div>
   <div id="if-pedidos-local" role="tabpanel" aria-labelledby="if-tab-local">
 
@@ -248,7 +249,7 @@ nav::-webkit-scrollbar{display:none}
   <div id="pedidos-list"></div>
   </div>
   <div id="if-pedidos-web" role="tabpanel" aria-labelledby="if-tab-web" hidden style="display:none">
-    <p class="if-online-info"><strong>Pedidos recibidos por internet.</strong> Consulta protegida y de solo lectura. No modifica pedidos existentes ni descuenta existencias. Los pedidos de prueba no representan ventas pagadas.</p>
+    <p class="if-online-info"><strong>Ventas de instintofragancias.com.</strong> Cada venta pagada aparece también en “Pedidos actuales” con la etiqueta 🛍️ En línea (su esencia ya se descontó al pagar). Aquí generas guías, programas recolecciones y ves tus ventas.</p>
     <a class="if-online-link" href="pedidos-en-linea.html" target="_blank" rel="noopener noreferrer">Abrir panel completo en otra pestaña</a>
     <iframe class="if-online-iframe" id="if-online-panel" title="Pedidos de la tienda en línea (acceso protegido con Google)" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="identity-credentials-get"></iframe>
   </div>
@@ -3627,6 +3628,21 @@ function ifChangeOrdersView(view){
     if(iframe&&!iframe.getAttribute('src'))iframe.setAttribute('src','pedidos-en-linea.html');
   }
 }
+/* INSTINTO V10.1 - Aviso de pedidos en línea por atender (solo lectura vía webAdmin /overview). */
+(function(){
+  var WEB='https://us-central1-instinto-fragancias.cloudfunctions.net/webAdmin/overview',timer=null;
+  function setBadge(n){var b=document.getElementById('if-web-badge');if(!b)return;b.hidden=!n;b.textContent=n>9?'9+':String(n);
+    b.title=n?(n+' pedido(s) en línea por atender'):'';}
+  function pending(p){if(!p.liveMode||p.state!=='paid')return false;var s=p.shipment||{};
+    if(p.reviewRequired||s.state!=='label_ready')return true;
+    var t=s.trackingStatus;if(['exception','retained','destroyed','in_return'].indexOf(t)>=0)return true;return !(t&&t!=='created')&&!(p.pickup&&p.pickup.state==='scheduled');}
+  async function poll(){try{var u=window.firebase&&firebase.auth().currentUser;if(!u)return;
+    var r=await fetch(WEB,{cache:'no-store',headers:{Authorization:'Bearer '+await u.getIdToken()}});if(!r.ok)return;
+    var d=await r.json();setBadge((d.purchases||[]).filter(pending).length);}catch(e){}}
+  window.addEventListener('instinto-auth-ready',function(){poll();clearInterval(timer);timer=setInterval(function(){if(!document.hidden)poll()},120000);});
+  window.addEventListener('message',function(e){if(e.origin!==location.origin||!e.data)return;
+    if(e.data.type==='instinto-web-pending')setBadge(Number(e.data.count)||0);});
+})();
 </script>
 </body>
 </html>

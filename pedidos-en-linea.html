@@ -1,116 +1,363 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>INSTINTO | Pedidos de tienda en línea</title>
+<title>INSTINTO | Tienda en línea</title>
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Cinzel:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#1d1c18;--gold:#bd9b4c;--cream:#f7f5f0;--line:#ddd8ce}*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:14px Jost,Arial,sans-serif}header{padding:22px clamp(16px,5vw,70px);background:#fff;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}header h1{font:20px Cinzel,serif;letter-spacing:.15em;margin:0}header small{color:#817b70}main{max-width:1250px;margin:auto;padding:35px 18px}.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}h2{font:25px Cinzel,serif;font-weight:400}button{padding:10px 15px;cursor:pointer;border:1px solid var(--ink);background:var(--ink);color:white;font:12px Jost,sans-serif;letter-spacing:.04em}button:disabled{opacity:.5}button.outline{background:#fff;color:var(--ink)}.note{border-left:3px solid var(--gold);background:#f0eadb;padding:13px 16px;line-height:1.55}.panel{background:white;border:1px solid var(--line);margin-top:20px;overflow:auto}.table{width:100%;border-collapse:collapse;text-align:left;min-width:740px}td,th{border-bottom:1px solid var(--line);padding:14px 12px;vertical-align:top}th{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:#746e65;background:#faf9f6}tr:last-child td{border-bottom:0}.pill{font-size:11px;background:#f1e9d6;padding:5px 8px;white-space:nowrap}.muted{color:#8c8579;font-size:12px}.error{color:#9e322b}.hidden{display:none}.tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap}#status{margin:12px 0;min-height:18px}details{max-width:320px}details summary{cursor:pointer;color:#7d6133}details p{margin:5px 0;font-size:12px}#uid{font:12px monospace;word-break:break-all}a{color:#755622}
+:root{--ink:#1d1c18;--ink2:#4a463f;--muted:#857e72;--gold:#bd9b4c;--gold-soft:#f1e9d6;--cream:#f7f5f0;--paper:#fff;--line:#e3ddd2;
+--green:#2f7d55;--green-soft:#e3f2e9;--amber:#a5690f;--amber-soft:#fbefd9;--red:#a8382f;--red-soft:#f8e3e0;--blue:#2f5f8f;--blue-soft:#e3edf7;--r:10px}
+*{box-sizing:border-box}html,body{margin:0}body{background:var(--cream);color:var(--ink);font:14px/1.45 Jost,Arial,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}
+.wrap{max-width:1180px;margin:auto;padding:18px 16px 40px}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.brand h1{font:500 19px Cinzel,serif;letter-spacing:.16em;margin:0}.brand small{color:var(--muted);font-size:12px}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sync{font-size:12px;color:var(--muted)}
+.btn{border:1px solid var(--ink);background:var(--ink);color:#fff;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:500;white-space:nowrap}
+.btn.ghost{background:var(--paper);color:var(--ink);border-color:var(--line)}.btn.gold{background:var(--gold);border-color:var(--gold);color:#17150f}
+.btn.danger{background:var(--paper);color:var(--red);border-color:#e6c3bf}.btn.sm{padding:6px 10px;font-size:12px}
+.hidden{display:none!important}
+/* Aviso principal */
+.callout{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:#1d1b18;color:#f4ecd9;border-radius:var(--r);padding:14px 18px;margin-bottom:14px}
+.callout strong{color:#e6c877;font-size:16px}.callout p{margin:2px 0 0;font-size:13px;color:#d9cfbb}
+.callout.ok{background:var(--green-soft);color:var(--green)}.callout.ok strong{color:var(--green)}.callout.ok p{color:var(--ink2)}
+/* KPIs */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;text-align:left}
+button.kpi{cursor:pointer}button.kpi:hover{border-color:var(--gold)}
+.kpi .l{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}.kpi .v{font-size:22px;font-weight:600;margin-top:2px}.kpi .s{font-size:12px;color:var(--muted)}
+.kpi.warn .v{color:var(--amber)}.kpi.bad .v{color:var(--red)}.kpi.good .v{color:var(--green)}
+.spark{display:flex;align-items:flex-end;gap:2px;height:30px;margin-top:6px}.spark i{flex:1;background:var(--gold-soft);border-radius:2px 2px 0 0;min-height:2px}.spark i.on{background:var(--gold)}
+/* Alertas */
+.alerts{display:grid;gap:8px;margin-bottom:14px}
+.alert{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;background:var(--amber-soft);border:1px solid #efd9b0;border-radius:var(--r);padding:10px 14px}
+.alert.bad{background:var(--red-soft);border-color:#ecc8c3}.alert .t{font-weight:600}.alert .d{font-size:12px;color:var(--ink2);word-break:break-word}
+/* Filtros */
+.filters{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:10px;margin-bottom:12px;display:grid;gap:10px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{border:1px solid var(--line);background:var(--cream);border-radius:999px;padding:6px 12px;font-size:13px}
+.chip b{font-weight:600;margin-left:4px;color:var(--muted)}.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}.chip.on b{color:#e6c877}
+.row{display:flex;gap:8px;flex-wrap:wrap}.row input[type=search]{flex:1;min-width:200px}
+input[type=search],select,input[type=date],textarea{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--paper)}
+/* Tarjetas */
+.list{display:grid;gap:10px}.empty{background:var(--paper);border:1px dashed var(--line);border-radius:var(--r);padding:28px;text-align:center;color:var(--muted)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:10px}
+.card.attn{border-left:4px solid var(--red)}.card.todo{border-left:4px solid var(--gold)}
+.ch{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.folio{font-weight:600;font-size:16px;letter-spacing:.03em}.meta{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--gold-soft);color:#6d5420;white-space:nowrap}
+.pill.green{background:var(--green-soft);color:var(--green)}.pill.amber{background:var(--amber-soft);color:var(--amber)}.pill.red{background:var(--red-soft);color:var(--red)}
+.pill.blue{background:var(--blue-soft);color:var(--blue)}.pill.gray{background:#eeebe5;color:#6a645a}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}.step{font-size:11px;color:var(--muted);text-align:center}
+.step i{display:block;height:5px;border-radius:3px;background:#ebe6dc;margin-bottom:4px}.step.done i{background:var(--gold)}.step.now{color:var(--ink);font-weight:600}.step.now i{background:var(--ink)}
+.cb{display:grid;grid-template-columns:1.2fr 1fr .8fr;gap:14px}.cb h4{margin:0 0 4px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.cb p{margin:2px 0}.gift{font-size:12px;color:var(--amber)}
+.next{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px}
+.next .hint{font-size:13px;color:var(--ink2)}.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+details.more{position:relative}details.more summary{list-style:none;cursor:pointer}details.more summary::-webkit-details-marker{display:none}
+.menu{position:absolute;right:0;top:110%;background:var(--paper);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px #0002;z-index:5;min-width:210px;padding:6px;display:grid}
+.menu button,.menu a{background:none;border:0;text-align:left;padding:8px 10px;border-radius:6px;font-size:13px;color:var(--ink);text-decoration:none}.menu button:hover,.menu a:hover{background:var(--cream)}.menu .danger{color:var(--red)}
+a{color:#755622}
+/* Modal */
+dialog{border:0;border-radius:14px;padding:0;max-width:440px;width:calc(100% - 32px);box-shadow:0 20px 60px #0005}dialog::backdrop{background:#0006}
+.md{padding:20px}.md h3{margin:0 0 6px;font:500 18px Cinzel,serif;letter-spacing:.06em}.md p{margin:6px 0;color:var(--ink2);font-size:13px}
+.md label{display:block;font-size:12px;color:var(--muted);margin:12px 0 4px}.md input,.md select,.md textarea{width:100%}
+.md .opt{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px;font-size:13px;color:var(--ink)}
+.md .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.md .err{color:var(--red);font-size:13px;min-height:18px;margin-top:8px}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13px;z-index:50;box-shadow:0 8px 24px #0003}
+.login{background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:28px;text-align:center}
+details.legacy{margin-top:26px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}details.legacy summary{cursor:pointer;color:var(--muted)}
+.table{width:100%;border-collapse:collapse;font-size:13px}.table td,.table th{border-bottom:1px solid var(--line);padding:8px;text-align:left;vertical-align:top}
+@media(max-width:760px){.cb{grid-template-columns:1fr}.steps .step span{display:none}.callout{padding:12px 14px}.kpi .v{font-size:19px}}
 </style></head><body>
-<header><div><h1>INSTINTO</h1><small>Fragancias · Pedidos de tienda en línea · V10</small></div><div class="tools"><button id="login">Acceder con Google</button><button id="logout" class="outline hidden">Cerrar sesión</button></div></header>
-<main><div class="bar"><h2>Pedidos recibidos por internet</h2><button id="refresh" class="outline" disabled>Actualizar</button></div>
-<p class="note"><strong>Panel de solo lectura.</strong> Los pedidos de prueba son independientes de los pedidos administrativos actuales. No se modifica ni descuenta <code>stockGramos</code>. Un pedido de prueba no es una venta pagada.</p>
-<p id="status" role="status">Inicia sesión con la cuenta administradora autorizada.</p>
-<div class="panel"><table class="table"><thead><tr><th>Folio / fecha</th><th>Cliente</th><th>Artículos</th><th>Subtotal</th><th>Estado</th><th>Datos de entrega</th></tr></thead><tbody id="orders"><tr><td colspan="6">Inicia sesión para ver los pedidos.</td></tr></tbody></table></div>
-<section class="panel" style="padding:16px;margin-top:24px" id="webSales"><div class="bar"><h2 style="font-size:20px">Ventas Web pagadas · V10</h2><button id="webRefresh" class="outline" disabled>Actualizar ventas</button></div>
-<p class="muted">Compras confirmadas por Mercado Pago (API/webhook). Cada frasco ya es un pedido administrativo con folio Web compartido y esencia descontada una sola vez. Generar guía compra una guía real en Skydropx con cargo a tus créditos.</p>
-<p id="webStatus" role="status">Inicia sesión para ver las ventas.</p><div id="webAlerts"></div>
-<table class="table"><thead><tr><th>Folio / fecha</th><th>Cliente y entrega</th><th>Frascos</th><th>Total</th><th>Estado</th><th>Envío</th><th>Acciones</th></tr></thead><tbody id="webRows"></tbody></table></section>
-<section class="panel" style="padding:16px;margin-top:24px"><div class="bar"><h2 style="font-size:20px">Diagnóstico de inventario · V9</h2><button id="auditBtn" class="outline" disabled>Revisar disponibilidad</button></div><p class="muted">Consulta solo lectura. No reserva, libera ni descuenta gramos. No permite ventas.</p><p id="auditStatus" role="status">Inicia sesión para consultar el diagnóstico.</p><div id="auditResult"></div></section>
-<p class="muted">Esta vista usa Firebase Authentication y una API protegida. No escribe sobre el inventario ni incorpora pedidos en <code>instinto/datos</code>.</p></main>
+<div class="wrap">
+<header class="top">
+  <div class="brand"><h1>INSTINTO</h1><small>Tienda en línea · ventas, envíos y alertas</small></div>
+  <div class="tools"><span class="sync" id="sync"></span>
+    <button class="btn ghost sm" id="refresh" type="button" disabled>↻ Actualizar</button>
+    <button class="btn ghost sm" id="notifyBtn" type="button" title="Avisos del navegador cuando entre un pedido">🔔 Avisos</button>
+    <button class="btn ghost sm hidden" id="logout" type="button">Cerrar sesión</button></div>
+</header>
+
+<section id="loginBox" class="login"><p>Inicia sesión con una cuenta autorizada para ver las ventas de la tienda.</p><button class="btn" id="login" type="button">Acceder con Google</button></section>
+
+<main id="app" class="hidden">
+  <div id="callout" class="callout"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="alerts" id="alerts"></div>
+  <div class="filters">
+    <div class="chips" id="stageChips" role="tablist" aria-label="Etapa"></div>
+    <div class="row">
+      <input type="search" id="q" placeholder="Buscar folio, cliente, fragancia, teléfono o rastreo…" aria-label="Buscar">
+      <select id="range" aria-label="Periodo"><option value="all">Todo</option><option value="1">Hoy</option><option value="7">Últimos 7 días</option><option value="30">Últimos 30 días</option></select>
+      <select id="sort" aria-label="Orden"><option value="urgent">Más urgentes primero</option><option value="new">Más recientes</option><option value="old">Más antiguos</option></select>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)"><input type="checkbox" id="showTest"> Incluir pruebas</label>
+    </div>
+  </div>
+  <div class="meta" id="count" style="margin:0 2px 8px"></div>
+  <div class="list" id="list"></div>
+
+  <details class="legacy"><summary>Herramientas anteriores (V9 · pedidos de prueba y diagnóstico de inventario)</summary>
+    <p class="meta">Pedidos de prueba sin cobro y diagnóstico de solo lectura. No son ventas.</p>
+    <div class="row" style="margin:8px 0"><button class="btn ghost sm" id="v9load" type="button">Ver pedidos de prueba</button><button class="btn ghost sm" id="auditBtn" type="button">Revisar disponibilidad</button></div>
+    <p id="status" class="meta"></p><table class="table"><tbody id="orders"></tbody></table>
+    <p id="auditStatus" class="meta"></p><div id="auditResult"></div>
+  </details>
+</main>
+</div>
+
+<dialog id="dlg"><form method="dialog" class="md" id="dlgForm"></form></dialog>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="assets/admin-access.js"></script>
 <script>
 'use strict';
+// INSTINTO V10.1 — panel de ventas Web. SOLO interfaz: usa las mismas acciones del servidor
+// (webAdmin /overview, /label, /label/cancel, /pickup, /cancel, /alert/resolve). La identidad
+// siempre se valida en el servidor con el token de Firebase.
 const app=firebase.initializeApp({apiKey:'AIzaSyBafY_htzgeMH5_J_h9-VscHHnrHdLX0IY',authDomain:'instinto-fragancias.firebaseapp.com',projectId:'instinto-fragancias',appId:'1:972424984397:web:5910eef68d595de71ee904'});
-const auth=firebase.auth();
-InstintoAccess.start(auth);
-const API='https://us-central1-instinto-fragancias.cloudfunctions.net/storeApi/api/admin/orders';
-const $=id=>document.getElementById(id);
-const status=(str,err=false)=>{$('status').textContent=str;$('status').className=err?'error':''};
-function t(parent,tag,str){const el=document.createElement(tag);el.textContent=String(str??'');parent.appendChild(el);return el}
-function formatDate(str){return str?new Date(str).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}):'—'}
-function money(v){return Number(v||0).toLocaleString('es-MX',{style:'currency',currency:'MXN'})}
-function draw(orders){const body=$('orders');body.replaceChildren();if(!orders.length){const row=body.insertRow();const c=row.insertCell();c.colSpan=6;c.textContent='No hay pedidos de prueba registrados.';return}
-for(const p of orders){const row=body.insertRow();let c=row.insertCell();t(c,'strong',p.id);t(c,'div',formatDate(p.createdAt)).className='muted';
-c=row.insertCell();t(c,'strong',[p.address?.firstName,p.address?.lastName].filter(Boolean).join(' '));t(c,'div',p.address?.email).className='muted';
-c=row.insertCell();for(const i of p.items||[]){t(c,'div',`${i.qty} × ${i.brand||''} · ${i.name||''} · ${i.size||''} ml${i.gift?' · Regalo':''}`);if(i.giftText)t(c,'div',`Dedicatoria: ${i.giftText}`).className='muted'}
-c=row.insertCell();t(c,'strong',money(p.subtotal));t(c,'div','Envío pendiente').className='muted';
-c=row.insertCell();const statusText=p.status==='reserva_provisional'&&p.expiresAt&&new Date(p.expiresAt)<new Date()?'Reserva vencida':p.status;t(c,'span',statusText).className='pill';t(c,'div',p.paymentStatus==='not_enabled'?'Sin cobro':'Pago: '+p.paymentStatus).className='muted';
-c=row.insertCell();const d=document.createElement('details');const sum=document.createElement('summary');sum.textContent='Ver dirección';d.appendChild(sum);const a=p.address||{};for(const val of [a.phone,[a.street,a.colony].filter(Boolean).join(', '),[a.city,a.state,a.postal].filter(Boolean).join(', '),a.references]){if(val)t(d,'p',val)}c.appendChild(d)
-}}
-async function load(){const user=auth.currentUser;if(!user)return; $('refresh').disabled=true;status('Consultando pedidos…');try{const token=await user.getIdToken();const res=await fetch(API,{headers:{Authorization:'Bearer '+token},cache:'no-store'});let data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);draw(data.orders||[]);status(`${(data.orders||[]).length} pedido(s) mostrados. Solo lectura.`)}catch(e){draw([]);status(e.message,true)}finally{$('refresh').disabled=false}}
-$('login').addEventListener('click',async()=>{try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}catch(e){status(e.message,true)}});
-async function auditInventory(){
- const user=auth.currentUser;if(!user)return;
- $('auditBtn').disabled=true;$('auditStatus').textContent='Consultando inventario…';$('auditResult').replaceChildren();
- try{
-  const token=await user.getIdToken();const url=API.replace('/api/admin/orders','/api/admin/inventory-audit');
-  const res=await fetch(url,{headers:{Authorization:'Bearer '+token},cache:'no-store'});
-  const data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);
-  const p=$('auditResult');
-  const summary=[['Referencias en catálogo',data.catalogCount],['Pedidos administrativos',data.adminOrdersCount],['Presentaciones de 60 ml posibles',data.available60],['Presentaciones de 100 ml posibles',data.available100],['Referencias sin stock',data.zeroStock],['Reservas de prueba activas',data.activeHolds],['Reservas de prueba vencidas',data.expiredHolds],['Inconsistencias detectadas (máx. 80)',data.issues.length]];
-  for(const [name,val] of summary){const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #eee';t(row,'span',name);t(row,'strong',val===null?'—':val);p.appendChild(row)}
-  if(data.issues.length){const heading=t(p,'h3','Inconsistencias a revisar');heading.style.fontSize='15px';for(const x of data.issues){t(p,'p',`${x.id}: ${x.issue}`)}}
-  t(p,'p','AVISO: '+data.warning).className='muted';
-  $('auditStatus').textContent='Diagnóstico completado: '+new Date(data.checkedAt).toLocaleString('es-MX');
- }catch(e){$('auditStatus').textContent=e.message;$('auditStatus').className='error'}finally{$('auditBtn').disabled=!auth.currentUser}
-}
-$('auditBtn').addEventListener('click',auditInventory);
-$('logout').addEventListener('click',()=>auth.signOut());$('refresh').addEventListener('click',load);
-auth.onAuthStateChanged(user=>{if(user&&!InstintoAccess.authorized(user)){status('Esta cuenta no está autorizada.',true);return;}$('login').classList.toggle('hidden',!!user);$('logout').classList.toggle('hidden',!user);$('refresh').disabled=!user;$('auditBtn').disabled=!user;if(user)load();else{draw([]);$('auditResult').replaceChildren();$('auditStatus').textContent='Inicia sesión para consultar el diagnóstico.';status('Inicia sesión con la cuenta administradora autorizada.')}});
-</script>
-<script>
-'use strict';
-// INSTINTO V10 — ventas Web: identidad SIEMPRE por token verificado en servidor (webAdmin).
-(function(){
+const auth=firebase.auth();InstintoAccess.start(auth);
 const WEB='https://us-central1-instinto-fragancias.cloudfunctions.net/webAdmin';
+const STORE_API='https://us-central1-instinto-fragancias.cloudfunctions.net/storeApi/api/admin/orders';
 const $=id=>document.getElementById(id);
-const el=(tag,txt,cls)=>{const e=document.createElement(tag);if(txt!=null)e.textContent=String(txt);if(cls)e.className=cls;return e};
+function h(tag,attrs,...kids){const e=document.createElement(tag);for(const [k,v] of Object.entries(attrs||{})){if(v==null||v===false)continue;
+  if(k==='class')e.className=v;else if(k.startsWith('on'))e.addEventListener(k.slice(2),v);else if(k==='text')e.textContent=v;else e.setAttribute(k,v===true?'':v)}
+  for(const c of kids.flat()){if(c==null||c===false)continue;e.append(c.nodeType?c:document.createTextNode(String(c)))}return e}
 const money=c=>(Number(c||0)/100).toLocaleString('es-MX',{style:'currency',currency:'MXN'});
-const when=ms=>ms?new Date(ms).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'}):'—';
-const ops=new Map();const opFor=k=>{if(!ops.has(k))ops.set(k,crypto.randomUUID().replace(/-/g,''));return ops.get(k)};
-const MSG={labels_disabled:'La generación de guías aún no está habilitada.',labels_not_configured:'Falta configuración verificada de guías.',
- cost_difference:'El costo actual de la guía es mayor al cobrado al cliente.',shipment_uncertain_check_provider:'Respuesta incierta: revisa en Skydropx si se generó la guía antes de reintentar.',
- purchase_not_shippable:'El pedido no está pagado o requiere revisión.',label_provider_rejected:'Skydropx rechazó la guía',pickup_provider_rejected:'La paquetería rechazó la recolección',invalid_pickup_window:'Ventana inválida: debe ser futura, dentro de 10 días y de al menos 2 horas.',label_not_ready:'Primero genera la guía.',shipment_in_progress:'Hay una generación de guía en curso; espera 10 minutos o actualiza.',refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona devolución.',
- forbidden:'Cuenta no autorizada.',invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',reason_required:'Escribe el motivo.'};
-async function call(path,body){const u=firebase.auth().currentUser;if(!u)throw Error('Inicia sesión');
+const when=ms=>ms?new Date(ms).toLocaleString('es-MX',{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}):'—';
+const ago=ms=>{if(!ms)return'';const m=Math.round((Date.now()-ms)/60000);if(m<60)return`hace ${m} min`;const hh=Math.round(m/60);if(hh<48)return`hace ${hh} h`;return`hace ${Math.round(hh/24)} días`};
+const folio=p=>p.id.slice(1,9).toUpperCase();
+const ops=new Map();const opFor=k=>{if(!ops.has(k))ops.set(k,crypto.randomUUID?crypto.randomUUID().replace(/-/g,''):[...crypto.getRandomValues(new Uint8Array(16))].map(b=>b.toString(16).padStart(2,'0')).join(''));return ops.get(k)};
+function toast(t){const e=h('div',{class:'toast',role:'status'},t);document.body.append(e);setTimeout(()=>e.remove(),3200)}
+const MSG={labels_disabled:'La generación de guías no está habilitada.',labels_not_configured:'Falta configuración verificada de guías.',cost_difference:'El costo actual de la guía es mayor al cobrado.',
+ shipment_uncertain_check_provider:'Respuesta incierta: revisa en Skydropx si se generó la guía antes de reintentar.',purchase_not_shippable:'El pedido no está pagado o requiere revisión.',
+ refund_failed:'Mercado Pago no confirmó el reembolso.',already_in_transit_handle_return:'El paquete ya está en tránsito: gestiona una devolución.',forbidden:'Cuenta no autorizada.',
+ invalid_session:'Tu sesión venció. Vuelve a iniciar sesión.',reason_required:'Escribe el motivo (mínimo 5 caracteres).',label_provider_rejected:'Skydropx rechazó la guía',
+ shipment_in_progress:'Hay una generación de guía en curso; espera unos minutos.',pickup_provider_rejected:'La paquetería rechazó la recolección',
+ invalid_pickup_window:'El horario debe ser futuro, dentro de 10 días y de al menos 2 horas.',label_not_ready:'Primero genera la guía.',operation_reused:'Esta operación ya se registró con otros datos.'};
+async function call(path,body){const u=auth.currentUser;if(!u)throw Error('Inicia sesión');
  const r=await fetch(WEB+path,{method:body?'POST':'GET',cache:'no-store',headers:{Authorization:'Bearer '+await u.getIdToken(),...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined});
  const d=await r.json().catch(()=>({}));if(!r.ok){const e=Error((MSG[d.error]||d.error||('Error '+r.status))+(d.detail?': '+d.detail:''));Object.assign(e,d);throw e}return d}
-function stateLabel(p){return {awaiting_payment:'Esperando pago',paid:'Pagado',expired:'Reserva vencida',cancelled:'Cancelado'}[p.state]||p.state}
-async function load(){$('webRefresh').disabled=true;$('webStatus').textContent='Consultando ventas…';
- try{const d=await call('/overview');drawAlerts(d.alerts);drawRows(d.purchases);$('webStatus').textContent=d.purchases.length+' compra(s) Web. '+d.alerts.length+' alerta(s) abiertas.';}
- catch(e){$('webStatus').textContent=e.message;$('webStatus').className='error'}finally{$('webRefresh').disabled=false}}
-function drawAlerts(alerts){const box=$('webAlerts');box.replaceChildren();for(const a of alerts){const n=el('div',null,'note');n.style.margin='8px 0';
- n.append(el('strong',a.type+' '),el('span',(a.purchaseId?('Folio '+a.purchaseId.slice(1,9).toUpperCase()+' · '):'')+(a.reason||a.status||'')+' · '+when(a.lastAt)+' (x'+(a.count||1)+') '));
- const b=el('button','Marcar atendida','outline');b.onclick=async()=>{const note=prompt('Nota de atención (opcional):')||'';try{await call('/alert/resolve',{key:a.key,note});load()}catch(e){alert(e.message)}};n.append(b);box.append(n)}}
-function drawRows(list){const body=$('webRows');body.replaceChildren();if(!list.length){const r=body.insertRow();const c=r.insertCell();c.colSpan=7;c.textContent='Sin compras Web todavía.';return}
- for(const p of list){const r=body.insertRow();let c=r.insertCell();c.append(el('strong',p.id.slice(1,9).toUpperCase()),el('div',when(p.paidAt||p.createdAt),'muted'),el('div',p.liveMode?'REAL':'PRUEBA','pill'));
-  c=r.insertCell();const a=p.address||{};c.append(el('strong',[a.firstName,a.lastName].join(' ')),el('div',a.phone+' · '+a.email,'muted'),el('div',[a.street,a.colony,a.city,a.state,a.postal].join(', '),'muted'));if(a.references)c.append(el('div','Ref: '+a.references,'muted'));
-  c=r.insertCell();for(const i of p.items)c.append(el('div',i.qty+' × '+i.brand+' · '+i.name+' · '+i.size+' ml'+(i.gift?' · Regalo: '+(i.giftText||''):'')));c.append(el('div','Pedidos admin #'+(p.adminOrderIds||[]).join(', #'),'muted'));
-  c=r.insertCell();c.append(el('strong',money(p.totalCents)),el('div','Envío '+money(p.shippingCents)+' · '+(p.shippingChoice?.carrier||'')+' '+(p.shippingChoice?.service||''),'muted'));
-  c=r.insertCell();c.append(el('span',stateLabel(p),'pill'));if(p.reviewRequired)c.append(el('div','Revisión: '+p.reviewReason,'error'));if(p.refund)c.append(el('div','Reembolso '+p.refund.status,'muted'));
-  c=r.insertCell();const s=p.shipment;if(s?.state==='label_ready'){c.append(el('div',s.carrier+' · '+s.trackingNumber));for(const k of s.packages||[]){if(k.labelUrl){const l=el('a','Descargar guía');l.href=k.labelUrl;l.target='_blank';l.rel='noopener';c.append(l,el('br'))}}c.append(el('div',s.trackingStatus||'Guía creada','muted'))}else{c.append(el('div',s?s.state+(s.error?' · '+s.error:''):'Sin guía','muted'));if(s?.providerDetail)c.append(el('div','Skydropx: '+s.providerDetail,'error'))}
-  c=r.insertCell();
-  if(p.state==='paid'&&!p.reviewRequired&&s?.state!=='label_ready'){const b=el('button','Generar guía');b.onclick=()=>label(p,false,b);c.append(b)}
-  if(s?.state==='label_ready'){const b=el('button','Cancelar guía','outline');b.onclick=async()=>{const reason=prompt('Motivo de cancelación de la guía:');if(!reason)return;b.disabled=true;try{await call('/label/cancel',{purchaseId:p.id,operationId:opFor('lc'+p.id),reason});load()}catch(e){alert(e.message)}finally{b.disabled=false}};c.append(b)}
-  if(s?.state==='label_ready'){const pk=p.pickup;if(pk?.state==='scheduled')c.append(el('div','Recolección '+pk.date+' '+pk.from+'–'+pk.to+(pk.requestNumber?' · solicitud '+pk.requestNumber:''),'pill'));
-   else{if(pk?.state==='failed')c.append(el('div','Recolección rechazada: '+(pk.providerDetail||pk.error||''),'error'));const b=el('button','Programar recolección','outline');b.style.marginTop='6px';b.onclick=()=>pickup(p,b);c.append(b)}}
-  if(p.state==='paid'){const b=el('button','Cancelar pedido','outline');b.style.marginTop='6px';b.onclick=()=>cancel(p,b);c.append(b)}
- }}
-async function label(p,accept,b){if(!accept&&!confirm('Se comprará una guía REAL en Skydropx para '+p.items.reduce((n,i)=>n+i.qty,0)+' caja(s). ¿Continuar?'))return;
- b.disabled=true;try{const d=await call('/label',{purchaseId:p.id,operationId:opFor('l'+p.id),acceptCostDifference:accept});if(d.outcome==='processing')alert('Skydropx está generando la guía. Actualiza en un minuto.');load()}
- catch(e){if(e.error==='cost_difference'&&confirm('Cobrado al cliente '+money(e.paidCents)+', costo actual '+money(e.currentCents)+'. ¿Generar de todos modos?')){ops.delete('l'+p.id);return label(p,true,b)}alert(e.message)}finally{b.disabled=false}}
-async function pickup(p,b){const t=new Date(Date.now()+86400000);const def=t.toISOString().slice(0,10);
- const date=prompt('Fecha de recolección (AAAA-MM-DD, día hábil):',def);if(!date)return;
- const win=prompt('Horario en que habrá alguien para entregar el paquete (HH:MM-HH:MM, mínimo 2 horas):','10:00-14:00');if(!win)return;
- const [from,to]=win.split('-').map(x=>x.trim());
- b.disabled=true;try{const d=await call('/pickup',{purchaseId:p.id,operationId:opFor('pk'+p.id+date+win),date,from,to});alert(d.outcome==='scheduled'||d.outcome==='already_scheduled'?'Recolección solicitada '+date+' '+from+'–'+to+(d.pickup.requestNumber?' · solicitud '+d.pickup.requestNumber:''):'La paquetería no confirmó: '+(d.pickup.error||''));load()}
- catch(e){alert(e.message)}finally{b.disabled=false}}
-async function cancel(p,b){const reason=prompt('Motivo de la cancelación (queda registrado):');if(!reason)return;
- const refund=confirm('¿Reembolsar el TOTAL al cliente por Mercado Pago ('+money(p.totalCents)+')?\nAceptar = reembolsar · Cancelar = no reembolsar');
- const restock=confirm('¿Reponer al inventario la esencia de los frascos que AÚN NO se elaboran?\n(Los materiales nunca se reponen automáticamente.)');
- if(!confirm('Confirma: cancelar folio '+p.id.slice(1,9).toUpperCase()+(refund?' con reembolso total':' sin reembolso')+(restock?' y reponiendo esencia no usada':'')+'.'))return;
- b.disabled=true;try{const d=await call('/cancel',{purchaseId:p.id,operationId:opFor('c'+p.id),refund:refund?'full':'none',restockEssence:restock,reason});alert('Pedido cancelado. Esencia repuesta: '+JSON.stringify(d.restocked||{}));load()}catch(e){alert(e.message)}finally{b.disabled=false}}
-$('webRefresh').addEventListener('click',load);
-firebase.auth().onAuthStateChanged(u=>{const ok=u&&InstintoAccess.authorized(u);$('webRefresh').disabled=!ok;if(ok)load();else{$('webRows').replaceChildren();$('webAlerts').replaceChildren()}});
-})();
+
+/* ---------- Modelo de etapas (solo lectura del estado que ya guarda el servidor) ---------- */
+const REASON={payment_total_mismatch:'El monto pagado no coincide con el pedido',late_payment:'Pago recibido después de vencer la reserva',late_payment_no_stock:'Pago tardío y ya no hay esencia suficiente: considera reembolsar',
+ insufficient_stock:'No hay esencia suficiente para este pedido',charged_back:'El cliente desconoció el cargo (contracargo)',in_mediation:'Pago en disputa en Mercado Pago',payment_reversal:'Mercado Pago revirtió el pago',
+ second_approved_payment:'Se recibió un segundo pago aprobado: revisa si hay que reembolsar uno',reservation_mismatch:'La reserva de esencia no coincide',collector_mismatch:'El pago llegó a otra cuenta de Mercado Pago',
+ payment_environment_mismatch:'Pago de prueba en ambiente real (o viceversa)',purchase_binding_mismatch:'El pago no corresponde a este pedido',invalid_payment_reference:'Referencia de pago inválida',unknown_purchase:'Pago sin pedido asociado'};
+const why=r=>REASON[r]||r||'';
+const IN_TRANSIT=new Set(['picked_up','in_transit','last_mile','delivery_attempt','delivered_to_branch','in_return']);
+const TRACK={created:'Guía creada',picked_up:'Recolectado',in_transit:'En tránsito',last_mile:'En reparto',delivery_attempt:'Intento de entrega',delivered_to_branch:'En sucursal',
+ delivered:'Entregado',exception:'Incidencia',in_return:'En devolución',canceled:'Cancelado',destroyed:'Destruido',retained:'Retenido'};
+function stage(p){
+ if(p.state==='cancelled')return'cancelado';if(p.state==='awaiting_payment')return'pago';if(p.state==='expired')return'vencido';
+ if(p.state!=='paid')return'otro';const s=p.shipment,t=s?.trackingStatus;
+ if(p.reviewRequired||['exception','retained','destroyed','in_return'].includes(t)||s?.state==='uncertain')return'atencion';
+ if(s?.state!=='label_ready')return'enviar';
+ if(t==='delivered')return'entregado';
+ if(IN_TRANSIT.has(t))return'camino';
+ return'recolectar';
+}
+const STAGES=[['accion','Por atender'],['enviar','Por enviar'],['recolectar','Por recolectar'],['camino','En camino'],['entregado','Entregados'],['atencion','Atención'],['cancelado','Cancelados'],['todos','Todos']];
+const STAGE_PILL={enviar:['Por enviar','amber'],recolectar:['Esperando paquetería','blue'],camino:['En camino','blue'],entregado:['Entregado','green'],atencion:['Requiere atención','red'],
+ cancelado:['Cancelado','gray'],pago:['Esperando pago','gray'],vencido:['Reserva vencida','gray'],otro:['—','gray']};
+const STEP_IX={enviar:1,recolectar:2,camino:3,entregado:4,atencion:1};
+const needsAction=p=>{const st=stage(p);return st==='atencion'||st==='enviar'||(st==='recolectar'&&p.pickup?.state!=='scheduled')};
+
+let DATA={purchases:[],alerts:[]},filter={stage:'accion',q:'',range:'all',sort:'urgent',test:false},lastSeen=null,timer=null;
+try{const f=JSON.parse(localStorage.getItem('instinto_web_filters')||'null');if(f)Object.assign(filter,f)}catch{}
+try{lastSeen=Number(localStorage.getItem('instinto_web_lastseen'))||null}catch{}
+const saveFilter=()=>{try{localStorage.setItem('instinto_web_filters',JSON.stringify(filter))}catch{}};
+
+async function load(silent){
+ $('refresh').disabled=true;if(!silent)$('sync').textContent='Actualizando…';
+ try{DATA=await call('/overview');render();detectNew();$('sync').textContent='Actualizado '+new Date().toLocaleTimeString('es-MX',{hour:'numeric',minute:'2-digit'})}
+ catch(e){$('sync').textContent=e.message}finally{$('refresh').disabled=false}
+}
+function visibleBase(){return DATA.purchases.filter(p=>filter.test||p.liveMode)}
+function detectNew(){
+ const paid=visibleBase().filter(p=>p.state==='paid'&&p.paidAt);const newest=Math.max(0,...paid.map(p=>p.paidAt));
+ if(lastSeen&&newest>lastSeen){const n=paid.filter(p=>p.paidAt>lastSeen).length;toast(`🛍️ ${n} pedido(s) nuevo(s) pagado(s)`);chime();
+   if('Notification' in window&&Notification.permission==='granted')new Notification('INSTINTO · Pedido nuevo',{body:`${n} pedido(s) pagado(s) en la tienda en línea`});}
+ if(newest){lastSeen=Math.max(lastSeen||0,newest);try{localStorage.setItem('instinto_web_lastseen',String(lastSeen))}catch{}}
+ const pend=visibleBase().filter(needsAction).length;
+ document.title=(pend?`(${pend}) `:'')+'INSTINTO | Tienda en línea';
+ try{parent!==window&&parent.postMessage({type:'instinto-web-pending',count:pend},location.origin)}catch{}
+}
+function chime(){try{const c=new AudioContext(),o=c.createOscillator(),g=c.createGain();o.frequency.value=880;g.gain.setValueAtTime(.08,c.currentTime);g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.6);o.connect(g).connect(c.destination);o.start();o.stop(c.currentTime+.6)}catch{}}
+
+function render(){renderCallout();renderKpis();renderAlerts();renderChips();renderList()}
+function renderCallout(){
+ const base=visibleBase(),enviar=base.filter(p=>stage(p)==='enviar'),recoger=base.filter(p=>stage(p)==='recolectar'&&p.pickup?.state!=='scheduled'),attn=base.filter(p=>stage(p)==='atencion');
+ const box=$('callout');box.replaceChildren();
+ const parts=[];if(enviar.length)parts.push(`${enviar.length} por generar guía`);if(recoger.length)parts.push(`${recoger.length} por programar recolección`);if(attn.length)parts.push(`${attn.length} requieren atención`);
+ if(!parts.length){box.className='callout ok';box.append(h('div',null,h('strong',null,'Todo al día'),h('p',null,'No hay pedidos pendientes de acción. Te avisaremos cuando entre uno nuevo.')));return}
+ const total=enviar.length+recoger.length+attn.length;
+ box.className='callout';box.append(h('div',null,h('strong',null,`Tienes ${total} pedido${total===1?'':'s'} por atender`),h('p',null,parts.join(' · '))),
+  h('button',{class:'btn gold',type:'button',onclick:()=>{filter.stage='accion';saveFilter();render()}},'Ver pendientes'));
+}
+function renderKpis(){
+ const paid=visibleBase().filter(p=>p.state==='paid'),now=Date.now(),day=86400000,start=new Date();start.setHours(0,0,0,0);
+ const sum=(arr)=>arr.reduce((s,p)=>s+(p.totalCents||0),0),units=arr=>arr.reduce((n,p)=>n+p.items.reduce((m,i)=>m+i.qty,0),0);
+ const today=paid.filter(p=>p.paidAt>=start.getTime()),w=paid.filter(p=>p.paidAt>=now-7*day),m=paid.filter(p=>p.paidAt>=now-30*day);
+ const days=[...Array(14)].map((_,i)=>{const d0=start.getTime()-(13-i)*day;return sum(paid.filter(p=>p.paidAt>=d0&&p.paidAt<d0+day))});const mx=Math.max(1,...days);
+ const counts=Object.fromEntries(STAGES.map(([k])=>[k,0]));visibleBase().forEach(p=>{const st=stage(p);if(counts[st]!=null)counts[st]++});
+ const recoger=visibleBase().filter(p=>stage(p)==='recolectar'&&p.pickup?.state!=='scheduled').length;
+ const k=$('kpis');k.replaceChildren(
+  h('div',{class:'kpi'},h('div',{class:'l'},'Ventas hoy'),h('div',{class:'v'},money(sum(today))),h('div',{class:'s'},`${today.length} pedido(s) · ${units(today)} frasco(s)`)),
+  h('div',{class:'kpi'},h('div',{class:'l'},'Últimos 7 días'),h('div',{class:'v'},money(sum(w))),h('div',{class:'s'},`${w.length} pedido(s)`),h('div',{class:'spark',title:'Ventas de los últimos 14 días'},days.map((v,i)=>h('i',{class:i>=7?'on':'',style:`height:${Math.max(6,v/mx*100)}%`,title:money(v)})))),
+  h('div',{class:'kpi'},h('div',{class:'l'},'Últimos 30 días'),h('div',{class:'v'},money(sum(m))),h('div',{class:'s'},`Ticket promedio ${money(m.length?sum(m)/m.length:0)}`)),
+  h('button',{class:'kpi '+(counts.enviar?'warn':''),type:'button',onclick:()=>setStage('enviar')},h('div',{class:'l'},'Por enviar'),h('div',{class:'v'},counts.enviar),h('div',{class:'s'},'Generar guía')),
+  h('button',{class:'kpi '+(recoger?'warn':''),type:'button',onclick:()=>setStage('recolectar')},h('div',{class:'l'},'Por recolectar'),h('div',{class:'v'},counts.recolectar),h('div',{class:'s'},recoger?`${recoger} sin recolección programada`:'Recolección programada')),
+  h('button',{class:'kpi',type:'button',onclick:()=>setStage('camino')},h('div',{class:'l'},'En camino'),h('div',{class:'v'},counts.camino),h('div',{class:'s'},`${counts.entregado} entregado(s)`)),
+  h('button',{class:'kpi '+(counts.atencion?'bad':'good'),type:'button',onclick:()=>setStage('atencion')},h('div',{class:'l'},'Atención'),h('div',{class:'v'},counts.atencion),h('div',{class:'s'},counts.atencion?'Revisar ahora':'Sin incidencias')));
+}
+const ALERT_TXT={new_paid_order:['Pedido nuevo pagado',''],label_failed:['No se pudo generar la guía','bad'],label_uncertain:['Guía con respuesta incierta','bad'],payment_review:['Pago por revisar','bad'],
+ payment_rejected_by_validation:['Pago rechazado por validación','bad'],shipping_exception:['Incidencia de envío','bad'],refund_failed:['Reembolso no confirmado','bad'],outbox_failed:['Aviso o correo no enviado','bad'],
+ web_order_integrity:['Pedido Web modificado en la administración','bad'],reconcile_error:['Error al conciliar pago','bad'],payment_in_flight_48h:['Pago en proceso por más de 48 h','']};
+function renderAlerts(){
+ const byId=new Map(DATA.purchases.map(p=>[p.id,p]));
+ const live=DATA.alerts.filter(a=>{const p=byId.get(a.purchaseId);
+   if(a.type==='new_paid_order')return false; // ya se refleja en "Por atender"
+   if((a.type==='label_failed'||a.type==='label_uncertain')&&p?.shipment?.state==='label_ready')return false; // resuelta después
+   return !p||filter.test||p.liveMode});
+ const box=$('alerts');box.replaceChildren(...live.map(a=>{const [t,cls]=ALERT_TXT[a.type]||[a.type,''];
+   return h('div',{class:'alert '+cls},h('div',null,h('div',{class:'t'},`${t}${a.purchaseId?' · Folio '+a.purchaseId.slice(1,9).toUpperCase():''}`),
+     h('div',{class:'d'},[why(a.reason)||a.status||a.detail||'',` · ${when(a.lastAt)}${a.count>1?' · '+a.count+' veces':''}`].join(''))),
+     h('button',{class:'btn ghost sm',type:'button',onclick:async e=>{e.target.disabled=true;try{await call('/alert/resolve',{key:a.key});load(true)}catch(err){toast(err.message);e.target.disabled=false}}},'Marcar atendida'))}));
+}
+function setStage(s){filter.stage=s;saveFilter();render();$('list').scrollIntoView({behavior:'smooth',block:'start'})}
+function renderChips(){
+ const base=inRange(visibleBase());const c=Object.fromEntries(STAGES.map(([k])=>[k,0]));
+ base.forEach(p=>{const st=stage(p);if(c[st]!=null)c[st]++;if(needsAction(p))c.accion++;if(!['pago','vencido','otro'].includes(st))c.todos++});
+ $('stageChips').replaceChildren(...STAGES.map(([k,l])=>h('button',{class:'chip'+(filter.stage===k?' on':''),type:'button',role:'tab','aria-selected':String(filter.stage===k),onclick:()=>{filter.stage=k;saveFilter();render()}},l,h('b',null,c[k]))));
+}
+function inRange(arr){if(filter.range==='all')return arr;const d=Number(filter.range);const start=new Date();start.setHours(0,0,0,0);const from=d===1?start.getTime():Date.now()-d*86400000;return arr.filter(p=>(p.paidAt||p.createdAt)>=from)}
+function matches(p){const q=filter.q.trim().toLowerCase();if(!q)return true;const a=p.address||{};
+ return [folio(p),p.id,a.firstName,a.lastName,a.email,a.phone,a.city,p.shipment?.trackingNumber,...p.items.map(i=>i.brand+' '+i.name)].some(v=>String(v||'').toLowerCase().includes(q))}
+function renderList(){
+ let arr=inRange(visibleBase()).filter(matches).filter(p=>{const st=stage(p);
+   if(filter.stage==='accion')return needsAction(p);if(filter.stage==='todos')return !['pago','vencido','otro'].includes(st);return st===filter.stage});
+ const urg=p=>({atencion:0,enviar:1,recolectar:2,camino:3,entregado:4,cancelado:5}[stage(p)]??6);
+ arr.sort(filter.sort==='new'?(a,b)=>(b.paidAt||b.createdAt)-(a.paidAt||a.createdAt):filter.sort==='old'?(a,b)=>(a.paidAt||a.createdAt)-(b.paidAt||b.createdAt):(a,b)=>urg(a)-urg(b)||(a.paidAt||0)-(b.paidAt||0));
+ $('count').textContent=`${arr.length} pedido${arr.length===1?'':'s'}`;
+ $('list').replaceChildren(...(arr.length?arr.map(card):[h('div',{class:'empty'},filter.stage==='accion'?'🎉 No hay pedidos por atender.':'No hay pedidos con estos filtros.')]));
+}
+function card(p){
+ const st=stage(p),[pl,pc]=STAGE_PILL[st]||['—','gray'],a=p.address||{},s=p.shipment,pk=p.pickup;
+ const ix=STEP_IX[st]??(st==='cancelado'?-1:0);
+ const steps=h('div',{class:'steps'},['Pagado','Guía','Recolección','En camino','Entregado'].map((n,i)=>h('div',{class:'step'+(i<ix?' done':'')+(i===ix?' now':'')},h('i'),h('span',null,n))));
+ const late=st==='enviar'&&p.paidAt&&Date.now()-p.paidAt>24*3600000;
+ const addr=[a.street,a.colony,a.city,a.state,'CP '+(a.postal||'')].filter(Boolean).join(', ');
+ const units=p.items.reduce((n,i)=>n+i.qty,0);
+ // Siguiente paso (botón principal) según la etapa
+ let hint='',primary=null;
+ if(st==='enviar'){hint=s?.state==='failed'?`Último intento rechazado: ${s.providerDetail||s.error||''}`:`Genera la guía de ${p.shippingChoice?.carrier||'la paquetería'} (${units} caja${units===1?'':'s'}).`;
+   primary=h('button',{class:'btn gold',type:'button',onclick:e=>labelDialog(p,e.target)},'Generar guía')}
+ else if(st==='recolectar'){
+   if(pk?.state==='scheduled'){hint=`Recolección programada ${fmtDate(pk.date)} de ${pk.from} a ${pk.to}. Ten la caja lista con la guía pegada.`;}
+   else{hint=pk?.state==='failed'?`La paquetería rechazó la recolección: ${pk.providerDetail||pk.error||''}`:'Imprime y pega la guía. Programa la recolección o llévalo a sucursal.';
+     primary=h('button',{class:'btn gold',type:'button',onclick:e=>pickupDialog(p,e.target)},'Programar recolección')}}
+ else if(st==='camino')hint=`${TRACK[s?.trackingStatus]||'En tránsito'}${s?.trackingDetail?' · '+s.trackingDetail:''}`;
+ else if(st==='entregado')hint='Entregado al cliente.';
+ else if(st==='atencion')hint=p.reviewReason?`Revisar: ${why(p.reviewReason)}. Si necesitas ayuda, no generes guía todavía.`:(TRACK[s?.trackingStatus]||'Revisa este pedido.');
+ else if(st==='cancelado')hint=`Cancelado${p.refund?' · reembolso '+(p.refund.status||''):''}`;
+ const labelLinks=(s?.packages||[]).filter(x=>x.labelUrl).map((x,i,all)=>h('a',{class:'btn ghost sm',href:x.labelUrl,target:'_blank',rel:'noopener'},all.length>1?`⬇ Guía ${i+1}`:'⬇ Descargar guía'));
+ const trackUrl=(s?.packages||[]).find(x=>x.trackingUrl)?.trackingUrl;
+ const wa=a.phone?'https://wa.me/52'+String(a.phone).replace(/\D/g,'').slice(-10)+'?text='+encodeURIComponent(`Hola ${a.firstName||''}, te escribimos de INSTINTO Fragancias sobre tu pedido ${folio(p)}.`):null;
+ const menu=h('details',{class:'more'},h('summary',{class:'btn ghost sm'},'Más ▾'),h('div',{class:'menu'},
+   wa&&h('a',{href:wa,target:'_blank',rel:'noopener'},'💬 WhatsApp al cliente'),
+   h('button',{type:'button',onclick:()=>copy(`${a.firstName} ${a.lastName}\n${addr}\nTel. ${a.phone}${a.references?'\nRef: '+a.references:''}`,'Dirección copiada')},'📋 Copiar dirección'),
+   s?.trackingNumber&&h('button',{type:'button',onclick:()=>copy(s.trackingNumber,'Rastreo copiado')},'📋 Copiar rastreo'),
+   trackUrl&&h('a',{href:trackUrl,target:'_blank',rel:'noopener'},'🔎 Rastrear en la paquetería'),
+   st==='recolectar'&&pk?.state==='scheduled'&&h('button',{type:'button',onclick:e=>pickupDialog(p,e.target)},'📅 Reprogramar recolección'),
+   s?.state==='label_ready'&&!IN_TRANSIT.has(s.trackingStatus)&&s.trackingStatus!=='delivered'&&h('button',{class:'danger',type:'button',onclick:e=>cancelLabelDialog(p,e.target)},'Cancelar guía'),
+   p.state==='paid'&&h('button',{class:'danger',type:'button',onclick:e=>cancelDialog(p,e.target)},'Cancelar pedido / reembolsar')));
+ return h('article',{class:'card'+(st==='atencion'?' attn':needsAction(p)?' todo':'')},
+  h('div',{class:'ch'},h('div',null,h('div',{class:'folio'},'Folio '+folio(p)),h('div',{class:'meta'},`${when(p.paidAt||p.createdAt)} · ${ago(p.paidAt||p.createdAt)}`)),
+   h('div',{style:'display:flex;gap:6px;flex-wrap:wrap;align-items:center'},!p.liveMode&&h('span',{class:'pill gray'},'PRUEBA'),late&&h('span',{class:'pill red'},'+24 h sin guía'),h('span',{class:'pill '+pc},pl))),
+  !['cancelado','pago','vencido'].includes(st)&&steps,
+  h('div',{class:'cb'},
+   h('div',null,h('h4',null,'Cliente y entrega'),h('p',null,h('strong',null,`${a.firstName||''} ${a.lastName||''}`)),h('p',{class:'meta'},`${a.phone||''} · ${a.email||''}`),h('p',{class:'meta'},addr),a.references&&h('p',{class:'meta'},'Ref: '+a.references)),
+   h('div',null,h('h4',null,'Frascos'),p.items.map(i=>h('div',null,h('p',null,`${i.qty} × ${i.brand} · ${i.name} · ${i.size} ml`),i.gift&&h('p',{class:'gift'},'🎁 Regalo'+(i.giftText?': '+i.giftText:'')))),h('p',{class:'meta'},'Pedido admin #'+(p.adminOrderIds||[]).join(', #'))),
+   h('div',null,h('h4',null,'Pago y envío'),h('p',null,h('strong',null,money(p.totalCents))),h('p',{class:'meta'},`Envío ${money(p.shippingCents)} · ${p.shippingChoice?.carrier||''} ${p.shippingChoice?.service||''}`),
+     s?.trackingNumber&&h('p',{class:'meta'},`Rastreo ${s.trackingNumber}`))),
+  h('div',{class:'next'},h('div',{class:'hint'},hint),h('div',{class:'acts'},labelLinks,primary,menu)));
+}
+const fmtDate=d=>{try{return new Date(d+'T12:00:00').toLocaleDateString('es-MX',{weekday:'short',day:'numeric',month:'short'})}catch{return d}};
+function copy(t,msg){navigator.clipboard?.writeText(t).then(()=>toast(msg),()=>toast('No se pudo copiar'))}
+
+/* ---------- Diálogos (mismas acciones del servidor) ---------- */
+function openDialog(build){const f=$('dlgForm');f.replaceChildren(...build());$('dlg').showModal()}
+const closeDlg=()=>$('dlg').close();
+function dlgError(t){const e=$('dlgErr');if(e)e.textContent=t}
+function labelDialog(p,btn,accept=false){
+ const units=p.items.reduce((n,i)=>n+i.qty,0);
+ openDialog(()=>[h('h3',null,'Generar guía'),h('p',null,`Se comprará una guía REAL en Skydropx con cargo a tus créditos.`),
+  h('div',{class:'opt'},h('div',null,h('strong',null,`${p.shippingChoice?.carrier||''} · ${p.shippingChoice?.service||''}`),h('div',{class:'meta'},`${units} caja(s) · cobrado al cliente ${money(p.shippingCents)}`))),
+  h('div',{class:'err',id:'dlgErr'}),
+  h('div',{class:'foot'},h('button',{class:'btn ghost',type:'button',onclick:closeDlg},'Cancelar'),h('button',{class:'btn gold',type:'button',id:'dlgOk',onclick:async e=>{
+   e.target.disabled=true;e.target.textContent='Generando…';
+   try{const d=await call('/label',{purchaseId:p.id,operationId:opFor('l'+p.id),acceptCostDifference:accept});closeDlg();toast(d.outcome==='processing'?'Skydropx está generando la guía; actualiza en un minuto.':'✓ Guía generada');load(true)}
+   catch(err){if(err.error==='cost_difference'){closeDlg();costDialog(p,err)}else{dlgError(err.message);e.target.disabled=false;e.target.textContent='Reintentar'}}}},'Comprar guía'))]);
+}
+function costDialog(p,err){openDialog(()=>[h('h3',null,'El costo de la guía cambió'),h('p',null,`Cobrado al cliente: ${money(err.paidCents)} · Costo actual: ${money(err.currentCents)}.`),
+ h('div',{class:'foot'},h('button',{class:'btn ghost',type:'button',onclick:closeDlg},'No generar'),h('button',{class:'btn gold',type:'button',onclick:()=>{closeDlg();labelDialog(p,null,true)}},'Generar de todos modos'))])}
+function pickupDialog(p){
+ const t=new Date(Date.now()+86400000);if(t.getDay()===0)t.setDate(t.getDate()+1);const min=new Date(Date.now()+86400000).toISOString().slice(0,10),max=new Date(Date.now()+9*86400000).toISOString().slice(0,10);
+ const hours=['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00'];
+ const sel=(id,v)=>h('select',{id},hours.map(x=>h('option',{value:x,selected:x===v||null},x)));
+ openDialog(()=>[h('h3',null,'Programar recolección'),h('p',null,'La paquetería pasará al origen "INSTINTO Origen" en la ventana que elijas. Debe haber alguien para entregar la caja con la guía pegada.'),
+  h('label',{for:'pkDate'},'Día (hábil)'),h('input',{type:'date',id:'pkDate',min,max,value:t.toISOString().slice(0,10)}),
+  h('div',{style:'display:grid;grid-template-columns:1fr 1fr;gap:10px'},h('div',null,h('label',{for:'pkFrom'},'Desde'),sel('pkFrom','10:00')),h('div',null,h('label',{for:'pkTo'},'Hasta'),sel('pkTo','14:00'))),
+  h('p',{class:'meta'},'Mínimo 2 horas. Recomendado: 10:00–14:00.'),h('div',{class:'err',id:'dlgErr'}),
+  h('div',{class:'foot'},h('button',{class:'btn ghost',type:'button',onclick:closeDlg},'Cancelar'),h('button',{class:'btn gold',type:'button',onclick:async e=>{
+   const date=$('pkDate').value,from=$('pkFrom').value,to=$('pkTo').value;
+   if(!date)return dlgError('Elige el día.');if(new Date(date+'T12:00:00').getDay()===0)return dlgError('Elige un día hábil (no domingo).');
+   if(Number(to.slice(0,2))-Number(from.slice(0,2))<2)return dlgError('La ventana debe ser de al menos 2 horas.');
+   e.target.disabled=true;e.target.textContent='Solicitando…';
+   try{const d=await call('/pickup',{purchaseId:p.id,operationId:opFor('pk'+p.id+date+from+to),date,from,to});closeDlg();
+     toast(d.outcome==='scheduled'||d.outcome==='already_scheduled'?`✓ Recolección ${fmtDate(date)} ${from}–${to}${d.pickup?.requestNumber?' · solicitud '+d.pickup.requestNumber:''}`:'La paquetería no confirmó: '+(d.pickup?.error||''));load(true)}
+   catch(err){dlgError(err.message);e.target.disabled=false;e.target.textContent='Reintentar'}}},'Solicitar recolección'))]);
+}
+function cancelLabelDialog(p){openDialog(()=>[h('h3',null,'Cancelar guía'),h('p',null,`Se solicitará a Skydropx cancelar la guía ${p.shipment?.trackingNumber||''}. El reembolso del costo de la guía depende de la paquetería.`),
+ h('label',{for:'clReason'},'Motivo'),h('input',{id:'clReason',maxlength:'200',placeholder:'Ej. cambio de domicilio'}),h('div',{class:'err',id:'dlgErr'}),
+ h('div',{class:'foot'},h('button',{class:'btn ghost',type:'button',onclick:closeDlg},'Volver'),h('button',{class:'btn danger',type:'button',onclick:async e=>{const reason=$('clReason').value.trim();if(reason.length<3)return dlgError('Escribe el motivo.');
+  e.target.disabled=true;try{await call('/label/cancel',{purchaseId:p.id,operationId:opFor('lc'+p.id),reason});closeDlg();toast('Cancelación de guía solicitada');load(true)}catch(err){dlgError(err.message);e.target.disabled=false}}},'Cancelar guía'))])}
+function cancelDialog(p){openDialog(()=>[h('h3',null,'Cancelar pedido '+folio(p)),h('p',null,'Queda registrado quién y por qué. Los materiales nunca se reponen automáticamente.'),
+ h('label',{for:'cReason'},'Motivo (obligatorio)'),h('textarea',{id:'cReason',rows:'2',maxlength:'300',placeholder:'Ej. el cliente canceló antes de elaborar'}),
+ h('label',{class:'opt'},h('input',{type:'checkbox',id:'cRefund',checked:true}),h('span',null,h('strong',null,`Reembolsar ${money(p.totalCents)} por Mercado Pago`),h('br'),h('span',{class:'meta'},'Devuelve el dinero al cliente. No se puede deshacer.'))),
+ h('label',{class:'opt'},h('input',{type:'checkbox',id:'cRestock'}),h('span',null,h('strong',null,'Reponer la esencia al inventario'),h('br'),h('span',{class:'meta'},'Solo para frascos que aún no se elaboran (siguen en "Pedido" o "Comprado proveedor").'))),
+ h('div',{class:'err',id:'dlgErr'}),
+ h('div',{class:'foot'},h('button',{class:'btn ghost',type:'button',onclick:closeDlg},'Volver'),h('button',{class:'btn danger',type:'button',onclick:async e=>{
+  const reason=$('cReason').value.trim();if(reason.length<5)return dlgError(MSG.reason_required);const refund=$('cRefund').checked,restock=$('cRestock').checked;
+  if(e.target.dataset.confirm!=='1'){e.target.dataset.confirm='1';e.target.textContent=refund?'Confirmar cancelación y reembolso':'Confirmar cancelación';return}
+  e.target.disabled=true;try{const d=await call('/cancel',{purchaseId:p.id,operationId:opFor('c'+p.id),refund:refund?'full':'none',restockEssence:restock,reason});closeDlg();
+   const g=Object.values(d.restocked||{}).reduce((s,x)=>s+x,0);toast(`Pedido cancelado${refund?' y reembolsado':''}${g?` · ${g} g de esencia repuestos`:''}`);load(true)}catch(err){dlgError(err.message);e.target.disabled=false}}},'Cancelar pedido'))])}
+
+/* ---------- Controles ---------- */
+$('q').value=filter.q;$('range').value=filter.range;$('sort').value=filter.sort;$('showTest').checked=filter.test;
+let qt;$('q').addEventListener('input',e=>{clearTimeout(qt);qt=setTimeout(()=>{filter.q=e.target.value;saveFilter();renderList()},150)});
+$('range').addEventListener('change',e=>{filter.range=e.target.value;saveFilter();render()});
+$('sort').addEventListener('change',e=>{filter.sort=e.target.value;saveFilter();renderList()});
+$('showTest').addEventListener('change',e=>{filter.test=e.target.checked;saveFilter();render()});
+$('refresh').addEventListener('click',()=>load());
+$('notifyBtn').addEventListener('click',async()=>{if(!('Notification' in window))return toast('Este navegador no admite avisos');const r=await Notification.requestPermission();toast(r==='granted'?'🔔 Avisos activados en este navegador':'Avisos no permitidos')});
+$('login').addEventListener('click',async()=>{try{await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())}catch(e){toast(e.message)}});
+$('logout').addEventListener('click',()=>auth.signOut());
+document.addEventListener('click',e=>{document.querySelectorAll('details.more[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&auth.currentUser)load(true)});
+auth.onAuthStateChanged(user=>{const ok=user&&InstintoAccess.authorized(user);
+ $('loginBox').classList.toggle('hidden',!!ok);$('app').classList.toggle('hidden',!ok);$('logout').classList.toggle('hidden',!ok);$('refresh').disabled=!ok;
+ clearInterval(timer);if(ok){load();timer=setInterval(()=>load(true),60000)}else{DATA={purchases:[],alerts:[]}}});
+
+/* ---------- Herramientas V9 (solo lectura, sin cambios funcionales) ---------- */
+function t(parent,tag,str){const el=document.createElement(tag);el.textContent=String(str??'');parent.appendChild(el);return el}
+async function loadV9(){const user=auth.currentUser;if(!user)return;$('status').textContent='Consultando pedidos de prueba…';
+ try{const res=await fetch(STORE_API,{headers:{Authorization:'Bearer '+await user.getIdToken()},cache:'no-store'});const data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);
+  const body=$('orders');body.replaceChildren();for(const p of data.orders||[]){const r=body.insertRow();t(r.insertCell(),'strong',p.id);t(r.insertCell(),'span',[p.address?.firstName,p.address?.lastName].filter(Boolean).join(' '));
+   t(r.insertCell(),'span',(p.items||[]).map(i=>`${i.qty}× ${i.name} ${i.size} ml`).join(', '));t(r.insertCell(),'span',p.status)}
+  $('status').textContent=`${(data.orders||[]).length} pedido(s) de prueba. Solo lectura.`}catch(e){$('status').textContent=e.message}}
+async function auditInventory(){const user=auth.currentUser;if(!user)return;$('auditStatus').textContent='Consultando inventario…';$('auditResult').replaceChildren();
+ try{const res=await fetch(STORE_API.replace('/api/admin/orders','/api/admin/inventory-audit'),{headers:{Authorization:'Bearer '+await user.getIdToken()},cache:'no-store'});const data=await res.json();if(!res.ok)throw Error(data.error||'Error '+res.status);
+  const p=$('auditResult');for(const [name,val] of [['Referencias en catálogo',data.catalogCount],['Pedidos administrativos',data.adminOrdersCount],['Presentaciones de 60 ml posibles',data.available60],['Referencias sin stock',data.zeroStock],['Inconsistencias (máx. 80)',data.issues.length]]){
+   const row=document.createElement('div');row.style.cssText='display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #eee';t(row,'span',name);t(row,'strong',val===null?'—':val);p.appendChild(row)}
+  $('auditStatus').textContent='Diagnóstico: '+new Date(data.checkedAt).toLocaleString('es-MX')}catch(e){$('auditStatus').textContent=e.message}}
+$('v9load').addEventListener('click',loadV9);$('auditBtn').addEventListener('click',auditInventory);
 </script></body></html>
