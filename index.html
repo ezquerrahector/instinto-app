@@ -914,7 +914,9 @@ function calcularStockPedidos(){
   cat.forEach(r=>{ stockDisp[r.id]=Math.max(0,parseFloat(r.stockGramos)||0); });
   const stockUsadoPorPedido={};
   const stockTemporal={...stockDisp};
-  // Los pedidos Web pagados ya descontaron su esencia en el servidor: no apartan stock otra vez.
+  // Pedidos con esencia ya descontada (p. ej. ventas Web pagadas): tienen su esencia asegurada,
+  // se muestran "Con stock" y NO vuelven a restar gramos en la simulación.
+  peds.forEach(p=>{if((p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.esenciaDescontada===true)stockUsadoPorPedido[p.id]='ok';});
   [...peds].filter(p=>(p.estatus==='Pedido'||p.estatus==='Comprado proveedor')&&p.cliente!=='Para stock'&&p.esenciaDescontada!==true)
     .sort((a,b)=>pedidoNumero(a)-pedidoNumero(b))
     .forEach(p=>{
