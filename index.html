@@ -356,6 +356,7 @@ nav::-webkit-scrollbar{display:none}
       <option value="">Familia olfativa: todas</option>
       <option>Fresca</option><option>Dulce</option><option>Floral</option><option>Amaderada</option><option>Aromática</option><option>Oriental</option>
       <option value="__sin">Sin perfil olfativo</option>
+      <option value="__aprox">Perfil por revisar (aproximado)</option>
     </select>
     <select onchange="filterCatLinea(this.value)">
       <option value="">Todas las líneas</option>
@@ -578,7 +579,7 @@ const escH = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','
 const tienePerfil = r => !!(r && (r.familia||r.notasSalida||r.notasCorazon||r.notasFondo));
 function htmlPerfil(r, compacto){
   if(!tienePerfil(r)) return compacto?'':'<div class="card-sub" style="margin-top:3px;color:var(--text3)">Sin perfil olfativo</div>';
-  const chips=`<div class="olf-chips">${String(r.familia||'').split(',').map(x=>x.trim()).filter(Boolean).map(f=>`<span class="olf-chip">${escH(f)}</span>`).join('')}${r.intensidad?`<span class="olf-chip soft">${escH(r.intensidad)}</span>`:''}${r.momento?`<span class="olf-chip soft">${escH(r.momento)}</span>`:''}</div>`;
+  const chips=`<div class="olf-chips">${r.perfilAproximado?'<span class="olf-chip soft" title="Familia aproximada, sin notas. Edita la fragancia para confirmarla.">Por revisar</span>':''}${String(r.familia||'').split(',').map(x=>x.trim()).filter(Boolean).map(f=>`<span class="olf-chip">${escH(f)}</span>`).join('')}${r.intensidad?`<span class="olf-chip soft">${escH(r.intensidad)}</span>`:''}${r.momento?`<span class="olf-chip soft">${escH(r.momento)}</span>`:''}</div>`;
   if(compacto) return chips;
   const fila=(t,v)=>v?`<div><b>${t}:</b> ${escH(v)}</div>`:'';
   return chips+((r.notasSalida||r.notasCorazon||r.notasFondo)?`<details class="olf-notas"><summary>Notas olfativas</summary>${fila('Salida',r.notasSalida)}${fila('Corazón',r.notasCorazon)}${fila('Fondo',r.notasFondo)}</details>`:'');
@@ -1498,7 +1499,7 @@ function sortCat(v){_catSort=v||'az';renderCat();}
 function renderCat(){
   let list=cat.map(r=>({...r,_stats:fragStats(r)})).filter(r=>{
     const m=!_catTxt||[r.referencia,r.disenador,r.base,r.id,r.familia,r.notasSalida,r.notasCorazon,r.notasFondo].some(v=>norm(v).includes(norm(_catTxt)));
-    const fam=!_catFam||(_catFam==='__sin'?!tienePerfil(r):norm(r.familia).includes(norm(_catFam)));
+    const fam=!_catFam||(_catFam==='__sin'?!tienePerfil(r):_catFam==='__aprox'?!!r.perfilAproximado:norm(r.familia).includes(norm(_catFam)));
     return m&&fam&&(!_catLin||r.linea===_catLin)&&passStockFilter(r._stats,_catStock)&&passProvFilter(r._stats,_catProv)&&passDemandFilter(r._stats,_catDemand);
   });
   sortFragList(list,_catSort);
@@ -2102,22 +2103,27 @@ function completarPerfilesOlfativos(){
   const cambios=[];let sinSug=0;
   cat.forEach(r=>{const sug=InstintoPerfiles.suggest(r);if(!sug){if(!tienePerfil(r))sinSug++;return;}
     const campos=CAMPOS_OLF.filter(c=>!String(r[c]||'').trim()&&sug[c]);if(campos.length)cambios.push({r,sug,campos});});
+  const nAprox=cambios.filter(x=>x.sug.aproximado).length, nComp=cambios.length-nAprox;
   const mc=document.getElementById('modal-content'),overlay=document.getElementById('modal-overlay');
   mc.innerHTML=`<div class="modal-handle"></div><div class="modal-title">🌿 Completar perfiles olfativos</div>
     <p style="font-size:13px;color:var(--text2);line-height:1.6">Se llenarán <strong>solo los campos vacíos</strong> con información sugerida de la fragancia original (familia, notas de salida, corazón y fondo, intensidad y momento). <strong>No se cambia nada de lo que ya capturaste</strong>, ni stock, ni precios, ni pedidos. Después puedes editar cada fragancia.</p>
     <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;margin:10px 0">
-      <div>✓ <strong>${cambios.length}</strong> fragancia(s) se completarán</div>
-      <div style="color:var(--text2)">• ${sinSug} sin sugerencia disponible (se capturan a mano)</div>
+      <div>✓ <strong>${nComp}</strong> con familia y notas de salida, corazón y fondo</div>
+      <label style="display:flex;gap:8px;align-items:flex-start;margin-top:6px;cursor:pointer"><input type="checkbox" id="olf-aprox" ${nAprox?'checked':'disabled'} onchange="document.getElementById('olf-btn').textContent='Completar '+(${nComp}+(this.checked?${nAprox}:0))"/>
+        <span><strong>${nAprox}</strong> solo con familia, intensidad y momento <em>aproximados</em> (sin notas). Quedan marcadas "Por revisar" para que las confirmes.</span></label>
+      <div style="color:var(--text2);margin-top:6px">• ${sinSug} sin sugerencia disponible (se capturan a mano)</div>
     </div>
     <div style="max-height:180px;overflow:auto;font-size:11.5px;color:var(--text2)">${cambios.slice(0,60).map(x=>`<div>${escH(x.r.id)} · ${escH(x.r.referencia)} — ${escH(x.sug.familia)}</div>`).join('')}${cambios.length>60?`<div>… y ${cambios.length-60} más</div>`:''}</div>
     <div class="modal-footer"><button class="btn" type="button" onclick="closeModal()">Cancelar</button>
-    <button class="btn btn-gold" type="button" ${cambios.length?'':'disabled'} onclick="aplicarPerfilesOlfativos()">Completar ${cambios.length}</button></div>`;
+    <button class="btn btn-gold" type="button" id="olf-btn" ${cambios.length?'':'disabled'} onclick="aplicarPerfilesOlfativos()">Completar ${cambios.length}</button></div>`;
   window._olfPendientes=cambios;overlay.classList.add('open');
 }
 function aplicarPerfilesOlfativos(){
-  const cambios=window._olfPendientes||[];let n=0;
+  const incluirAprox=!!document.getElementById('olf-aprox')?.checked;
+  const cambios=(window._olfPendientes||[]).filter(x=>incluirAprox||!x.sug.aproximado);let n=0;
   cambios.forEach(({r,sug})=>{const cur=cat.find(x=>x.id===r.id);if(!cur)return;let tocado=false;
-    CAMPOS_OLF.forEach(c=>{if(!String(cur[c]||'').trim()&&sug[c]){cur[c]=sug[c];tocado=true;}});if(tocado)n++;});
+    CAMPOS_OLF.forEach(c=>{if(!String(cur[c]||'').trim()&&sug[c]){cur[c]=sug[c];tocado=true;}});
+    if(tocado){n++;if(sug.aproximado&&!cur.notasSalida&&!cur.notasCorazon&&!cur.notasFondo)cur.perfilAproximado=true;}});
   window._olfPendientes=null;closeModal();save();fbSave();renderCat();renderInv();
   toast(`✓ Perfil olfativo agregado a ${n} fragancia(s)`);
 }
@@ -2137,6 +2143,7 @@ function saveFrag(existingId){
   // Perfil olfativo: se guarda tal cual lo capturaste (vacío = sin dato).
   const olf={familia:'fc-familia',notasSalida:'fc-salida',notasCorazon:'fc-corazon',notasFondo:'fc-fondo',intensidad:'fc-intensidad',momento:'fc-momento'};
   for(const [campo,el] of Object.entries(olf)){const v=(document.getElementById(el)?.value||'').trim().slice(0,200);if(v)data[campo]=v;else if(existingId)data[campo]='';}
+  if(existingId) data.perfilAproximado=false; // al guardar desde el formulario el perfil queda revisado
   if(existingId){
     const idx=cat.findIndex(x=>x.id===existingId);
     if(idx>=0) cat[idx]={...cat[idx],...data};
