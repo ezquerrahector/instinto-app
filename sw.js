@@ -1,4 +1,4 @@
-const CACHE = 'instinto-v34-cancelados';
+const CACHE = 'instinto-v35-password';
 // Solo cachear index.html — no incluir manifest.json ni '/' que pueden fallar
 // en GitHub Pages o servidores sin esos archivos exactos.
 const ASSETS = ['/instinto-app/index.html', '/instinto-app/assets/safe-sync.js', '/instinto-app/assets/admin-access.js', '/instinto-app/assets/perfiles-olfativos.js'];
