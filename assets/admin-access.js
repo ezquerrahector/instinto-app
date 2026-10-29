@@ -75,6 +75,13 @@
       catch(e){alert(e.code==='auth/requires-recent-login'?'Por seguridad, cierra sesión, entra de nuevo con el enlace del correo y vuelve a intentarlo.':e.code==='auth/weak-password'?'La contraseña es muy débil; usa al menos 8 caracteres con letras y números.':'No se pudo guardar la contraseña: '+(e.code||e.message));}};
     document.body.append(pwd);
   }
+  // Los botones de sesión van discretos en el encabezado (junto al logo) para no tapar botones de guardar.
+  function placeButtons(){
+    const host=document.querySelector('.logo');if(!host||account.dataset.placed)return;
+    const wrap=document.createElement('span');wrap.style.cssText='display:inline-flex;gap:10px;margin-left:10px;align-items:center';
+    for(const b of [pwd,account]){b.style.cssText='background:none;border:0;padding:0;color:var(--text2,#888);font-size:11px;text-decoration:underline;cursor:pointer;position:static';wrap.append(b);}
+    pwd.textContent='Contraseña';host.append(wrap);account.dataset.placed='1';
+  }
   function errorText(e) {
     if(e.code==='auth/popup-closed-by-user')return 'La ventana se cerró. Puedes volver a intentar cuando quieras.';
     if(e.code==='auth/operation-not-allowed')return 'Este método de acceso aún no está habilitado. Contacta al administrador.';
@@ -93,7 +100,7 @@
       auth.onAuthStateChanged(user=>{
         if(authorized(user)) {
           overlay.style.display='none';resolveReady(user);
-          account.style.display='block';pwd.style.display=window===window.top?'block':'none';
+          placeButtons();const top=window===window.top;account.style.display=top?'inline-block':'none';pwd.style.display=top?'inline-block':'none';
           window.dispatchEvent(new CustomEvent('instinto-auth-ready'));
         } else {
           overlay.style.display='grid';
