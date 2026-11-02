@@ -7,6 +7,7 @@ const checkout = require('../payments/checkout');
 const {reconcilePayment} = require('../payments/reconcile');
 const m = require('../payments/maintenance');
 const actions = require('../payments/admin-actions');
+const gifts = require('../payments/gifts');
 const PROJECT = 'demo-instinto-v10';
 if (process.env.FIRESTORE_EMULATOR_HOST !== '127.0.0.1:8085') throw Error('Local emulator required');
 let app, db;
@@ -221,6 +222,48 @@ test('cancelling with an unshipped label also cancels the label; our own refund 
   const before = (await db.collection('instinto_alerts').where('type', '==', 'web_order_integrity').get()).size;
   await m.verifyIntegrity({db, now: T0 + 3800000});
   assert.equal((await db.collection('instinto_alerts').where('type', '==', 'web_order_integrity').get()).size, before);
+});
+
+test('gift: pay, code becomes a balance coupon, a fully covered order skips Mercado Pago, expiry/cancel restore the balance', async () => {
+  const mp = fakeMp(), s = fakeShipping();
+  const g = await gifts.createGift({db, mp, body: {requestId: 'gift_' + 'a'.repeat(20), productoId: 'A', incluirEnvio: true, deNombre: 'Héctor', deCorreo: 'h@example.com',
+    paraNombre: 'Ana', paraTel: '4771234567', mensaje: 'Feliz cumpleaños'}, clientKey: 'ip9', webhookUrl: 'https://us-central1-instinto-fragancias.cloudfunctions.net/mpWebhook', now: T0});
+  assert.ok(g.token && g.initPoint);
+  const gid = (await db.collection('instinto_web_gifts').get()).docs[0].id;
+  const pay = {id: '7001', external_reference: gid, metadata: {instinto_gift: gid}, collector_id: 123, live_mode: false, status: 'approved', currency_id: 'MXN', transaction_amount: 460,
+    date_last_updated: new Date(T0).toISOString()};
+  const r = await gifts.reconcileGift(db, pay, {now: T0 + 1000});
+  assert.equal(r.outcome, 'applied');
+  const coupon = (await db.doc('instinto_coupons/' + r.code).get()).data();
+  assert.equal(coupon.balanceCents, 46000); assert.equal(coupon.productId, 'A');
+  assert.equal((await gifts.reconcileGift(db, pay, {now: T0 + 2000})).outcome, 'already_applied');
+  // Canje: el perfume A + envío quedan cubiertos → pedido pagado sin Mercado Pago.
+  const items = [{id: 'A', size: 60, qty: 1}];
+  const q = await checkout.quote({db, shipping: s, body: {items, address}, clientKey: 'ip1', now: T0});
+  const res = await checkout.checkout({db, mp, body: {items, address, quoteId: q.quoteId, rateId: q.options[0].id, requestId: 'req_' + 'g'.repeat(20), coupon: r.code.toLowerCase()},
+    clientKey: 'ip1', webhookUrl: 'https://us-central1-instinto-fragancias.cloudfunctions.net/mpWebhook', now: T0 + 5000});
+  assert.equal(res.paid, true); assert.equal(res.total, 0);
+  const pr = (await db.doc('instinto_web_purchases/' + res.purchaseId).get()).data();
+  assert.equal(pr.state, 'paid'); assert.equal(pr.coupon.state, 'consumed'); assert.equal(pr.adminOrderIds.length, 1);
+  assert.equal((await db.doc('instinto_coupons/' + r.code).get()).data().balanceCents, 46000 - 36125);
+  // Cancelación: no hay dinero que devolver; el saldo regresa al regalo.
+  const c = await actions.cancelPurchase({db, mp, identity: ident('ezquerrahector@gmail.com'), body: {purchaseId: res.purchaseId, operationId: 'op_' + 'z'.repeat(20), refund: 'full', restockEssence: true, reason: 'Prueba de regalo'}, now: T0 + 9000});
+  assert.equal(c.outcome, 'cancelled'); assert.equal(mp.refunds.length, 0);
+  assert.equal((await db.doc('instinto_coupons/' + r.code).get()).data().balanceCents, 46000);
+  // Un pedido mayor que el saldo paga la diferencia en Mercado Pago; si vence sin pago, el saldo se libera.
+  const items2 = [{id: 'A', size: 60, qty: 1}, {id: 'B', size: 60, qty: 1}];
+  const q2 = await checkout.quote({db, shipping: s, body: {items: items2, address}, clientKey: 'ip1', now: T0 + 10000});
+  const res2 = await checkout.checkout({db, mp, body: {items: items2, address, quoteId: q2.quoteId, rateId: q2.options[0].id, requestId: 'req_' + 'h'.repeat(20), coupon: r.code},
+    clientKey: 'ip1', webhookUrl: 'https://us-central1-instinto-fragancias.cloudfunctions.net/mpWebhook', now: T0 + 10000});
+  assert.equal(res2.total, 620 + 51.25 - 460); assert.ok(res2.initPoint);
+  assert.equal((await db.doc('instinto_coupons/' + r.code).get()).data().balanceCents, 0);
+  const p2 = (await db.doc('instinto_web_purchases/' + res2.purchaseId).get()).data();
+  assert.equal(await m.releaseReservation(db, p2.id, p2.expiresAt + 1), true);
+  assert.equal((await db.doc('instinto_coupons/' + r.code).get()).data().balanceCents, 46000);
+  // Admin: cupón de 10% creado desde el panel.
+  await actions.saveCoupon({db, identity: ident('osmararobles@hotmail.com'), body: {code: 'bienvenida10', type: 'percent', value: 10, create: true}, now: T0});
+  const chk = await checkout.couponCheck({db, body: {coupon: 'BIENVENIDA10', items: [{id: 'A', size: 60, qty: 1}]}, clientKey: 'ip1', now: T0});
+  assert.equal(chk.discount, 31);
 });
 
 test('integrity check detects deleted or edited web orders', async () => {

@@ -79,6 +79,22 @@ details.legacy{margin-top:26px;background:var(--paper);border:1px solid var(--li
 <section id="loginBox" class="login"><p>Inicia sesión con una cuenta autorizada para ver las ventas de la tienda.</p><button class="btn" id="login" type="button">Acceder con Google</button></section>
 
 <main id="app" class="hidden">
+  <div class="chips" style="margin-bottom:12px" role="tablist" aria-label="Sección"><button class="chip on" type="button" id="tabOrders" role="tab" aria-selected="true">📦 Pedidos y ventas</button><button class="chip" type="button" id="tabCoupons" role="tab" aria-selected="false">🎟️ Cupones y regalos</button></div>
+  <section id="couponsView" class="hidden">
+    <div class="filters"><h3 style="margin:0;font:500 16px Cinzel,serif;letter-spacing:.06em">Crear o editar cupón</h3>
+      <div class="row"><input type="search" id="cCode" placeholder="CÓDIGO (ej. BIENVENIDA10)" maxlength="24" style="text-transform:uppercase;flex:1;min-width:160px">
+        <select id="cType"><option value="percent">% de descuento</option><option value="amount">$ monto fijo</option></select>
+        <input type="search" id="cValue" inputmode="decimal" placeholder="Valor (10 = 10% o $10)" style="width:170px"></div>
+      <div class="row"><input type="search" id="cDesc" placeholder="Descripción (para ti)" maxlength="120" style="flex:1;min-width:180px">
+        <input type="search" id="cProduct" placeholder="Código de perfume (vacío = todos)" style="width:230px">
+        <input type="search" id="cUses" inputmode="numeric" placeholder="Usos máx. (vacío = ilimitado)" style="width:210px">
+        <label style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--muted)">Vence <input type="date" id="cExp"></label></div>
+      <div class="row"><button class="btn" type="button" id="cSave">Guardar cupón</button><span class="meta" id="cMsg"></span></div>
+      <p class="meta" style="margin:0">Los cupones de % o monto aplican solo a perfumes (no al envío). Los códigos de regalo se crean solos al pagarse un regalo y funcionan como saldo.</p></div>
+    <h3 style="font:500 15px Cinzel,serif;letter-spacing:.06em;margin:18px 0 8px">Cupones</h3><div class="list" id="cList"></div>
+    <h3 style="font:500 15px Cinzel,serif;letter-spacing:.06em;margin:18px 0 8px">Regalos</h3><div class="list" id="gList"></div>
+  </section>
+  <section id="ordersView">
   <div id="callout" class="callout"></div>
   <div class="kpis" id="kpis"></div>
   <div class="alerts" id="alerts"></div>
@@ -100,6 +116,7 @@ details.legacy{margin-top:26px;background:var(--paper);border:1px solid var(--li
     <p id="status" class="meta"></p><table class="table"><tbody id="orders"></tbody></table>
     <p id="auditStatus" class="meta"></p><div id="auditResult"></div>
   </details>
+  </section>
 </main>
 </div>
 
@@ -285,6 +302,7 @@ function card(p){
    h('div',null,h('h4',null,'Cliente y entrega'),h('p',null,h('strong',null,`${a.firstName||''} ${a.lastName||''}`)),h('p',{class:'meta'},`${a.phone||''} · ${a.email||''}`),h('p',{class:'meta'},addr),a.references&&h('p',{class:'meta'},'Ref: '+a.references)),
    h('div',null,h('h4',null,'Frascos'),p.items.map(i=>h('div',null,h('p',null,`${i.qty} × ${i.brand} · ${i.name} · ${i.size} ml`),i.gift&&h('p',{class:'gift'},'🎁 Regalo'+(i.giftText?': '+i.giftText:'')))),h('p',{class:'meta'},'Pedido admin #'+(p.adminOrderIds||[]).join(', #'))),
    h('div',null,h('h4',null,'Pago y envío'),h('p',null,h('strong',null,money(p.totalCents))),h('p',{class:'meta'},`Envío ${money(p.shippingCents)} · ${p.shippingChoice?.carrier||''} ${p.shippingChoice?.service||''}`),
+     p.discountCents>0&&h('p',{class:'meta'},`${p.coupon?.kind==='gift'?'🎁 Saldo de regalo':'🎟️ Cupón'} ${p.coupon?.code||''}: −${money(p.discountCents)}`),
      s?.trackingNumber&&h('p',{class:'meta'},`Rastreo ${s.trackingNumber}`))),
   h('div',{class:'next'},h('div',{class:'hint'},hint),h('div',{class:'acts'},labelLinks,primary,menu)));
 }
@@ -351,6 +369,38 @@ $('login').addEventListener('click',async()=>{try{await auth.signInWithPopup(new
 $('logout').addEventListener('click',()=>auth.signOut());
 document.addEventListener('click',e=>{document.querySelectorAll('details.more[open]').forEach(d=>{if(!d.contains(e.target))d.removeAttribute('open')})});
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&auth.currentUser)load(true)});
+
+/* ---------- Cupones y regalos (V10.5) ---------- */
+function showTab(c){$('couponsView').classList.toggle('hidden',!c);$('ordersView').classList.toggle('hidden',c);$('tabCoupons').classList.toggle('on',c);$('tabOrders').classList.toggle('on',!c);
+ $('tabCoupons').setAttribute('aria-selected',String(c));$('tabOrders').setAttribute('aria-selected',String(!c));if(c)loadCoupons()}
+$('tabOrders').addEventListener('click',()=>showTab(false));$('tabCoupons').addEventListener('click',()=>showTab(true));
+const GST={awaiting_payment:['Esperando pago','gray'],paid:['Pagado','green'],expired:['Sin pago','gray']};
+async function loadCoupons(){try{const d=await call('/coupons');
+ $('cList').replaceChildren(...(d.coupons.filter(c=>c.kind!=='gift').map(c=>h('div',{class:'card',style:'padding:12px 14px'},h('div',{class:'ch'},
+   h('div',null,h('div',{class:'folio'},c.code),h('div',{class:'meta'},`${c.type==='percent'?c.value+'%':money(c.value*100)} de descuento${c.productId?' · solo '+c.productId:''} · usos ${c.uses||0}${c.usesMax?' de '+c.usesMax:''}${c.expiresAt?' · vence '+new Date(c.expiresAt).toLocaleDateString('es-MX'):''}${c.description?' · '+c.description:''}`)),
+   h('div',{class:'acts'},h('span',{class:'pill '+(c.active?'green':'gray')},c.active?'Activo':'Pausado'),
+     h('button',{class:'btn ghost sm',type:'button',onclick:()=>editCoupon(c)},'Editar'),
+     h('button',{class:'btn ghost sm',type:'button',onclick:async e=>{e.target.disabled=true;try{await call('/coupons/toggle',{code:c.code,active:!c.active});loadCoupons()}catch(err){toast(err.message)}}},c.active?'Pausar':'Activar'),
+     h('button',{class:'btn ghost sm',type:'button',onclick:()=>copy(c.code,'Código copiado')},'Copiar')))))).concat(d.coupons.some(c=>c.kind!=='gift')?[]:[h('div',{class:'empty'},'Aún no hay cupones. Crea el primero arriba.')]));
+ const byCode=new Map(d.coupons.filter(c=>c.kind==='gift').map(c=>[c.code,c]));
+ $('gList').replaceChildren(...(d.gifts.length?d.gifts.map(g=>{const c=byCode.get(g.code),[pl,pc]=GST[g.state]||[g.state,'gray'];
+  const used=c?c.originalCents-c.balanceCents:0;
+  return h('div',{class:'card',style:'padding:12px 14px'},h('div',{class:'ch'},h('div',null,
+    h('div',{class:'folio'},`${g.from.name} → ${g.to.name}`),
+    h('div',{class:'meta'},`${g.mode==='open'?'Saldo '+money(g.valueCents):g.productName}${g.shippingIncluded?' + envío':''} · pagado ${money(g.totalCents)} · ${when(g.paidAt||g.createdAt)}`),
+    h('div',{class:'meta'},`${g.code?'Código '+g.code+' · ':''}${c?`saldo ${money(c.balanceCents)}${used?' (usado '+money(used)+')':''}`:''}${g.to.email?' · correo '+(g.delivered?'enviado':g.deliverAt?'programado '+new Date(g.deliverAt).toLocaleDateString('es-MX'):'pendiente'):' · por WhatsApp'}`),
+    g.message&&h('div',{class:'meta'},'“'+g.message+'”')),
+   h('div',{class:'acts'},g.reviewRequired&&h('span',{class:'pill red'},'Revisar pago'),c&&!c.active&&h('span',{class:'pill gray'},'Desactivado'),h('span',{class:'pill '+pc},pl),
+     g.code&&h('button',{class:'btn ghost sm',type:'button',onclick:()=>copy(g.code,'Código copiado')},'Copiar código'))))}):[h('div',{class:'empty'},'Aún no hay regalos.')]))
+}catch(e){$('cList').replaceChildren(h('div',{class:'empty'},e.message))}}
+function editCoupon(c){$('cCode').value=c.code;$('cType').value=c.type;$('cValue').value=c.value;$('cDesc').value=c.description||'';$('cProduct').value=c.productId||'';$('cUses').value=c.usesMax||'';
+ $('cExp').value=c.expiresAt?new Date(c.expiresAt-6*3600000).toISOString().slice(0,10):'';$('cCode').focus()}
+$('cSave').addEventListener('click',async e=>{const m=$('cMsg');e.target.disabled=true;m.textContent='Guardando…';
+ try{await call('/coupons/save',{code:$('cCode').value,type:$('cType').value,value:Number($('cValue').value),description:$('cDesc').value,productId:$('cProduct').value.trim().toUpperCase()||null,
+   usesMax:$('cUses').value?Number($('cUses').value):null,expires:$('cExp').value||null,active:true});
+  m.textContent='✓ Cupón guardado';['cCode','cValue','cDesc','cProduct','cUses','cExp'].forEach(id=>$(id).value='');loadCoupons()}
+ catch(err){m.textContent={coupon_code_invalid:'El código debe tener de 4 a 24 letras, números o guiones.',coupon_value_invalid:'Revisa el valor (1–100 % o un monto).',coupon_is_gift:'Ese código es de un regalo; no se puede editar aquí.',coupon_uses_invalid:'Revisa los usos máximos.'}[err.error]||err.message}
+ finally{e.target.disabled=false}});
 auth.onAuthStateChanged(user=>{const ok=user&&InstintoAccess.authorized(user);
  $('loginBox').classList.toggle('hidden',!!ok);$('app').classList.toggle('hidden',!ok);$('logout').classList.toggle('hidden',!ok);$('refresh').disabled=!ok;
  clearInterval(timer);if(ok){load();timer=setInterval(()=>load(true),60000)}else{DATA={purchases:[],alerts:[]}}});

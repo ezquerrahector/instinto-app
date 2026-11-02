@@ -28,7 +28,8 @@ const {createShippingClient} = require('./shipping');
 const checkout = require('./checkout');
 const maintenance = require('./maintenance');
 const actions = require('./admin-actions');
-const {createMailer} = require('./email');
+const {createMailer, sendGiftEmail} = require('./email');
+const gifts = require('./gifts');
 const mailerFactory = () => { const raw = smtp.value(); if (!raw || raw === 'PENDIENTE_CONFIGURAR') throw Error('smtp_not_configured'); return createMailer({smtp: JSON.parse(raw)}); };
 
 async function runtime() { return (await db.doc('instinto_private/runtime').get()).data() || {}; }
@@ -75,6 +76,14 @@ exports.checkoutApi = onRequest({region: REGION, timeoutSeconds: 45, memory: '25
       return res.json(await checkout.quote({db, shipping: shipping(), body: req.body, clientKey: clientKey(req)}));
     if (path === '/api/checkout' && req.method === 'POST')
       return res.status(201).json(await checkout.checkout({db, mp: await mpClient(), body: req.body, clientKey: clientKey(req), webhookUrl: WEBHOOK_URL}));
+    if (path === '/api/coupon/check' && req.method === 'POST')
+      return res.json(await checkout.couponCheck({db, body: req.body, clientKey: clientKey(req)}));
+    if (path === '/api/gift' && req.method === 'POST')
+      return res.status(201).json(await gifts.createGift({db, mp: await mpClient(), body: req.body, clientKey: clientKey(req), webhookUrl: WEBHOOK_URL}));
+    if (path === '/api/gift' && req.method === 'GET')
+      return res.json(await gifts.viewGift({db, t: String(req.query.t || '')}));
+    if (path === '/api/gift/edit' && req.method === 'POST')
+      return res.json(await gifts.editGift({db, body: req.body, clientKey: clientKey(req)}));
     if (path === '/api/checkout/status' && req.method === 'GET')
       return res.json(await checkout.status({db, purchaseId: req.query.id, binding: req.query.b}));
     return res.status(404).json({error: 'not_found'});
@@ -105,6 +114,12 @@ exports.mpWebhook = onRequest({region: REGION, timeoutSeconds: 45, memory: '256M
     const config = await runtime();
     if (config.reconciliationEnabled === true && config.compatibleWritesValidated === true) {
       try {
+        if (/^g[a-f0-9]{24}$/.test(String(payment.external_reference || ''))) {
+          const r = await gifts.reconcileGift(db, payment);
+          await db.collection('instinto_mp_webhook_inbox').doc('payment_' + id).set({integrationState: 'gift_' + r.outcome}, {merge: true});
+          if (r.outcome === 'review_required') await maintenance.alert(db, 'payment_' + id, {type: 'payment_review', paymentId: id, purchaseId: String(payment.external_reference), reason: r.reason});
+          return res.status(200).send('received');
+        }
         const result = await reconcilePayment(db, payment);
         await db.collection('instinto_mp_webhook_inbox').doc('payment_' + id).set({integrationState: result.outcome, reason: result.reason || null}, {merge: true});
         if (result.outcome === 'review_required') await maintenance.alert(db, 'payment_' + id, {type: 'payment_review', paymentId: id,
@@ -141,6 +156,9 @@ exports.webAdmin = onRequest({region: REGION, timeoutSeconds: 60, memory: '256Mi
     if (path === '/cancel' && req.method === 'POST') return res.json(await actions.cancelPurchase({...ctx, mp: await mpClient(), shipping: shipping()}));
     if (path === '/pickup' && req.method === 'POST') return res.json(await actions.schedulePickup({...ctx, shipping: shipping()}));
     if (path === '/alert/resolve' && req.method === 'POST') return res.json(await actions.resolveAlert(ctx));
+    if (path === '/coupons' && req.method === 'GET') return res.json(await actions.listCoupons(ctx));
+    if (path === '/coupons/save' && req.method === 'POST') return res.json(await actions.saveCoupon(ctx));
+    if (path === '/coupons/toggle' && req.method === 'POST') return res.json(await actions.toggleCoupon(ctx));
     return res.status(404).json({error: 'not_found'});
   } catch (e) { return fail(res, e, 'web_admin'); }
 });
@@ -151,7 +169,10 @@ exports.maintenance = onSchedule({region: REGION, schedule: 'every 5 minutes', t
   if (config.reconciliationEnabled !== true || config.compatibleWritesValidated !== true) return;
   const now = Date.now(), report = {at: now};
   try { report.reconcile = await maintenance.reconcileOpenPurchases({db, mp: await mpClient(), now}); } catch (e) { report.reconcileError = e.message; }
-  try { report.outbox = await maintenance.processOutbox({db, now, handlers: {purchase_paid: maintenance.purchasePaidHandler, label_ready: maintenance.labelReadyHandler, mailerFactory}}); } catch (e) { report.outboxError = e.message; }
+  try { report.gifts = await gifts.maintainGifts({db, mp: await mpClient(), now}); } catch (e) { report.giftsError = e.message; }
+  const giftMail = kind => async (task, {db: d, now: n, mailerFactory: mf}) => { if (mf) await sendGiftEmail({db: d, mailerFactory: mf, kind, giftId: task.giftId, now: n}); };
+  try { report.outbox = await maintenance.processOutbox({db, now, handlers: {purchase_paid: maintenance.purchasePaidHandler, label_ready: maintenance.labelReadyHandler,
+    gift_paid: giftMail('paid'), gift_deliver: giftMail('deliver'), mailerFactory}}); } catch (e) { report.outboxError = e.message; }
   try { report.tracking = await maintenance.refreshTracking({db, shipping: shipping(), now}); } catch (e) { report.trackingError = e.message; }
   try { report.integrity = await maintenance.verifyIntegrity({db, now}); } catch (e) { report.integrityError = e.message; }
   await db.doc('instinto_private/maintenance').set({last: report}, {merge: true});

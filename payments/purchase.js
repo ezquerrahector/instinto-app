@@ -58,8 +58,10 @@ function preferencePayload(purchase,{webhookUrl,excludedPaymentTypes=['ticket','
   if(purchase.state!=='awaiting_payment'||purchase.expiresAt<=now)throw Error('purchase_not_payable');
   const callback=new URL(webhookUrl);
   if(callback.protocol!=='https:'||callback.hostname!=='us-central1-instinto-fragancias.cloudfunctions.net'||callback.pathname!=='/mpWebhook'||callback.search||callback.username||callback.password)throw Error('invalid_webhook_url');
-  const items=purchase.items.map(i=>({id:i.id+'_'+i.size,title:(i.name+' '+i.size+' ml').slice(0,200),quantity:i.qty,currency_id:'MXN',unit_price:i.unitPriceCents/100}));
+  let items=purchase.items.map(i=>({id:i.id+'_'+i.size,title:(i.name+' '+i.size+' ml').slice(0,200),quantity:i.qty,currency_id:'MXN',unit_price:i.unitPriceCents/100}));
   items.push({id:'shipping',title:'Envío',quantity:1,currency_id:'MXN',unit_price:purchase.shippingCents/100});
+  if(purchase.discountCents>0){const n=purchase.items.reduce((s,i)=>s+i.qty,0);
+    items=[{id:'pedido',title:`INSTINTO · ${n} fragancia${n===1?'':'s'} + envío (cupón ${purchase.coupon?.code||''} aplicado)`.slice(0,200),quantity:1,currency_id:'MXN',unit_price:purchase.totalCents/100}];}
   const total=items.reduce((n,i)=>n+Math.round(i.unit_price*100)*i.quantity,0);
   if(total!==purchase.totalCents)throw Error('purchase_total_mismatch');
   return {items,external_reference:purchase.id,metadata:{instinto_purchase:purchase.id,instinto_binding:purchase.binding},

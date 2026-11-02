@@ -52,32 +52,51 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
     if(payment.status!=='approved') {
       tx.set(ledgerRef,{...record,disposition:'waiting'},{merge:true});return {outcome:'waiting'};
     }
+    if(!Number.isFinite(Date.parse(payment.date_approved)))return review('invalid_payment_timestamp');
+    if(!purchase.reservation&&Date.parse(payment.date_approved)>purchase.expiresAt)return review('late_payment');
+    const r=await applyPaidPurchase(tx,db,{purchase,purchaseRef,paymentKey:id,now});
+    if(r.review)return review(r.review);
+    tx.set(ledgerRef,{...record,disposition:'applied',adminOrderIds:r.adminOrderIds},{merge:true});
+    return {outcome:'applied',adminOrderIds:r.adminOrderIds};
+  });
+}
+// Aplica una compra pagada (por Mercado Pago o 100% cubierta con cupón/saldo de regalo): consume la reserva,
+// crea los pedidos administrativos y deja la tarea de aviso. Devuelve {review: motivo} si no se puede aplicar.
+async function applyPaidPurchase(tx,db,{purchase,purchaseRef,paymentKey,now}){
+  const purchaseId=purchase.id,inventoryRef=db.doc('instinto/datos');
+  const R=reason=>({review:reason});
+  // Lecturas primero (regla de transacciones): cupón si la reserva del descuento se liberó.
+  let couponRef=null,couponRehold=null;
+  if(purchase.coupon&&purchase.coupon.state==='released'){
+    couponRef=db.doc('instinto_coupons/'+purchase.coupon.code);
+    const c=(await tx.get(couponRef)).data();
+    if(!c)return R('coupon_released_late_payment');
+    if(c.kind==='gift'){if((c.balanceCents||0)<purchase.coupon.discountCents)return R('coupon_released_late_payment');couponRehold={balanceCents:c.balanceCents-purchase.coupon.discountCents};}
+    else couponRehold={uses:(c.uses||0)+1};
+  }
     const held=purchase.reservation?.state==='held';
     const released=purchase.reservation?.state==='released';
-    if(!Number.isFinite(Date.parse(payment.date_approved)))return review('invalid_payment_timestamp');
-    if(purchase.state==='expired'&&!released)return review('purchase_not_payable');
-    if(purchase.state!=='awaiting_payment'&&purchase.state!=='expired')return review('purchase_not_payable');
-    // Sin modelo de reserva (compras anteriores): se conserva la regla original de caducidad.
-    if(!purchase.reservation&&Date.parse(payment.date_approved)>purchase.expiresAt)return review('late_payment');
+    if(purchase.state==='expired'&&!released)return R('purchase_not_payable');
+    if(purchase.state!=='awaiting_payment'&&purchase.state!=='expired')return R('purchase_not_payable');
     const inventorySnap=await tx.get(inventoryRef),inventory=inventorySnap.data();
-    if(!inventory||!Array.isArray(inventory.cat)||!Array.isArray(inventory.peds))return review('inventory_invalid');
-    if(!Array.isArray(purchase.items)||!purchase.items.length)return review('purchase_invalid');
+    if(!inventory||!Array.isArray(inventory.cat)||!Array.isArray(inventory.peds))return R('inventory_invalid');
+    if(!Array.isArray(purchase.items)||!purchase.items.length)return R('purchase_invalid');
     const catalog=inventory.cat.map(x=>({...x})),byId=new Map(catalog.map(x=>[x.id,x]));
-    if(byId.size!==catalog.length)return review('duplicate_catalog_id');
+    if(byId.size!==catalog.length)return R('duplicate_catalog_id');
     const demands=new Map();let units=0;
     for(const item of purchase.items) {
       if(![60,100].includes(item.size)||!Number.isSafeInteger(item.qty)||item.qty<1||item.qty>5||
-        item.gramsPerUnit!==({60:30,100:50})[item.size]||!Number.isSafeInteger(item.unitPriceCents)||item.unitPriceCents<=0)return review('purchase_invalid');
+        item.gramsPerUnit!==({60:30,100:50})[item.size]||!Number.isSafeInteger(item.unitPriceCents)||item.unitPriceCents<=0)return R('purchase_invalid');
       units+=item.qty;demands.set(item.id,(demands.get(item.id)||0)+item.gramsPerUnit*item.qty);
     }
-    if(units>12)return review('purchase_invalid');
+    if(units>12)return R('purchase_invalid');
     if(!Number.isSafeInteger(purchase.shippingCents)||purchase.shippingCents<=0||
-       purchase.items.reduce((sum,i)=>sum+i.unitPriceCents*i.qty,0)+purchase.shippingCents!==purchase.totalCents)return review('purchase_invalid');
+       purchase.items.reduce((sum,i)=>sum+i.unitPriceCents*i.qty,0)+purchase.shippingCents-(purchase.discountCents||0)!==purchase.totalCents)return R('purchase_invalid');
     if(held) {
       // La esencia ya se descontó al crear la reserva: verificar que coincide y NO descontar de nuevo.
       const reserved=purchase.reservation.grams||{};
-      if(Object.keys(reserved).length!==demands.size||[...demands].some(([sku,g])=>reserved[sku]!==g))return review('reservation_mismatch');
-      for(const sku of demands.keys())if(!byId.has(sku))return review('insufficient_stock');
+      if(Object.keys(reserved).length!==demands.size||[...demands].some(([sku,g])=>reserved[sku]!==g))return R('reservation_mismatch');
+      for(const sku of demands.keys())if(!byId.has(sku))return R('insufficient_stock');
     } else {
       // Compra sin reserva vigente (anterior al modelo o reserva liberada): descontar solo si hay
       // existencia libre después de los apartados de pedidos Directo/WhatsApp pendientes.
@@ -85,39 +104,39 @@ async function reconcilePayment(db,payment,{now=Date.now()}={}) {
       for(const [sku,grams] of demands) {
         const entry=byId.get(sku),stock=Number(entry?.stockGramos);
         const limit=free?(free.get(sku)??0):stock;
-        if(!entry||!Number.isFinite(stock)||stock<grams||limit<grams)return review(released?'late_payment_no_stock':'insufficient_stock');
+        if(!entry||!Number.isFinite(stock)||stock<grams||limit<grams)return R(released?'late_payment_no_stock':'insufficient_stock');
         entry.stockGramos=Math.round((stock-grams)*100)/100;
       }
     }
     const peds=inventory.peds.map(p=>({...p}));
-    if(peds.some(p=>p.folioWeb===purchaseId))return review('existing_orders_without_ledger');
+    if(peds.some(p=>p.folioWeb===purchaseId))return R('existing_orders_without_ledger');
     let nextId=1;
-    for(const p of peds){if(!Number.isSafeInteger(p.id)||p.id<0)return review('admin_ids_invalid');nextId=Math.max(nextId,p.id+1);}
+    for(const p of peds){if(!Number.isSafeInteger(p.id)||p.id<0)return R('admin_ids_invalid');nextId=Math.max(nextId,p.id+1);}
     const adminIds=[],date=new Date(now).toISOString(),day=date.slice(0,10);
     for(const item of purchase.items)for(let unit=0;unit<item.qty;unit++) {
-      if(!Number.isSafeInteger(nextId))return review('admin_ids_invalid');
+      if(!Number.isSafeInteger(nextId))return R('admin_ids_invalid');
       const adminId=nextId++;adminIds.push(adminId);
-      peds.push({id:adminId,uid:'WEB-'+purchaseId+'-'+adminIds.length,folioWeb:purchaseId,pagoId:id,
+      peds.push({id:adminId,uid:'WEB-'+purchaseId+'-'+adminIds.length,folioWeb:purchaseId,pagoId:paymentKey,
         origenWeb:true,pagoConfirmadoServidor:true,esenciaDescontada:true,matDescontado:false,
         creadoEn:date,fecha:day,cliente:[purchase.address.firstName,purchase.address.lastName].join(' '),
         codigo:item.id,fragancia:item.name,disenador:item.brand,linea:item.linea,presentacionMl:item.size,
         gramosEsencia:item.gramsPerUnit,precio:item.unitPriceCents/100,costoEsencia:item.costoEsencia,
         materialesWeb:item.materialsPerUnit,estatus:'Pedido',canal:'Web',fechaPromesa:'',
-        notas:item.gift?'Regalo: '+item.giftText:'',emailNuevoEnviado:false});
+        notas:[item.gift?'Regalo: '+item.giftText:'',purchase.coupon?('Cupón '+purchase.coupon.code+' (-$'+(purchase.coupon.discountCents/100)+')'):''].filter(Boolean).join(' · '),emailNuevoEnviado:false});
     }
     // Stay below Firestore's 1 MiB document limit, including field overhead.
-    if(Buffer.byteLength(JSON.stringify({...inventory,cat:catalog,peds}))>850000)return review('inventory_document_capacity');
+    if(Buffer.byteLength(JSON.stringify({...inventory,cat:catalog,peds}))>850000)return R('inventory_document_capacity');
     const revision=inventory.syncRevision??0;
-    if(!Number.isSafeInteger(revision)||revision<0)return review('inventory_revision_invalid');
-    tx.update(inventoryRef,{cat:catalog,peds,syncRevision:revision+1,syncClient:'v10',lastWriteId:'mp_'+id,updatedAt:date});
-    const purchaseUpdate={state:'paid',paymentId:id,paidAt:now,adminOrderIds:adminIds};
+    if(!Number.isSafeInteger(revision)||revision<0)return R('inventory_revision_invalid');
+    tx.update(inventoryRef,{cat:catalog,peds,syncRevision:revision+1,syncClient:'v10',lastWriteId:(String(paymentKey).startsWith('cupon')?'':'mp_')+paymentKey,updatedAt:date});
+    const purchaseUpdate={state:'paid',paymentId:paymentKey,paidAt:now,adminOrderIds:adminIds};
+    if(purchase.coupon){purchaseUpdate.coupon={...purchase.coupon,state:'consumed',consumedAt:now};
+      if(couponRehold)tx.update(couponRef,couponRehold);}
     if(purchase.reservation)purchaseUpdate.reservation={...purchase.reservation,state:'consumed',consumedAt:now,
       ...(released?{lateRecovered:true}:{})};
     tx.update(purchaseRef,purchaseUpdate);
-    tx.set(ledgerRef,{...record,disposition:'applied',adminOrderIds:adminIds},{merge:true});
     // Durable task, not an email side effect inside a retryable transaction.
     tx.create(db.doc('instinto_web_outbox/paid_'+purchaseId),{type:'purchase_paid',purchaseId,state:'pending',createdAt:now});
-    return {outcome:'applied',adminOrderIds:adminIds};
-  });
+    return {adminOrderIds:adminIds};
 }
-module.exports={toCents,validatePayment,reconcilePayment};
+module.exports={toCents,validatePayment,reconcilePayment,applyPaidPurchase};

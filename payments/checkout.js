@@ -10,6 +10,8 @@ const {normalizedInput, basketHash, buildPurchase} = require('./purchase');
 const {pendingClaims} = require('./availability');
 const {checkoutConfig} = require('./config');
 const {packCart} = require('./packing');
+const {normCode, CODE, evaluateCoupon} = require('./coupons');
+const {applyPaidPurchase} = require('./reconcile');
 
 const GRAMS = {60: 30, 100: 50};
 const LINES = {dama: 'Dama', caballero: 'Caballero', unisex: 'Unisex'};
@@ -60,7 +62,8 @@ async function catalog({db}) {
   let sizes = [60], payments = false;
   try { const c = checkoutConfig(runtime); sizes = c.enabledSizes; payments = true; } catch { /* catálogo informativo */ }
   return {products: publicCatalog(snap.data(), sizes), mode: payments ? (runtime.liveMode ? 'live' : 'sandbox') : 'preview',
-    checkoutEnabled: payments, enabledSizes: sizes, prices: Object.fromEntries(sizes.map(s => [s, (runtime.pricesCents?.[s] ?? ({60: 31000, 100: 49000})[s]) / 100]))};
+    checkoutEnabled: payments, enabledSizes: sizes,
+    gifts: {enabled: runtime.gifts?.enabled !== false && payments, shippingCredit: (Number.isSafeInteger(runtime.gifts?.shippingCreditCents) ? runtime.gifts.shippingCreditCents : 15000) / 100}, prices: Object.fromEntries(sizes.map(s => [s, (runtime.pricesCents?.[s] ?? ({60: 31000, 100: 49000})[s]) / 100]))};
 }
 
 async function quote({db, shipping, body, clientKey, now = Date.now()}) {
@@ -117,18 +120,22 @@ async function checkout({db, mp, body, clientKey, webhookUrl, now = Date.now()})
   let input;
   try { input = normalizedInput(body); } catch (e) { throw httpError(400, e.message); }
   const hash = basketHash(input);
+  const couponCode = body?.coupon ? normCode(body.coupon) : null;
+  if (couponCode && !CODE.test(couponCode)) throw httpError(409, 'coupon_invalid');
   const id = 'w' + sha('instinto-purchase:' + requestId).slice(0, 24);
   const purchaseRef = db.doc('instinto_web_purchases/' + id), inventoryRef = db.doc('instinto/datos');
   let purchase = await db.runTransaction(async tx => {
     const existing = (await tx.get(purchaseRef)).data();
     if (existing) {
-      if (existing.basketHash !== hash || existing.shipping?.rateId !== rateId) throw httpError(409, 'request_reused');
+      if (existing.basketHash !== hash || existing.shipping?.rateId !== rateId || (existing.coupon?.code || null) !== couponCode) throw httpError(409, 'request_reused');
       return existing;
     }
     const quoteDoc = (await tx.get(db.doc('instinto_web_quotes/' + quoteId))).data();
     if (!quoteDoc || quoteDoc.liveMode !== config.liveMode) throw httpError(409, 'quote_expired_or_changed');
     const invSnap = await tx.get(inventoryRef), inventory = invSnap.data();
     if (!inventory || !Array.isArray(inventory.cat)) throw httpError(503, 'inventory_unavailable');
+    const couponRef = couponCode ? db.doc('instinto_coupons/' + couponCode) : null;
+    const couponSnap = couponRef ? await tx.get(couponRef) : null;
     const {available} = pendingClaims(inventory);
     let built;
     try {
@@ -137,6 +144,16 @@ async function checkout({db, mp, body, clientKey, webhookUrl, now = Date.now()})
     } catch (e) {
       const status = {insufficient_stock: 409, quote_expired_or_changed: 409, invalid_shipping_rate: 409, unavailable_product: 409}[e.message] || 400;
       throw httpError(status, e.message);
+    }
+    // Cupón / saldo de regalo: se recalcula aquí y se APARTA (saldo o uso) junto con la reserva de esencia.
+    if (couponRef) {
+      const c = couponSnap.data();
+      let ev;
+      try { ev = evaluateCoupon(c ? {...c, code: couponCode} : null, {items: built.items, shippingCents: built.shippingCents, now, availableIds: new Set([...available].filter(([, g]) => g >= 30).map(([k]) => k))}); }
+      catch (e) { throw httpError(409, e.message); }
+      built.discountCents = ev.discountCents; built.totalCents = ev.totalCents;
+      built.coupon = {code: couponCode, kind: c.kind, discountCents: ev.discountCents, state: 'held', heldAt: now};
+      tx.update(couponRef, c.kind === 'gift' ? {balanceCents: c.balanceCents - ev.discountCents} : {uses: (c.uses || 0) + 1});
     }
     built.expiresAt = Math.min(now + config.holdMs, quoteDoc.expiresAt + config.holdMs);
     built.liveMode = config.liveMode;
@@ -157,6 +174,19 @@ async function checkout({db, mp, body, clientKey, webhookUrl, now = Date.now()})
     tx.create(purchaseRef, built);
     return built;
   });
+  // Cubierta al 100% con cupón/saldo: se confirma sin pasar por Mercado Pago.
+  if (purchase.totalCents === 0 && purchase.state === 'awaiting_payment') {
+    const r = await db.runTransaction(async tx => {
+      const p = (await tx.get(purchaseRef)).data();
+      if (p.state !== 'awaiting_payment') return {state: p.state};
+      const out = await applyPaidPurchase(tx, db, {purchase: p, purchaseRef, paymentKey: 'cupon-' + p.coupon.code, now});
+      if (out.review) { tx.update(purchaseRef, {reviewRequired: true, reviewReason: out.review}); return {review: out.review}; }
+      return {state: 'paid'};
+    });
+    if (r.review) throw httpError(409, 'coupon_order_review');
+    purchase = (await purchaseRef.get()).data();
+  }
+  if (purchase.state === 'paid' && purchase.totalCents === 0) return {...publicCheckout({...purchase, preference: {initPoint: null}}), paid: true};
   if (purchase.state !== 'awaiting_payment') throw httpError(409, 'purchase_' + purchase.state);
   if (purchase.preference?.state === 'created') return publicCheckout(purchase);
   if (purchase.expiresAt <= now) throw httpError(409, 'purchase_expired');
@@ -183,7 +213,27 @@ async function checkout({db, mp, body, clientKey, webhookUrl, now = Date.now()})
 function publicCheckout(p) {
   return {purchaseId: p.id, binding: p.binding, initPoint: p.preference.initPoint,
     expiresAt: new Date(p.expiresAt).toISOString(), subtotal: p.subtotalCents / 100, shipping: p.shippingCents / 100,
-    total: p.totalCents / 100, currency: 'MXN'};
+    total: p.totalCents / 100, discount: (p.discountCents || 0) / 100, currency: 'MXN'};
+}
+
+// Vista previa del descuento en el carrito (sin apartar nada). El cobro real lo recalcula checkout().
+async function couponCheck({db, body, clientKey, now = Date.now()}) {
+  const config = await readRuntime(db);
+  await rateLimit(db, 'coupon:' + clientKey, 20, now);
+  const code = normCode(body?.coupon);
+  if (!CODE.test(code)) throw httpError(409, 'coupon_invalid');
+  const items = (Array.isArray(body?.items) ? body.items : []).slice(0, 8).map(i => ({id: clean(i?.id, 80), size: Number(i?.size), qty: Math.min(5, Math.max(1, Number(i?.qty) || 1))}))
+    .filter(i => config.enabledSizes.includes(i.size)).map(i => ({...i, unitPriceCents: config.prices?.[i.size] ?? ({60: 31000, 100: 49000})[i.size]}));
+  if (!items.length) throw httpError(400, 'invalid_cart');
+  const shippingCents = Math.max(0, Math.min(500000, Math.round(Number(body?.shipping || 0) * 100)));
+  const [c, inv] = await Promise.all([db.doc('instinto_coupons/' + code).get(), db.doc('instinto/datos').get()]);
+  const {available} = pendingClaims(inv.data());
+  let ev;
+  try { ev = evaluateCoupon(c.exists ? c.data() : null, {items, shippingCents, now, availableIds: new Set([...available].filter(([, g]) => g >= 30).map(([k]) => k))}); }
+  catch (e) { const er = httpError(409, e.message); if (e.message === 'coupon_product_required') er.detail = c.data().productId; throw er; }
+  const d = c.data();
+  return {code, kind: d.kind, discount: ev.discountCents / 100, total: ev.totalCents / 100, productId: d.productId || null,
+    balance: d.kind === 'gift' ? d.balanceCents / 100 : null, description: d.kind === 'gift' ? 'Saldo de regalo' : (d.description || 'Cupón de descuento')};
 }
 
 async function status({db, purchaseId, binding}) {
@@ -199,4 +249,4 @@ async function status({db, purchaseId, binding}) {
       trackingStatus: p.shipment.trackingStatus || null} : (p.state === 'paid' ? {pending: true} : null)};
 }
 
-module.exports = {publicCatalog, catalog, quote, checkout, status, rateLimit, httpError};
+module.exports = {publicCatalog, catalog, quote, checkout, status, couponCheck, rateLimit, httpError, readRuntime};

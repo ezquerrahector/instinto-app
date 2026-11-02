@@ -56,6 +56,8 @@ async function releaseReservation(db, purchaseId, now = Date.now()) {
     const p = (await tx.get(purchaseRef)).data();
     if (!p || p.state !== 'awaiting_payment' || p.reservation?.state !== 'held') return false;
     const inv = (await tx.get(inventoryRef)).data();
+    const couponRef = p.coupon?.state === 'held' ? db.doc('instinto_coupons/' + p.coupon.code) : null;
+    const coupon = couponRef ? (await tx.get(couponRef)).data() : null;
     const cat = inv.cat.map(x => ({...x}));
     for (const [sku, g] of Object.entries(p.reservation.grams || {})) {
       const entry = cat.find(x => x.id === sku);
@@ -64,7 +66,12 @@ async function releaseReservation(db, purchaseId, now = Date.now()) {
     }
     tx.update(inventoryRef, {cat, syncRevision: (inv.syncRevision ?? 0) + 1, syncClient: 'v10', lastWriteId: 'release_' + purchaseId,
       updatedAt: new Date(now).toISOString()});
-    tx.update(purchaseRef, {state: 'expired', expiredAt: now, reservation: {...p.reservation, state: 'released', releasedAt: now}});
+    const upd = {state: 'expired', expiredAt: now, reservation: {...p.reservation, state: 'released', releasedAt: now}};
+    if (couponRef && coupon) {
+      tx.update(couponRef, coupon.kind === 'gift' ? {balanceCents: (coupon.balanceCents || 0) + p.coupon.discountCents} : {uses: Math.max(0, (coupon.uses || 0) - 1)});
+      upd.coupon = {...p.coupon, state: 'released', releasedAt: now};
+    }
+    tx.update(purchaseRef, upd);
     return true;
   });
 }

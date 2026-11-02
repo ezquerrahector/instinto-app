@@ -41,7 +41,8 @@ async function overview({db, identity}) {
         reviewRequired: p.reviewRequired === true, reviewReason: p.reviewReason || null,
         items: p.items.map(i => ({id: i.id, name: i.name, brand: i.brand, size: i.size, qty: i.qty, gift: i.gift, giftText: i.giftText})),
         address: p.address, shippingChoice: p.shipping, reservation: p.reservation?.state || null,
-        shipment: p.shipment || null, pickup: p.pickup || null, refund: p.refund || null};
+        shipment: p.shipment || null, pickup: p.pickup || null, refund: p.refund || null,
+        discountCents: p.discountCents || 0, coupon: p.coupon ? {code: p.coupon.code, kind: p.coupon.kind} : null};
     }),
     alerts: alerts.docs.map(d => d.data()).sort((a, b) => b.lastAt - a.lastAt)};
 }
@@ -179,6 +180,10 @@ async function cancelPurchase({db, mp, shipping, identity, body, now = Date.now(
   if (p.shipment?.state === 'label_ready' && p.shipment.trackingStatus && p.shipment.trackingStatus !== 'created')
     throw err(409, 'already_in_transit_handle_return');
   let refundResult = p.refund || null;
+  if (refund === 'full' && !refundResult && (!p.paymentId || String(p.paymentId).startsWith('cupon-') || !(p.totalCents > 0))) {
+    refundResult = {id: 'sin-cargo', status: 'not_needed', amount: 0}; // pagado 100% con cupón/saldo: no hay dinero que devolver
+    await ref.update({refund: {...refundResult, actor, at: now, operationId}});
+  }
   if (refund === 'full' && !refundResult) {
     try { refundResult = await mp.refund(p.paymentId, {idempotencyKey: 'refund_' + operationId}); }
     catch (e) { await alert(db, 'refund_' + purchaseId, {type: 'refund_failed', purchaseId, reason: e.message}, now); throw err(502, 'refund_failed'); }
@@ -190,6 +195,8 @@ async function cancelPurchase({db, mp, shipping, identity, body, now = Date.now(
     p = (await tx.get(ref)).data();
     const inv = (await tx.get(invRef)).data();
     if (p.state === 'cancelled') return {outcome: 'already_cancelled', refund: p.refund || refundResult};
+    const couponRef = p.coupon?.state === 'consumed' ? db.doc('instinto_coupons/' + p.coupon.code) : null;
+    const coupon = couponRef ? (await tx.get(couponRef)).data() : null;
     const peds = inv.peds.map(x => ({...x})), cat = inv.cat.map(x => ({...x}));
     const mine = peds.filter(x => x.folioWeb === purchaseId);
     if (mine.length !== (p.adminOrderIds || []).length) throw err(409, 'admin_orders_mismatch');
@@ -208,7 +215,8 @@ async function cancelPurchase({db, mp, shipping, identity, body, now = Date.now(
     }
     tx.update(invRef, {peds, cat, syncRevision: (inv.syncRevision ?? 0) + 1, syncClient: 'v10', lastWriteId: 'cancel_' + operationId,
       updatedAt: new Date(now).toISOString()});
-    tx.update(ref, {state: 'cancelled', cancelledAt: now, cancel: {actor, reason: why, refund, restockEssence, restocked, operationId},
+    if (couponRef && coupon) tx.update(couponRef, coupon.kind === 'gift' ? {balanceCents: (coupon.balanceCents || 0) + p.coupon.discountCents} : {uses: Math.max(0, (coupon.uses || 0) - 1)});
+    tx.update(ref, {state: 'cancelled', cancelledAt: now, cancel: {actor, reason: why, refund, restockEssence, restocked, operationId, couponRestored: !!coupon},
       ...(refundResult ? {refund: refundResult} : {})});
     return {outcome: 'cancelled', restocked, refund: refundResult};
   });
@@ -270,4 +278,37 @@ async function resolveAlert({db, identity, body, now = Date.now()}) {
   return {outcome: 'resolved'};
 }
 
-module.exports = {overview, createLabel, cancelLabel, cancelPurchase, schedulePickup, resolveAlert, actorOf};
+
+// ── Cupones y regalos (admin) ───────────────────────────────────────────
+async function listCoupons({db, identity}) {
+  actorOf(identity);
+  const [c, g] = await Promise.all([db.collection('instinto_coupons').orderBy('createdAt', 'desc').limit(300).get(),
+    db.collection('instinto_web_gifts').orderBy('createdAt', 'desc').limit(150).get()]);
+  return {coupons: c.docs.map(d => d.data()), gifts: g.docs.map(d => { const x = d.data();
+    return {id: x.id, state: x.state, mode: x.mode, productName: x.productName, valueCents: x.valueCents, shippingIncluded: x.shippingIncluded,
+      totalCents: x.totalCents, from: x.from, to: x.to, message: x.message, deliverAt: x.deliverAt || null, delivered: x.delivered || null,
+      code: x.code || null, createdAt: x.createdAt, paidAt: x.paidAt || null, reviewRequired: x.reviewRequired === true}; })};
+}
+async function saveCoupon({db, identity, body, now = Date.now()}) {
+  const actor = actorOf(identity);
+  const {validateAdminCoupon} = require('./coupons');
+  let c; try { c = validateAdminCoupon(body); } catch (e) { throw err(400, e.message); }
+  const ref = db.doc('instinto_coupons/' + c.code);
+  await db.runTransaction(async tx => {
+    const prev = (await tx.get(ref)).data();
+    if (prev && prev.kind === 'gift') throw err(409, 'coupon_is_gift');
+    if (prev && body.create === true) throw err(409, 'coupon_exists');
+    tx.set(ref, {...c, uses: prev?.uses || 0, createdAt: prev?.createdAt || now, createdBy: prev?.createdBy || actor, updatedAt: now, updatedBy: actor});
+  });
+  return {outcome: 'saved', code: c.code};
+}
+async function toggleCoupon({db, identity, body, now = Date.now()}) {
+  const actor = actorOf(identity);
+  const code = String(body?.code || '').toUpperCase();
+  if (!/^[A-Z0-9-]{4,24}$/.test(code)) throw err(400, 'invalid_request');
+  const ref = db.doc('instinto_coupons/' + code);
+  if (!(await ref.get()).exists) throw err(404, 'not_found');
+  await ref.update({active: body.active === true, updatedAt: now, updatedBy: actor});
+  return {outcome: 'saved'};
+}
+module.exports = {listCoupons, saveCoupon, toggleCoupon, overview, createLabel, cancelLabel, cancelPurchase, schedulePickup, resolveAlert, actorOf};

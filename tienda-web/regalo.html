@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Tu regalo · INSTINTO FRAGANCIAS</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500&family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#12120f;--cream:#f6f4ef;--paper:#fffcf7;--gold:#b69761;--muted:#756f64;--line:#e5dfd5}
+*{box-sizing:border-box}body{margin:0;background:var(--cream);color:var(--ink);font:300 15px/1.6 Jost,Arial,sans-serif}
+header{padding:22px;text-align:center;border-bottom:1px solid var(--line);background:#faf8f4}header a{text-decoration:none;color:inherit}
+header strong{font:500 21px Cinzel,serif;letter-spacing:.24em;display:block}header small{font-size:9px;letter-spacing:.36em;color:#7e776c}
+main{max-width:760px;margin:auto;padding:26px 18px 60px}h1{font:400 clamp(26px,4vw,38px) 'Cormorant Garamond',serif;margin:6px 0 10px}
+h2{font:400 22px Cinzel,serif;letter-spacing:.06em;margin:0 0 12px}.box{background:var(--paper);border:1px solid var(--line);padding:22px;margin:16px 0}
+.code{font:500 24px Cinzel,serif;letter-spacing:.08em;background:#f1e9da;padding:10px 14px;display:inline-block;margin:6px 0}
+.btn{display:inline-flex;gap:8px;align-items:center;justify-content:center;border:1px solid var(--gold);background:var(--gold);color:#1b1710;padding:12px 18px;font:500 11px Jost,sans-serif;letter-spacing:.16em;text-transform:uppercase;cursor:pointer;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--ink)}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.designs{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.designs button{border:1px solid var(--line);background:#fff;padding:8px 12px;font:inherit;font-size:13px;cursor:pointer}.designs button[aria-pressed=true]{background:var(--ink);color:#fff}
+canvas{width:100%;max-width:520px;height:auto;display:block;border:1px solid var(--line);margin:8px 0}
+label{display:block;font-size:10px;letter-spacing:.17em;text-transform:uppercase;font-weight:500;margin:12px 0 6px}
+input,textarea{width:100%;border:1px solid #ded8ce;padding:11px 12px;font:inherit;font-size:14px;background:#fff}.muted{color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:11px;padding:3px 10px;border-radius:999px;background:#f1e9da;color:#6d5631}.ok{color:#2f7d55}.err{color:#a8382f}
+</style></head><body>
+<header><a href="/"><strong>INSTINTO</strong><small>FRAGANCIAS</small></a></header>
+<main id="app"><p class="muted">Cargando tu regalo…</p></main>
+<script src="config.js?v=10.5"></script>
+<script>
+'use strict';
+const API=(window.INSTINTO_API_BASE||'https://us-central1-instinto-fragancias.cloudfunctions.net/checkoutApi').replace(/storeApi$/,'checkoutApi');
+const P=new URLSearchParams(location.search),T=P.get('t')||'';const app=document.getElementById('app');
+const money=c=>(Number(c||0)/100).toLocaleString('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:2});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fecha=ms=>new Date(ms).toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric',timeZone:'America/Mexico_City'});
+const what=g=>g.mode==='open'?`un saldo de ${money(g.valueCents)} para la fragancia que elija`:esc(g.productName);
+let G=null,design='elegante',polls=0;
+const DESIGNS={elegante:{n:'Elegante',bg:['#12120f','#3b3325'],ink:'#f4eadc',acc:'#c9a84c'},cumple:{n:'Cumpleaños',bg:['#3b1d4a','#b4508a'],ink:'#fff4fb',acc:'#ffd36e'},
+ amor:{n:'Amor',bg:['#5c0f1f','#c2384f'],ink:'#fff1f1',acc:'#ffd1d8'},navidad:{n:'Navidad',bg:['#0e3b2a','#1f6b4a'],ink:'#f6fff9',acc:'#e9c46a'},gracias:{n:'Gracias',bg:['#f6f4ef','#e9e1d5'],ink:'#12120f',acc:'#9f8051'}};
+const TITLES={elegante:'Un regalo para ti',cumple:'¡Feliz cumpleaños!',amor:'Con todo mi amor',navidad:'¡Feliz Navidad!',gracias:'¡Gracias!'};
+async function load(){
+ if(!/^[a-f0-9]{48}$/.test(T)){app.innerHTML='<h1>No encontramos tu regalo</h1><p class="muted">Revisa que la liga esté completa (viene en tu correo).</p>';return}
+ try{const r=await fetch(API+'/api/gift?t='+T,{cache:'no-store'});const d=await r.json();if(!r.ok)throw Error(d.error);G=d.regalo;render()}
+ catch(e){app.innerHTML='<h1>No encontramos tu regalo</h1><p class="muted">Revisa que la liga esté completa (viene en tu correo).</p>'}
+}
+function render(){
+ const g=G;
+ if(g.state==='awaiting_payment'){app.innerHTML=`<h1>Tu regalo para ${esc(g.to.name)}</h1><div class="box"><p>Estamos esperando la confirmación de Mercado Pago… <span class="pill">Pago en proceso</span></p><p class="muted">Esta página se actualiza sola. Si ya pagaste, el código aparecerá en unos minutos y también te llegará por correo.</p></div>`;
+  if(polls++<40)setTimeout(load,polls<6?4000:15000);return}
+ if(g.state!=='paid'){app.innerHTML=`<h1>Este regalo no se completó</h1><p class="muted">El pago no se confirmó. Puedes volver a <a href="/#regalar">regalar un perfume</a>.</p>`;return}
+ const porWhats=!g.to.email;
+ app.innerHTML=`<div class="muted">Regalo de ${esc(g.from.name)}</div><h1>Tu regalo para ${esc(g.to.name)} está listo 🎁</h1>
+ <div class="box"><p>Regalaste ${what(g)}${g.shippingIncluded?', con envío incluido':''}.</p>
+  <div>Código de regalo</div><div class="code">${esc(g.code)}</div>
+  <p class="muted">Saldo disponible: <b>${money(g.balanceCents)}</b> · válido hasta el ${fecha(g.expiresAt)}.<br>
+  ${g.to.email?(g.delivered?`✓ Se envió por correo a ${esc(g.to.email)} el ${fecha(g.delivered.at)}.`:(g.deliverAt?`Se enviará por correo a ${esc(g.to.email)} el ${fecha(g.deliverAt)}.`:`Se enviará por correo a ${esc(g.to.email)} en unos minutos.`)):'Mándaselo tú por WhatsApp con la tarjeta de abajo.'}</p></div>
+ <div class="box"><h2>🎨 ${porWhats?'Elige su tarjeta y envíasela':'Su tarjeta de regalo'}</h2>
+  <div class="designs" id="designs">${Object.entries(DESIGNS).map(([k,d])=>`<button type="button" data-d="${k}" aria-pressed="${k===design}">${d.n}</button>`).join('')}</div>
+  <canvas id="card" width="1080" height="1350" aria-label="Tarjeta de regalo"></canvas>
+  <div class="row"><button class="btn" id="share">Enviar por WhatsApp</button><button class="btn ghost" id="dl">Descargar imagen</button></div>
+  <p class="muted">En el celular, “Enviar por WhatsApp” comparte la imagen con el mensaje. En computadora se descarga la imagen y se abre WhatsApp con el texto.</p></div>
+ ${g.editable?`<div class="box"><h2>¿Quieres cambiar algo?</h2><p class="muted">Puedes cambiarlo mientras el código no se use.</p>
+  <label for="eName">Su nombre</label><input id="eName" value="${esc(g.to.name)}" maxlength="80">
+  <label for="eMail">Su correo (opcional)</label><input id="eMail" type="email" value="${esc(g.to.email||'')}">
+  <label for="ePhone">Su WhatsApp (opcional)</label><input id="ePhone" value="${esc(g.to.phone||'')}">
+  <label for="eDate">Fecha de entrega por correo (vacío = ahora)</label><input id="eDate" type="date" value="${g.deliverAt?new Date(g.deliverAt).toISOString().slice(0,10):''}">
+  <label for="eMsg">Tu mensaje</label><textarea id="eMsg" maxlength="300" rows="3">${esc(g.message||'')}</textarea>
+  <div class="row" style="margin-top:12px"><button class="btn" id="save">Guardar cambios</button>${g.to.email?'<button class="btn ghost" id="resend">Guardar y reenviar correo</button>':''}</div>
+  <p id="eMsgBox" class="muted"></p></div>`:''}
+ <p class="muted">¿Dudas? Escríbenos respondiendo el correo de tu regalo.</p>`;
+ document.getElementById('designs').addEventListener('click',e=>{const b=e.target.closest('[data-d]');if(!b)return;design=b.dataset.d;document.querySelectorAll('[data-d]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));draw()});
+ document.getElementById('dl').onclick=()=>download();document.getElementById('share').onclick=share;
+ if(g.editable){document.getElementById('save').onclick=()=>save(false);const rs=document.getElementById('resend');if(rs)rs.onclick=()=>save(true)}
+ (document.fonts?.ready||Promise.resolve()).then(draw);
+}
+function wrap(c,text,maxW){const words=String(text).split(/\s+/),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(c.measureText(t).width>maxW&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
+function draw(){const cv=document.getElementById('card');if(!cv)return;const c=cv.getContext('2d'),W=1080,H=1350,d=DESIGNS[design],g=G;
+ const gr=c.createLinearGradient(0,0,0,H);gr.addColorStop(0,d.bg[0]);gr.addColorStop(1,d.bg[1]);c.fillStyle=gr;c.fillRect(0,0,W,H);
+ c.strokeStyle=d.acc;c.lineWidth=3;c.strokeRect(46,46,W-92,H-92);c.textAlign='center';c.fillStyle=d.acc;
+ c.font='500 54px Cinzel, serif';c.fillText('INSTINTO',W/2,170);c.font='300 22px Jost, sans-serif';c.fillText('F R A G A N C I A S',W/2,212);
+ c.fillStyle=d.ink;c.font='italic 400 92px "Cormorant Garamond", serif';c.fillText(TITLES[design],W/2,380);
+ c.font='300 40px Jost, sans-serif';c.fillText('Para '+g.to.name,W/2,470);
+ c.font='italic 400 44px "Cormorant Garamond", serif';const msg=g.message?('“'+g.message+'”'):'';let y=560;for(const l of wrap(c,msg,820).slice(0,4)){c.fillText(l,W/2,y);y+=58}
+ c.fillStyle='rgba(255,255,255,.92)';c.fillRect(140,820,W-280,330);c.fillStyle='#12120f';
+ c.font='300 30px Jost, sans-serif';const w=g.mode==='open'?('Saldo de '+money(g.valueCents)+' para la fragancia que elijas'):g.productName;let y2=880;for(const l of wrap(c,w,720).slice(0,2)){c.fillText(l,W/2,y2);y2+=40}
+ if(g.shippingIncluded){c.fillText('Envío incluido',W/2,y2);y2+=40}
+ c.font='500 30px Jost, sans-serif';c.fillText('Tu código',W/2,1010);c.font='500 58px Cinzel, serif';c.fillText(g.code,W/2,1080);
+ c.font='300 24px Jost, sans-serif';c.fillText('Canjéalo en instintofragancias.com',W/2,1125);
+ c.fillStyle=d.ink;c.font='300 30px Jost, sans-serif';c.fillText('Con cariño, '+g.from.name,W/2,1235);}
+function blob(){return new Promise(ok=>document.getElementById('card').toBlob(ok,'image/png'))}
+async function download(){const b=await blob();const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='regalo-instinto.png';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+function waText(){const g=G;return `🎁 ${g.to.name}, ${g.from.name} te regaló una fragancia INSTINTO${g.mode==='open'?' (saldo de '+money(g.valueCents)+')':': '+g.productName}${g.shippingIncluded?', con envío incluido':''}.${g.message?'\n“'+g.message+'”':''}\nTu código: ${g.code}\nCanjéalo aquí: ${g.redeemUrl}`}
+async function share(){const text=waText();try{const b=await blob();const f=new File([b],'regalo-instinto.png',{type:'image/png'});
+ if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],text});return}}catch(e){if(e.name==='AbortError')return}
+ await download();const tel=String(G.to.phone||'').replace(/\D/g,'');window.open('https://wa.me/'+(tel.length===10?'52'+tel:tel)+'?text='+encodeURIComponent(text),'_blank')}
+async function save(reenviar){const box=document.getElementById('eMsgBox');box.textContent='Guardando…';
+ const body={t:T,paraNombre:document.getElementById('eName').value,paraCorreo:document.getElementById('eMail').value,paraTel:document.getElementById('ePhone').value,
+  entregarEn:document.getElementById('eDate').value||'',mensaje:document.getElementById('eMsg').value,reenviar};
+ try{const r=await fetch(API+'/api/gift/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json();
+  if(!r.ok)throw Error({gift_already_used:'El regalo ya se usó; ya no se puede cambiar.',gift_recipient_contact:'Escribe un correo o WhatsApp.',gift_recipient_name:'Escribe su nombre.'}[d.error]||'No se pudo guardar.');
+  G=d.regalo;render();setTimeout(()=>{const b=document.getElementById('eMsgBox');if(b)b.innerHTML='<span class="ok">✓ Guardado'+(d.reenviado?' y reenviado por correo':'')+'</span>'},50)}catch(e){box.innerHTML='<span class="err">'+esc(e.message)+'</span>'}}
+load();
+</script></body></html>

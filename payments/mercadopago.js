@@ -1,5 +1,6 @@
 'use strict';
 const {preferencePayload}=require('./purchase');
+const giftPayload=(...a)=>require('./gifts').giftPreferencePayload(...a);
 // Transport only. The caller must durably store purchase/binding before creating
 // a preference. An ambiguous POST is queued for reconciliation, never retried blind.
 function createMercadoPagoClient({accessToken,fetchImpl=fetch}) {
@@ -14,7 +15,7 @@ function createMercadoPagoClient({accessToken,fetchImpl=fetch}) {
   }
   return {
     async createPreference(purchase,config) {
-      const result=await request('/checkout/preferences',{method:'POST',idempotencyKey:'pref_'+purchase.id,body:JSON.stringify(preferencePayload(purchase,config))});
+      const result=await request('/checkout/preferences',{method:'POST',idempotencyKey:'pref_'+purchase.id,body:JSON.stringify(config?.gift?giftPayload(purchase,config):preferencePayload(purchase,config))});
       if(typeof result.id!=='string'||!result.id||result.external_reference!==purchase.id)throw Error('mp_preference_mismatch');
       let url;try{url=new URL(result.init_point);}catch{throw Error('mp_checkout_url_invalid');}
       if(url.protocol!=='https:'||!['www.mercadopago.com.mx','www.mercadopago.com'].includes(url.hostname)||url.username||url.password)throw Error('mp_checkout_url_invalid');

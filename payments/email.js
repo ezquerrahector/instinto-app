@@ -23,12 +23,13 @@ function itemsTable(p) {
     `<tr><td style="padding:8px 0;border-bottom:1px solid #eee">${i.qty} × ${esc(i.brand)} · ${esc(i.name)} · ${i.size} ml${i.gift ? `<br><span style="color:#756f64;font-size:12px">Regalo: ${esc(i.giftText || 'sin dedicatoria')}</span>` : ''}</td>
      <td align="right" style="padding:8px 0;border-bottom:1px solid #eee">${money(i.unitPriceCents * i.qty)}</td></tr>`).join('')}
     <tr><td style="padding:8px 0">Envío (${esc(p.shipping?.carrier || '')} ${esc(p.shipping?.service || '')})</td><td align="right">${money(p.shippingCents)}</td></tr>
+    ${p.discountCents ? `<tr><td style="padding:8px 0">${p.coupon?.kind === 'gift' ? 'Saldo de regalo' : 'Cupón'} ${esc(p.coupon?.code || '')}</td><td align="right">−${money(p.discountCents)}</td></tr>` : ''}
     <tr><td style="padding:8px 0;font-weight:bold">Total pagado</td><td align="right" style="font-weight:bold">${money(p.totalCents)}</td></tr></table>`;
 }
 function paidEmail(p) {
   const a = p.address;
   const html = layout(`Gracias, ${a.firstName}. Tu pedido está confirmado`,
-    `<p style="font-size:14px;line-height:1.6">Mercado Pago confirmó tu pago. Folio <strong>${folio(p)}</strong>. Elaboraremos tu fragancia y te enviaremos otro correo con tu número de rastreo cuando salga.</p>
+    `<p style="font-size:14px;line-height:1.6">${p.totalCents === 0 ? 'Tu pedido quedó cubierto con tu saldo de regalo.' : 'Mercado Pago confirmó tu pago.'} Folio <strong>${folio(p)}</strong>. Elaboraremos tu fragancia y te enviaremos otro correo con tu número de rastreo cuando salga.</p>
     ${itemsTable(p)}
     <p style="font-size:13px;line-height:1.6;color:#4a463f"><strong>Entrega:</strong> ${esc(a.street)}, ${esc(a.colony)}, ${esc(a.city)}, ${esc(a.state)}, CP ${esc(a.postal)}</p>
     <p style="font-size:12px;color:#756f64">¿Dudas? Responde a este correo citando tu folio.</p>`);
@@ -72,4 +73,44 @@ async function sendPurchaseEmail({db, mailerFactory, kind, purchaseId, now = Dat
   await ref.update({['emails.' + kind + 'SentAt']: now, ['emails.' + kind + 'MessageId']: info.messageId});
   return 'sent';
 }
-module.exports = {paidEmail, shippedEmail, createMailer, sendPurchaseEmail};
+
+// ── Regalos ─────────────────────────────────────────────────────────────
+const giftWhat = g => g.mode === 'open' ? `un saldo de ${money(g.valueCents)} para la fragancia que tú elijas` : `<strong>${esc(g.productName)}</strong>`;
+function giftPaidEmail(g) {
+  const link = `https://instintofragancias.com/regalo.html?t=${g.token}`;
+  const delivery = g.to.email ? (g.deliverAt ? `Se lo enviaremos por correo a ${esc(g.to.email)} el ${new Date(g.deliverAt).toLocaleDateString('es-MX', {timeZone: 'America/Mexico_City', day: 'numeric', month: 'long'})}.` : `Ya se lo enviamos por correo a ${esc(g.to.email)}.`)
+    : 'Entra a tu liga privada para elegir su tarjeta y mandársela por WhatsApp.';
+  const html = layout(`¡Listo, ${esc(g.from.name)}! Tu regalo para ${esc(g.to.name)} está pagado`,
+    `<p style="font-size:14px;line-height:1.6">Regalaste ${giftWhat(g)}${g.shippingIncluded ? ' con envío incluido' : ''}. ${delivery}</p>
+    <p style="font-size:14px">Código de regalo: <strong style="font-size:18px;letter-spacing:.06em">${esc(g.code)}</strong><br><span style="color:#756f64;font-size:12px">Válido 12 meses. Total pagado ${money(g.totalCents)}.</span></p>
+    <p><a href="${link}" style="display:inline-block;background:#12120f;color:#fff;padding:12px 18px;text-decoration:none;font-size:13px;letter-spacing:.08em">VER O CAMBIAR MI REGALO</a></p>
+    <p style="font-size:12px;color:#756f64">Con esa liga puedes cambiar el destinatario, el mensaje o la fecha mientras no se use, y descargar la tarjeta para WhatsApp. No la compartas.</p>`);
+  return {to: g.from.email, subject: `INSTINTO · Tu regalo para ${g.to.name} está listo`, html,
+    text: `Tu regalo para ${g.to.name} está pagado. Código ${g.code}. Ver o cambiar: ${link}`};
+}
+function giftDeliverEmail(g) {
+  const url = `https://instintofragancias.com/?cupon=${encodeURIComponent(g.code)}`;
+  const html = layout(`${esc(g.to.name)}, ${esc(g.from.name)} te regaló una fragancia`,
+    `${g.message ? `<p style="font:italic 17px/1.6 Georgia,serif;color:#4a463f;border-left:3px solid #b69761;padding-left:12px">“${esc(g.message)}”</p>` : ''}
+    <p style="font-size:14px;line-height:1.6">Tu regalo: ${giftWhat(g)}${g.shippingIncluded ? ', con envío incluido' : ''}.</p>
+    <p style="font-size:14px">Tu código: <strong style="font-size:18px;letter-spacing:.06em">${esc(g.code)}</strong></p>
+    <p><a href="${url}" style="display:inline-block;background:#b69761;color:#1b1710;padding:12px 18px;text-decoration:none;font-size:13px;letter-spacing:.08em">CANJEAR MI REGALO</a></p>
+    <p style="font-size:12px;color:#756f64">Elige tu fragancia, escribe tu dirección y aplica el código en tu carrito. Válido 12 meses.</p>`);
+  return {to: g.to.email, subject: `🎁 ${g.from.name} te regaló una fragancia INSTINTO`, html,
+    text: `${g.from.name} te regaló una fragancia INSTINTO. Código ${g.code}. Canjéalo en ${url}`};
+}
+async function sendGiftEmail({db, mailerFactory, kind, giftId, now = Date.now()}) {
+  const runtime = (await db.doc('instinto_private/runtime').get()).data() || {};
+  if (runtime.emails?.enabled !== true) return 'disabled';
+  const ref = db.doc('instinto_web_gifts/' + giftId), g = (await ref.get()).data();
+  if (!g || g.state !== 'paid') throw Error('gift_not_paid');
+  if (kind === 'paid') {
+    if (g.emails?.paidSentAt) return 'already_sent';
+    const info = await mailerFactory().send(giftPaidEmail(g), {bcc: runtime.emails.copyTo || undefined});
+    await ref.update({'emails.paidSentAt': now, 'emails.paidMessageId': info.messageId}); return 'sent';
+  }
+  if (!g.to.email || g.delivered || (g.deliverAt && g.deliverAt > now)) return 'skipped';
+  const info = await mailerFactory().send(giftDeliverEmail(g), {bcc: runtime.emails.copyTo || undefined});
+  await ref.update({delivered: {at: now, email: g.to.email, messageId: info.messageId}}); return 'sent';
+}
+module.exports = {paidEmail, shippedEmail, createMailer, sendPurchaseEmail, giftPaidEmail, giftDeliverEmail, sendGiftEmail};
