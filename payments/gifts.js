@@ -81,7 +81,7 @@ async function createGift({db, mp, body, clientKey, webhookUrl, now = Date.now()
   if (rev) {
     if (!couponRef) throw httpError(409, 'coupon_invalid');
     const c = (await couponRef.get()).data(), ev = evalCp(c);
-    return {code: couponCode, discount: ev.discountCents / 100, total: ev.chargedCents / 100, value: (valueCents + shippingCreditCents) / 100, description: c.description || 'Cupón de descuento'};
+    return {code: couponCode, discount: ev.discountCents / 100, total: ev.chargedCents / 100, value: (valueCents + shippingCreditCents) / 100, type: c.type, amount: c.value, shippingCredit: shippingCreditCents / 100};
   }
   const id = 'g' + sha('instinto-gift:' + requestId).slice(0, 24);
   const ref = db.doc('instinto_web_gifts/' + id);

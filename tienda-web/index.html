@@ -379,7 +379,9 @@ const PERFIL_OLFATIVO={
 </style>
 <script>
 // V10.5 — Regalar perfume y código de regalo / cupón en el carrito.
+window.cpLabel=d=>d.type==='percent'?Number(d.amount)+'% de descuento':'$'+Number(d.amount).toLocaleString('es-MX')+' de descuento';
 (function(){
+ const cpLabel=window.cpLabel;
  const API=()=>CONFIG.apiBase;const $$=id=>document.getElementById(id);
  const giftErr={gift_recipient_name:'Escribe el nombre de quien recibe.',gift_recipient_contact:'Escribe el correo o el WhatsApp de quien recibe.',gift_recipient_email:'Revisa el correo de quien recibe.',
   gift_recipient_phone:'Revisa el WhatsApp de quien recibe (10 dígitos).',gift_sender_name:'Escribe tu nombre: así sabrá quién se lo regala.',gift_sender_email:'Escribe tu correo: ahí te llega el código.',
@@ -400,7 +402,7 @@ const PERFIL_OLFATIVO={
   msg.textContent='Revisando cupón…';
   try{const r=await fetch(API()+'/api/gift',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...b,cupon:code,soloRevisar:true,requestId:'revisar'+code.replace(/[^A-Z0-9]/g,'').padEnd(16,'0')})});const d=await r.json().catch(()=>({}));
    if(!r.ok){msg.textContent=giftErr[d.error]||'No pudimos validar el cupón.';gTotal(true);return}
-   gCp={code,discount:d.discount,total:d.total};msg.textContent='✓ '+(d.description||'Cupón')+': −'+money(d.discount)+'. Quien recibe tendrá el valor completo de '+money(d.value)+'.'}catch(e){msg.textContent='No pudimos validar el cupón.'}
+   gCp={code,discount:d.discount,total:d.total};msg.textContent='✓ Cupón '+code+(d.type?' · '+cpLabel(d):'')+': −'+money(d.discount)+(d.shippingCredit?' (el envío no se descuenta)':'')+'. Quien recibe tendrá el valor completo de '+money(d.value)+'.'}catch(e){msg.textContent='No pudimos validar el cupón.'}
   gTotal(true)}
  function gTotal(fromCheck){$$('gShipAmt').textContent=money(shipCredit());const full=gValue()+($$('gShip').checked?shipCredit():0);
   if(!fromCheck&&($$('gCoupon').value||'').trim()){clearTimeout(gCpTimer);gCpTimer=setTimeout(gCheck,500)}
@@ -446,7 +448,7 @@ const PERFIL_OLFATIVO={
     if(d.error==='coupon_product_required'&&d.detail){const p=products.find(x=>x.id===d.detail);if(p)t=`Tu regalo es para ${p.brand} · ${p.name}. <a href="#" data-addgift="${p.id}">Agregarlo a mi selección</a>`}
     msg.innerHTML=t;renderCart();return}
    window.couponState={code,discount:d.discount,kind:d.kind,balance:d.balance};
-   msg.textContent=d.kind==='gift'?`🎁 Saldo de regalo aplicado: −${money(d.discount)}${d.balance>d.discount?` (te quedan ${money(d.balance-d.discount)} para otra compra)`:''}${shipping?'':' · el envío también se descuenta al cotizarlo si hay saldo'}`:`✓ ${d.description}: −${money(d.discount)}`;
+   msg.textContent=d.kind==='gift'?`🎁 Saldo de regalo aplicado: −${money(d.discount)}${d.balance>d.discount?` (te quedan ${money(d.balance-d.discount)} para otra compra)`:''}${shipping?'':' · el envío también se descuenta al cotizarlo si hay saldo'}`:`✓ Cupón ${code}${d.type?' · '+window.cpLabel(d):''}: −${money(d.discount)}${d.type==='percent'?' (en perfumes; el envío no se descuenta)':''}`;
    renderCart()}catch(e){if(!silent)msg.textContent='No pudimos validar el código.'}}
  let lastSig='';window.instintoCouponRecheck=()=>{const code=($$('couponCode')?.value||'').trim();if(!code)return;const sig=code+'|'+JSON.stringify(cart.map(({id,size,qty})=>[id,size,qty]))+'|'+(shipping?.amount||0);if(sig===lastSig)return;lastSig=sig;clearTimeout(couponTimer);couponTimer=setTimeout(()=>check(true),300)};
  $$('couponApply').addEventListener('click',()=>check(false));$$('couponCode').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();check(false)}});

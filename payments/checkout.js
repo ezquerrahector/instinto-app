@@ -233,7 +233,7 @@ async function couponCheck({db, body, clientKey, now = Date.now()}) {
   catch (e) { const er = httpError(409, e.message); if (e.message === 'coupon_product_required') er.detail = c.data().productId; throw er; }
   const d = c.data();
   return {code, kind: d.kind, discount: ev.discountCents / 100, total: ev.totalCents / 100, productId: d.productId || null,
-    balance: d.kind === 'gift' ? d.balanceCents / 100 : null, description: d.kind === 'gift' ? 'Saldo de regalo' : (d.description || 'Cupón de descuento')};
+    balance: d.kind === 'gift' ? d.balanceCents / 100 : null, type: d.kind === 'gift' ? null : d.type, amount: d.kind === 'gift' ? null : d.value};
 }
 
 async function status({db, purchaseId, binding}) {
