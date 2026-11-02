@@ -6,7 +6,7 @@
 //   kind 'gift' : {balanceCents, originalCents, productId|null, expiresAt, active, giftId}
 //                 el saldo cubre perfumes y envío; si el perfume del regalo sigue disponible, el carrito debe incluirlo.
 const CODE = /^[A-Z0-9-]{4,24}$/;
-const MIN_CHARGE_CENTS = 1000; // Mercado Pago no cobra montos muy pequeños: o se cubre todo o quedan al menos $10.
+const MIN_CHARGE_CENTS = 3000; // Mercado Pago no cobra menos de $30: o se cubre todo o quedan al menos $30.
 const normCode = v => String(v ?? '').trim().toUpperCase().replace(/\s+/g, '');
 function fail(code) { const e = Error(code); e.status = 409; return e; }
 

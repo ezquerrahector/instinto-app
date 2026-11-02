@@ -23,7 +23,7 @@ test('admin coupons: percent/amount only on perfumes, product restriction, uses,
 });
 test('never leaves a charge below the Mercado Pago minimum', () => {
   const r = evaluateCoupon({kind: 'gift', active: true, balanceCents: 35800}, {items: items.slice(0, 1), shippingCents: 5125});
-  assert.equal(r.totalCents, 1000);
+  assert.equal(r.totalCents, 3000);
 });
 test('admin coupon validation and code normalization', () => {
   assert.equal(normCode(' bienvenida 10 '), 'BIENVENIDA10');
