@@ -31,3 +31,13 @@ test('admin coupon validation and code normalization', () => {
   assert.throws(() => validateAdminCoupon({code: 'X', type: 'percent', value: 10}), {message: 'coupon_code_invalid'});
   assert.throws(() => validateAdminCoupon({code: 'ABCD', type: 'percent', value: 120}), {message: 'coupon_value_invalid'});
 });
+
+const {evaluateGiftCoupon} = require('../payments/coupons');
+test('gift purchase: store coupon discounts the perfume value only, keeps $30 minimum', () => {
+  const base = {active: true, kind: 'admin', type: 'percent', value: 80, uses: 0};
+  assert.deepEqual(evaluateGiftCoupon(base, {productId: 'P1', valueCents: 31000, shippingCreditCents: 15000}), {discountCents: 24800, chargedCents: 21200});
+  assert.deepEqual(evaluateGiftCoupon({...base, value: 100}, {valueCents: 31000}), {discountCents: 28000, chargedCents: 3000});
+  assert.throws(() => evaluateGiftCoupon({...base, productId: 'P2'}, {productId: 'P1', valueCents: 31000}), /coupon_not_applicable/);
+  assert.throws(() => evaluateGiftCoupon({...base, productId: 'P2'}, {valueCents: 31000}), /coupon_not_applicable/);
+  assert.throws(() => evaluateGiftCoupon({active: true, kind: 'gift', balanceCents: 31000}, {valueCents: 31000}), /coupon_gift_on_gift/);
+});

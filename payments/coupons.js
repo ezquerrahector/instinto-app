@@ -47,4 +47,16 @@ function validateAdminCoupon(b) {
     productId, usesMax, expiresAt, active: b.active !== false};
 }
 
-module.exports = {CODE, MIN_CHARGE_CENTS, normCode, evaluateCoupon, validateAdminCoupon};
+// Cupón de la tienda al COMPRAR un regalo: descuenta solo el valor del perfume/saldo (no el crédito de envío).
+// Los códigos de regalo (saldo) no sirven para comprar otro regalo. Siempre se cobran al menos $30 por Mercado Pago.
+function evaluateGiftCoupon(c, {productId = null, valueCents, shippingCreditCents = 0, now = Date.now()}) {
+  if (c && c.kind === 'gift') throw fail('coupon_gift_on_gift');
+  const ev = evaluateCoupon(c, {items: [{id: productId || '__saldo_abierto__', unitPriceCents: valueCents, qty: 1}], shippingCents: shippingCreditCents, now});
+  const total = valueCents + shippingCreditCents;
+  let d = ev.discountCents;
+  if (total - d < MIN_CHARGE_CENTS) d = Math.max(0, total - MIN_CHARGE_CENTS);
+  if (!(d > 0)) throw fail('coupon_not_applicable');
+  return {discountCents: d, chargedCents: total - d};
+}
+
+module.exports = {CODE, MIN_CHARGE_CENTS, normCode, evaluateCoupon, evaluateGiftCoupon, validateAdminCoupon};

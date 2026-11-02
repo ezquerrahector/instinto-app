@@ -355,7 +355,8 @@ const PERFIL_OLFATIVO={
   <div class="two"><div class="field"><label for="gFromName">Tu nombre</label><input id="gFromName" maxlength="80"></div><div class="field"><label for="gFromEmail">Tu correo</label><input id="gFromEmail" type="email"></div></div>
   <small class="g-help">Ahí te llega el comprobante, el código y la liga para cambiar el regalo o mandar la tarjeta.</small>
  </fieldset>
- <div class="g-total"><span>Total del regalo</span><strong id="gTotal">$0</strong></div>
+ <div class="coupon-row"><input id="gCoupon" placeholder="¿Tienes un cupón?" aria-label="Cupón de descuento" maxlength="24"><button type="button" id="gCouponApply">Aplicar</button></div><div class="coupon-msg" id="gCouponMsg"></div>
+ <div class="g-total"><span>Total a pagar</span><strong id="gTotal">$0</strong></div>
  <button class="primary wide" type="button" id="gPay">PAGAR REGALO CON MERCADO PAGO →</button>
  <p class="status" id="gMsgBox" aria-live="polite"></p>
 </div></div>
@@ -383,13 +384,27 @@ const PERFIL_OLFATIVO={
  const giftErr={gift_recipient_name:'Escribe el nombre de quien recibe.',gift_recipient_contact:'Escribe el correo o el WhatsApp de quien recibe.',gift_recipient_email:'Revisa el correo de quien recibe.',
   gift_recipient_phone:'Revisa el WhatsApp de quien recibe (10 dígitos).',gift_sender_name:'Escribe tu nombre: así sabrá quién se lo regala.',gift_sender_email:'Escribe tu correo: ahí te llega el código.',
   gift_amount_invalid:'El monto debe ser de $310 a $3,000, en pesos cerrados.',unavailable_product:'Ese perfume ya no está disponible. Elige otro.',gift_date_invalid:'Revisa la fecha de entrega.',
+  coupon_invalid:'Ese cupón no existe o no está activo.',coupon_expired:'Ese cupón ya venció.',coupon_used:'Ese cupón ya se usó por completo.',coupon_not_applicable:'Ese cupón no aplica a este regalo.',
+  coupon_gift_on_gift:'Los códigos de regalo se usan en el carrito, no para comprar otro regalo.',request_reused:'Cambiaste el regalo: vuelve a dar clic en pagar.',
   too_many_requests:'Demasiados intentos. Espera un minuto.',payment_provider_retry:'Mercado Pago no respondió. Intenta de nuevo.',gifts_disabled:'Los regalos estarán disponibles muy pronto.'};
  let gmode='chosen',gamt=310,gAttempt=null;
  const shipCredit=()=>Number(window.instintoGifts?.shippingCredit||150);
  function fillList(){const l=$$('gList');if(!l||typeof products==='undefined')return;l.replaceChildren(...products.filter(p=>p.availableSizes?.length).map(p=>{const o=document.createElement('option');o.value=p.brand+' · '+p.name;return o}))}
  function pickedProduct(){const v=($$('gSearch').value||'').trim().toLowerCase();return (typeof products!=='undefined'?products:[]).find(p=>p.availableSizes?.length&&(p.brand+' · '+p.name).toLowerCase()===v)}
  function gValue(){return gmode==='open'?(Number($$('gAmount').value)||gamt):Number(CONFIG.prices[60]||310)}
- function gTotal(){$$('gShipAmt').textContent=money(shipCredit());$$('gTotal').textContent=money(gValue()+($$('gShip').checked?shipCredit():0));$$('gDateBox').style.display=$$('gToEmail').value.trim()?'':'none'}
+ let gCp=null,gCpTimer=null;
+ function gBase(){const b={incluirEnvio:$$('gShip').checked};if(gmode==='open'){b.abierto=true;b.monto=gValue()}else{const p=pickedProduct();if(p)b.productoId=p.id}return b}
+ async function gCheck(){const code=($$('gCoupon').value||'').trim().toUpperCase(),msg=$$('gCouponMsg');gCp=null;
+  if(!code){msg.textContent='';gTotal(true);return}
+  const b=gBase();if(!b.abierto&&!b.productoId){msg.textContent='Elige el perfume y el cupón se aplicará.';gTotal(true);return}
+  msg.textContent='Revisando cupón…';
+  try{const r=await fetch(API()+'/api/gift',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...b,cupon:code,soloRevisar:true,requestId:'revisar'+code.replace(/[^A-Z0-9]/g,'').padEnd(16,'0')})});const d=await r.json().catch(()=>({}));
+   if(!r.ok){msg.textContent=giftErr[d.error]||'No pudimos validar el cupón.';gTotal(true);return}
+   gCp={code,discount:d.discount,total:d.total};msg.textContent='✓ '+(d.description||'Cupón')+': −'+money(d.discount)+'. Quien recibe tendrá el valor completo de '+money(d.value)+'.'}catch(e){msg.textContent='No pudimos validar el cupón.'}
+  gTotal(true)}
+ function gTotal(fromCheck){$$('gShipAmt').textContent=money(shipCredit());const full=gValue()+($$('gShip').checked?shipCredit():0);
+  if(!fromCheck&&($$('gCoupon').value||'').trim()){clearTimeout(gCpTimer);gCpTimer=setTimeout(gCheck,500)}
+  $$('gTotal').innerHTML=gCp?'<s style="font-size:16px;color:#867f71">'+money(full)+'</s> '+money(gCp.total):money(full);$$('gDateBox').style.display=$$('gToEmail').value.trim()?'':'none'}
  function open(preId){fillList();$$('giftModal').classList.remove('hidden');if(preId){const p=products.find(x=>x.id===preId);if(p){setMode('chosen');$$('gSearch').value=p.brand+' · '+p.name}}gTotal();
   const t=new Date(Date.now()+86400000);$$('gDate').min=new Date().toISOString().slice(0,10);}
  function setMode(m){gmode=m;document.querySelectorAll('[data-gmode]').forEach(b=>b.classList.toggle('active',b.dataset.gmode===m));$$('gChosen').classList.toggle('hidden',m!=='chosen');$$('gOpen').classList.toggle('hidden',m!=='open');gTotal()}
@@ -398,11 +413,13 @@ const PERFIL_OLFATIVO={
  document.querySelectorAll('[data-gmode]').forEach(b=>b.addEventListener('click',()=>setMode(b.dataset.gmode)));
  document.querySelectorAll('[data-gamt]').forEach(b=>b.addEventListener('click',()=>{gamt=Number(b.dataset.gamt);$$('gAmount').value='';document.querySelectorAll('[data-gamt]').forEach(x=>x.classList.toggle('active',x===b));gTotal()}));
  document.querySelector('[data-gamt="310"]').classList.add('active');
+ $$('gCouponApply').addEventListener('click',gCheck);$$('gCoupon').addEventListener('keydown',e=>{if(e.key==='Enter')gCheck()});$$('gSearch').addEventListener('change',()=>gTotal());
  ['gAmount','gShip','gToEmail'].forEach(id=>$$(id).addEventListener('input',()=>{if(id==='gAmount')document.querySelectorAll('[data-gamt]').forEach(x=>x.classList.remove('active'));gTotal()}));
  $$('gPay').addEventListener('click',async()=>{const box=$$('gMsgBox');try{
   const body={deNombre:$$('gFromName').value,deCorreo:$$('gFromEmail').value,paraNombre:$$('gToName').value,paraCorreo:$$('gToEmail').value,paraTel:$$('gToPhone').value,
    mensaje:$$('gMsg').value,entregarEn:$$('gDate').value||'',incluirEnvio:$$('gShip').checked};
   if(gmode==='open'){body.abierto=true;body.monto=gValue()}else{const p=pickedProduct();if(!p)throw Error('Elige el perfume de la lista.');body.productoId=p.id}
+  const cpc=($$('gCoupon').value||'').trim().toUpperCase();if(cpc){if(!gCp||gCp.code!==cpc)throw Error('Da clic en «Aplicar» para validar tu cupón (o bórralo).');body.cupon=cpc}
   const sig=JSON.stringify(body);if(!gAttempt||gAttempt.sig!==sig)gAttempt={sig,id:crypto.randomUUID().replace(/-/g,'')};body.requestId=gAttempt.id;
   $$('gPay').disabled=true;box.textContent='Preparando el pago seguro…';
   const r=await fetch(API()+'/api/gift',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));

@@ -383,7 +383,7 @@ async function loadCoupons(){try{const d=await call('/coupons');
   const used=c?c.originalCents-c.balanceCents:0;
   return h('div',{class:'card',style:'padding:12px 14px'},h('div',{class:'ch'},h('div',null,
     h('div',{class:'folio'},`${g.from.name} → ${g.to.name}`),
-    h('div',{class:'meta'},`${g.mode==='open'?'Saldo '+money(g.valueCents):g.productName}${g.shippingIncluded?' + envío':''} · pagado ${money(g.totalCents)} · ${when(g.paidAt||g.createdAt)}`),
+    h('div',{class:'meta'},`${g.mode==='open'?'Saldo '+money(g.valueCents):g.productName}${g.shippingIncluded?' + envío':''} · pagado ${money(g.chargedCents??g.totalCents)}${g.couponCode?' (cupón '+g.couponCode+')':''} · ${when(g.paidAt||g.createdAt)}`),
     h('div',{class:'meta'},`${g.code?'Código '+g.code+' · ':''}${c?`saldo ${money(c.balanceCents)}${used?' (usado '+money(used)+')':''}`:''}${g.to.email?' · correo '+(g.delivered?'enviado':g.deliverAt?'programado '+new Date(g.deliverAt).toLocaleDateString('es-MX'):'pendiente'):' · por WhatsApp'}`),
     g.message&&h('div',{class:'meta'},'“'+g.message+'”')),
    h('div',{class:'acts'},g.reviewRequired&&h('span',{class:'pill red'},'Revisar pago'),c&&!c.active&&h('span',{class:'pill gray'},'Desactivado'),h('span',{class:'pill '+pc},pl),

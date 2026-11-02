@@ -7,11 +7,13 @@
 // Entrega: correo automático en la fecha elegida o tarjeta para mandar por WhatsApp desde la liga privada.
 const {createHash, randomBytes, timingSafeEqual} = require('node:crypto');
 const {httpError, rateLimit, readRuntime, publicCatalog} = require('./checkout');
+const {normCode, CODE, evaluateGiftCoupon} = require('./coupons');
 const SITE = 'https://instintofragancias.com';
 const sha = v => createHash('sha256').update(v).digest('hex');
 const text = (v, n = 120) => typeof v === 'string' ? v.trim().slice(0, n) : '';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const YEAR = 365 * 86400000;
+const charged = g => g.chargedCents ?? g.totalCents; // lo que se cobra (con cupón puede ser menor que el saldo del regalo)
 
 function giftConfig(runtime) {
   const g = runtime.gifts || {};
@@ -49,15 +51,18 @@ async function createGift({db, mp, body, clientKey, webhookUrl, now = Date.now()
   const runtime = (await db.doc('instinto_private/runtime').get()).data() || {};
   const cfg = giftConfig(runtime), config = await readRuntime(db);
   if (!cfg.enabled) throw httpError(503, 'gifts_disabled');
-  await rateLimit(db, 'gift:' + clientKey, 6, now);
+  const rev = body?.soloRevisar === true; // solo calcular el descuento del cupón (sin crear nada)
+  const couponCode = body?.cupon ? normCode(body.cupon) : null;
+  if (couponCode && !CODE.test(couponCode)) throw httpError(409, 'coupon_invalid');
+  await rateLimit(db, (rev ? 'giftcp:' : 'gift:') + clientKey, rev ? 20 : 6, now);
   const requestId = text(body?.requestId, 100);
   if (!/^[A-Za-z0-9_-]{16,100}$/.test(requestId)) throw httpError(400, 'invalid_request_id');
   const from = {name: text(body?.deNombre, 80), email: text(body?.deCorreo, 120).toLowerCase()};
-  if (!from.name) throw httpError(400, 'gift_sender_name');
-  if (!EMAIL.test(from.email)) throw httpError(400, 'gift_sender_email');
-  const to = readRecipient(body);
+  if (!rev && !from.name) throw httpError(400, 'gift_sender_name');
+  if (!rev && !EMAIL.test(from.email)) throw httpError(400, 'gift_sender_email');
+  const to = rev ? null : readRecipient(body);
   const message = text(body?.mensaje, 300);
-  const deliverAt = to.email ? readDeliverAt(body, now) : null;
+  const deliverAt = to?.email ? readDeliverAt(body, now) : null;
   const shippingIncluded = body?.incluirEnvio === true;
   let mode, valueCents, productId = null, productName = null;
   if (body?.abierto === true) {
@@ -71,13 +76,26 @@ async function createGift({db, mp, body, clientKey, webhookUrl, now = Date.now()
     productName = `${p.brand} · ${p.name} · 60 ml`; valueCents = config.prices?.[60] ?? 31000;
   }
   const shippingCreditCents = shippingIncluded ? cfg.shippingCreditCents : 0;
+  const couponRef = couponCode ? db.doc('instinto_coupons/' + couponCode) : null;
+  const evalCp = c => { try { return evaluateGiftCoupon(c, {productId, valueCents, shippingCreditCents, now}); } catch (e) { throw httpError(409, e.message); } };
+  if (rev) {
+    if (!couponRef) throw httpError(409, 'coupon_invalid');
+    const c = (await couponRef.get()).data(), ev = evalCp(c);
+    return {code: couponCode, discount: ev.discountCents / 100, total: ev.chargedCents / 100, value: (valueCents + shippingCreditCents) / 100, description: c.description || 'Cupón de descuento'};
+  }
   const id = 'g' + sha('instinto-gift:' + requestId).slice(0, 24);
   const ref = db.doc('instinto_web_gifts/' + id);
   let gift = await db.runTransaction(async tx => {
     const ex = (await tx.get(ref)).data();
-    if (ex) { if (ex.requestHash !== sha(requestId)) throw httpError(409, 'request_reused'); return ex; }
+    if (ex) { if (ex.requestHash !== sha(requestId) || (ex.coupon?.code || null) !== couponCode) throw httpError(409, 'request_reused'); return ex; }
+    let coupon = null, chargedCents = valueCents + shippingCreditCents;
+    if (couponRef) {
+      const c = (await tx.get(couponRef)).data(), ev = evalCp(c);
+      coupon = {code: couponCode, discountCents: ev.discountCents, state: 'held', heldAt: now}; chargedCents = ev.chargedCents;
+      tx.update(couponRef, {uses: (c.uses || 0) + 1});
+    }
     const g = {schemaVersion: 1, id, token: randomBytes(24).toString('hex'), requestHash: sha(requestId), state: 'awaiting_payment', mode,
-      productId, productName, valueCents, shippingIncluded, shippingCreditCents, totalCents: valueCents + shippingCreditCents,
+      productId, productName, valueCents, shippingIncluded, shippingCreditCents, totalCents: valueCents + shippingCreditCents, chargedCents, coupon,
       from, to, message, deliverAt, delivered: null, liveMode: config.liveMode, createdAt: now, expiresAt: now + cfg.holdMs, preference: {state: 'creating'}};
     tx.create(ref, g); return g;
   });
@@ -92,7 +110,7 @@ async function createGift({db, mp, body, clientKey, webhookUrl, now = Date.now()
 
 function giftPreferencePayload(g, {webhookUrl, excludedPaymentTypes = ['ticket', 'atm']}) {
   const title = g.mode === 'open' ? `Regalo INSTINTO · saldo de $${g.valueCents / 100}` : `Regalo INSTINTO · ${g.productName}`;
-  const items = [{id: 'regalo', title: (title + (g.shippingIncluded ? ' + envío' : '')).slice(0, 200), quantity: 1, currency_id: 'MXN', unit_price: g.totalCents / 100}];
+  const items = [{id: 'regalo', title: (title + (g.shippingIncluded ? ' + envío' : '')).slice(0, 200), quantity: 1, currency_id: 'MXN', unit_price: charged(g) / 100}];
   return {items, external_reference: g.id, metadata: {instinto_gift: g.id}, payer: {email: g.from.email}, notification_url: webhookUrl,
     back_urls: {success: `${SITE}/regalo.html?t=${g.token}&pago=ok`, failure: `${SITE}/regalo.html?t=${g.token}&pago=error`, pending: `${SITE}/regalo.html?t=${g.token}&pago=pendiente`},
     auto_return: 'approved', expires: true, expiration_date_to: new Date(g.expiresAt).toISOString(),
@@ -117,7 +135,7 @@ async function reconcileGift(db, payment, {now = Date.now()} = {}) {
   return db.runTransaction(async tx => {
     const g = (await tx.get(ref)).data();
     if (!g || payment.metadata?.instinto_gift !== g.id) throw Error('unknown_purchase');
-    if (payment.currency_id !== 'MXN' || Math.round(Number(payment.transaction_amount) * 100) !== g.totalCents) throw Error('payment_total_mismatch');
+    if (payment.currency_id !== 'MXN' || Math.round(Number(payment.transaction_amount) * 100) !== charged(g)) throw Error('payment_total_mismatch');
     const record = {giftId, paymentId: id, status: String(payment.status), receivedAt: now};
     if (['refunded', 'charged_back', 'in_mediation'].includes(payment.status)) {
       if (g.state === 'paid') {
@@ -136,7 +154,7 @@ async function reconcileGift(db, payment, {now = Date.now()} = {}) {
     tx.create(cRef, {code, kind: 'gift', giftId, description: `Regalo de ${g.from.name} para ${g.to.name}`, balanceCents: g.totalCents, originalCents: g.totalCents,
       productId: g.productId || null, productName: g.productName || null, shippingIncluded: g.shippingIncluded, active: true,
       expiresAt: now + YEAR, createdAt: now});
-    tx.update(ref, {state: 'paid', paidAt: now, paymentId: id, code});
+    tx.update(ref, {state: 'paid', paidAt: now, paymentId: id, code, ...(g.coupon ? {'coupon.state': 'used'} : {})});
     tx.set(ledgerRef, {...record, disposition: 'gift_paid', code}, {merge: true});
     tx.create(db.doc('instinto_web_outbox/gift_paid_' + giftId), {type: 'gift_paid', giftId, state: 'pending', createdAt: now});
     return {outcome: 'applied', code};
@@ -181,7 +199,16 @@ async function maintainGifts({db, mp, now = Date.now(), limit = 25}) {
     for (const p of pays) { const r = await reconcileGift(db, await mp.getPayment(p.id), {now}).catch(e => ({outcome: 'error', reason: e.message})); if (r.outcome === 'applied') out.applied++; }
     const after = (await doc.ref.get()).data();
     if (after.state === 'awaiting_payment' && after.expiresAt + 600000 < now && !pays.some(x => ['approved', 'pending', 'in_process', 'authorized'].includes(x.status))) {
-      await doc.ref.update({state: 'expired', expiredAt: now}); out.expired++;
+      await db.runTransaction(async tx => {
+        const g2 = (await tx.get(doc.ref)).data();
+        if (g2.state !== 'awaiting_payment') return;
+        if (g2.coupon?.state === 'held') {
+          const cRef = db.doc('instinto_coupons/' + g2.coupon.code), c = (await tx.get(cRef)).data();
+          if (c) tx.update(cRef, {uses: Math.max(0, (c.uses || 0) - 1)});
+        }
+        tx.update(doc.ref, {state: 'expired', expiredAt: now, ...(g2.coupon?.state === 'held' ? {'coupon.state': 'released'} : {})});
+      });
+      out.expired++;
     }
   }
   const paid = await db.collection('instinto_web_gifts').where('state', '==', 'paid').where('delivered', '==', null).limit(limit).get();

@@ -286,7 +286,7 @@ async function listCoupons({db, identity}) {
     db.collection('instinto_web_gifts').orderBy('createdAt', 'desc').limit(150).get()]);
   return {coupons: c.docs.map(d => d.data()), gifts: g.docs.map(d => { const x = d.data();
     return {id: x.id, state: x.state, mode: x.mode, productName: x.productName, valueCents: x.valueCents, shippingIncluded: x.shippingIncluded,
-      totalCents: x.totalCents, from: x.from, to: x.to, message: x.message, deliverAt: x.deliverAt || null, delivered: x.delivered || null,
+      totalCents: x.totalCents, chargedCents: x.chargedCents ?? x.totalCents, couponCode: x.coupon?.code || null, from: x.from, to: x.to, message: x.message, deliverAt: x.deliverAt || null, delivered: x.delivered || null,
       code: x.code || null, createdAt: x.createdAt, paidAt: x.paidAt || null, reviewRequired: x.reviewRequired === true}; })};
 }
 async function saveCoupon({db, identity, body, now = Date.now()}) {

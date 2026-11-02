@@ -82,7 +82,7 @@ function giftPaidEmail(g) {
     : 'Entra a tu liga privada para elegir su tarjeta y mandársela por WhatsApp.';
   const html = layout(`¡Listo, ${esc(g.from.name)}! Tu regalo para ${esc(g.to.name)} está pagado`,
     `<p style="font-size:14px;line-height:1.6">Regalaste ${giftWhat(g)}${g.shippingIncluded ? ' con envío incluido' : ''}. ${delivery}</p>
-    <p style="font-size:14px">Código de regalo: <strong style="font-size:18px;letter-spacing:.06em">${esc(g.code)}</strong><br><span style="color:#756f64;font-size:12px">Válido 12 meses. Total pagado ${money(g.totalCents)}.</span></p>
+    <p style="font-size:14px">Código de regalo: <strong style="font-size:18px;letter-spacing:.06em">${esc(g.code)}</strong><br><span style="color:#756f64;font-size:12px">Válido 12 meses. Total pagado ${money(g.chargedCents ?? g.totalCents)}.</span></p>
     <p><a href="${link}" style="display:inline-block;background:#12120f;color:#fff;padding:12px 18px;text-decoration:none;font-size:13px;letter-spacing:.08em">VER O CAMBIAR MI REGALO</a></p>
     <p style="font-size:12px;color:#756f64">Con esa liga puedes cambiar el destinatario, el mensaje o la fecha mientras no se use, y descargar la tarjeta para WhatsApp. No la compartas.</p>`);
   return {to: g.from.email, subject: `INSTINTO · Tu regalo para ${g.to.name} está listo`, html,
